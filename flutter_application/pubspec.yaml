@@ -1,0 +1,60 @@
+name: attendance_app
+description: "Mano Attendance App"
+publish_to: "none"
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI
+  cupertino_icons: ^1.0.6
+  flutter_svg: ^2.0.9
+
+  # State management
+  provider: ^6.0.5
+
+  # API calls
+  http: ^1.1.0
+
+  # Date formatting
+  intl: ^0.18.1
+
+  # Calendar UI
+  table_calendar: ^3.0.9
+
+  # Location services (older stable version)
+  geolocator: ^10.1.0
+
+  # Local storage
+  shared_preferences: ^2.2.2
+
+  # Camera and permissions (older stable versions)
+  camera: ^0.10.5+5
+  permission_handler: ^11.0.1
+  path_provider: ^2.1.1
+  path: ^1.8.3
+  flutter_image_compress: ^2.1.0
+  image_picker: ^1.0.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/mano.svg
+    - assets/mano.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/mano.png"

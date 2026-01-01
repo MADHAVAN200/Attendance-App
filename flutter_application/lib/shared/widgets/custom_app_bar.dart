@@ -1,87 +1,180 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../controllers/navigation_controller.dart';
-import '../controllers/theme_controller.dart';
+import '../providers/theme_simple.dart';
+import 'glass_container.dart';
+import '../navigation/navigation_controller.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showDrawerButton;
-  final Color backgroundColor;
+  final String title;
 
   const CustomAppBar({
     super.key, 
     this.showDrawerButton = true,
-    this.backgroundColor = Colors.transparent,
+    this.title = 'Dashboard',
   });
 
   @override
   Widget build(BuildContext context) {
-    final nav = context.watch<NavigationController>();
-    final title = _getTitle(nav.selectedIndex);
-
-    return AppBar(
-      title: Text(
-        title,
-        style: GoogleFonts.inter(
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1E293B),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      height: 70,
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!,
+            width: 1,
+          ),
         ),
       ),
-      centerTitle: false,
-      backgroundColor: backgroundColor,
-      elevation: 0,
-      leading: showDrawerButton 
-        ? Builder(
-            builder: (context) => IconButton(
-              icon: Icon(Icons.menu, size: 24, color: Theme.of(context).iconTheme.color),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: [
+          if (showDrawerButton)
+            IconButton(
+              icon: Icon(Icons.menu, color: Theme.of(context).iconTheme.color),
               onPressed: () => Scaffold.of(context).openDrawer(),
             ),
-          )
-        : null,
-      actions: [
-        // Dark Mode Toggle
-        Consumer<ThemeController>(
-          builder: (context, themeController, _) {
-            return IconButton(
-              icon: Icon(
-                themeController.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-                color: Theme.of(context).iconTheme.color,
+            
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).textTheme.titleLarge?.color,
+            ),
+          ),
+          const Spacer(),
+          
+          // Theme Switcher Button
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeNotifier,
+            builder: (context, mode, _) {
+              final isDark = mode == ThemeMode.dark; 
+              return IconButton(
+                icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+                tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                onPressed: () {
+                  toggleTheme();
+                },
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {},
+          ),
+          const SizedBox(width: 16),
+          // Admin User Profile
+          Theme(
+            data: Theme.of(context).copyWith(
+              splashColor: Colors.transparent,
+              highlightColor: Colors.transparent,
+            ),
+            child: PopupMenuButton<String>(
+              offset: const Offset(0, 60),
+              color: Colors.transparent,
+              elevation: 0,
+              surfaceTintColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              padding: EdgeInsets.zero,
+              enableFeedback: true,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              tooltip: 'Profile Options',
+              itemBuilder: (context) => [
+                PopupMenuItem<String>(
+                  enabled: false, 
+                  padding: EdgeInsets.zero,
+                  child: GlassContainer(
+                    width: 220,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildDropdownItem(context, icon: Icons.person_outline, text: 'View Profile', onTap: () {
+                           navigationNotifier.value = PageType.profile;
+                           Navigator.pop(context);
+                        }),
+                        Divider(height: 1, thickness: 1, color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey[200]),
+                        _buildDropdownItem(context, icon: Icons.logout, text: 'Logout', onTap: () {
+                          Navigator.pop(context);
+                          // Implement logout logic here
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged out successfully')));
+                        }, isDestructive: true),
+                      ],
+                    ),
+                  ),
+                )
+              ],
+              child: Row(
+                children: [
+                   Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                       Text(
+                        'Admin User',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      Text(
+                        'Administrator',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: const Color(0xFF5B60F6).withOpacity(0.2),
+                    child: Text('AU', style: GoogleFonts.poppins(color: const Color(0xFF5B60F6), fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ],
               ),
-              onPressed: () => themeController.toggleTheme(),
-            );
-          },
-        ),
-        IconButton(
-          icon: Icon(Icons.notifications_outlined, size: 24, color: Theme.of(context).iconTheme.color),
-          onPressed: () {},
-        ),
-        const SizedBox(width: 8),
-        const CircleAvatar(
-          radius: 16,
-          backgroundColor: Color(0xFFE2E8F0),
-          child: Icon(Icons.person, size: 20, color: Color(0xFF64748B)),
-        ),
-        const SizedBox(width: 24),
-      ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  String _getTitle(int index) {
-    switch (index) {
-      case 0: return 'Dashboard';
-      case 1: return 'Live Attendance';
-      case 2: return 'My Attendance';
-      case 3: return 'Employees';
-      case 4: return 'Reports';
-      case 5: return 'Holidays';
-      case 6: return 'Policy Engine';
-      case 7: return 'Geo Fencing';
-      case 8: return 'Profile';
-      default: return 'MANO';
-    }
+  Widget _buildDropdownItem(BuildContext context, {required IconData icon, required String text, required VoidCallback onTap, bool isDestructive = false}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isDestructive ? Colors.red : (isDark ? Colors.white : Colors.black87);
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 12),
+            Text(
+              text,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(70);
 }

@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
-import 'core/theme/app_theme.dart';
-import 'shared/layout/main_scaffold.dart';
-
-import 'package:provider/provider.dart';
-import 'shared/controllers/theme_controller.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'features/dashboard/dashboard_screen.dart';
+import 'shared/providers/theme_simple.dart';
 
 void main() {
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeController(),
-      child: const AttendanceApp(),
-    ),
-  );
+  runApp(const AttendanceApp());
 }
 
 class AttendanceApp extends StatelessWidget {
@@ -19,25 +12,55 @@ class AttendanceApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeController>(
-      builder: (context, themeController, child) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, currentMode, child) {
         return MaterialApp(
+          title: 'Admin Dashboard',
           debugShowCheckedModeBanner: false,
-          title: 'MANO Dashboard',
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: themeController.themeMode,
-          home: const MainScaffold(initialIndex: 0),
-          routes: {
-            '/live-attendance': (context) => const MainScaffold(initialIndex: 1),
-            '/my-attendance': (context) => const MainScaffold(initialIndex: 2),
-            '/employees': (context) => const MainScaffold(initialIndex: 3),
-            '/reports': (context) => const MainScaffold(initialIndex: 4),
-            '/holidays': (context) => const MainScaffold(initialIndex: 5),
-            '/policy': (context) => const MainScaffold(initialIndex: 6),
-            '/geo-fencing': (context) => const MainScaffold(initialIndex: 7),
-            '/profile': (context) => const MainScaffold(initialIndex: 8),
-          },
+          theme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF5B60F6),
+              primary: const Color(0xFF5B60F6),
+              background: const Color(0xFFF8FAFC),
+              surface: const Color(0xFFFFFFFF),
+              onSurface: const Color(0xFF0F172A),
+              secondary: const Color(0xFF64748B),
+            ),
+            scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+            fontFamily: GoogleFonts.poppins().fontFamily,
+            brightness: Brightness.light,
+            cardColor: const Color(0xFFFFFFFF),
+            dividerColor: const Color(0xFFE2E8F0),
+            textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme).apply(
+              bodyColor: const Color(0xFF0F172A),
+              displayColor: const Color(0xFF0F172A),
+            ),
+          ),
+          darkTheme: ThemeData(
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF5B60F6),
+              primary: const Color(0xFF5B60F6),
+              background: const Color(0xFF0B1220),
+              surface: const Color(0xFF1E293B), // Base for glass, handled in widget mostly
+              onSurface: const Color(0xFFE5E7EB),
+              secondary: const Color(0xFF94A3B8),
+              brightness: Brightness.dark,
+            ),
+            scaffoldBackgroundColor: const Color(0xFF0B1220),
+            fontFamily: GoogleFonts.poppins().fontFamily,
+            brightness: Brightness.dark,
+            cardColor: const Color(0xFF1E293B), 
+            dividerColor: const Color(0xFF334155),
+            textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme).apply(
+              bodyColor: const Color(0xFFE5E7EB),
+              displayColor: const Color(0xFFE5E7EB),
+            ),
+          ),
+          themeMode: currentMode,
+          home: const DashboardScreen(),
         );
       },
     );

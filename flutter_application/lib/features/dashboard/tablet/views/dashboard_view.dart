@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/widgets/app_sidebar.dart';
-import '../../../../shared/widgets/custom_app_bar.dart';
 import '../../dashboard.dart';
 import '../widgets/action_card.dart';
 import '../widgets/activity_feed.dart';
@@ -8,58 +6,27 @@ import '../widgets/anomalies_card.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/trends_chart.dart';
 
-class TabletLandscape extends StatelessWidget {
-  const TabletLandscape({super.key});
+class DashboardView extends StatelessWidget {
+  const DashboardView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: KPI Cards
+          _buildKPISection(),
+          const SizedBox(height: 32),
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? [const Color(0xFF0F172A), const Color(0xFF334155)]
-              : [const Color(0xFFF8FAFC), const Color(0xFFE2E8F0)],
-        ),
-        // Add a subtle pattern or blobs if needed for more "glass" pop.
-        // For now, a strong gradient is good.
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        // SafeArea isn't strictly needed for tablet landscape usually if sidebar is there, 
-        // but let's keep consistent structure.
-        body: Row(
-          children: [
-            const AppSidebar(),
-            Expanded(
-              child: Scaffold(
-                backgroundColor: Colors.transparent,
-                appBar: const CustomAppBar(showDrawerButton: false),
-                body: SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Row 1: KPI Cards
-                      _buildKPISection(),
-                      const SizedBox(height: 32),
+          // Row 2: Quick Actions
+          _buildQuickActions(),
+          const SizedBox(height: 32),
 
-                      // Row 2: Quick Actions
-                      _buildQuickActions(),
-                      const SizedBox(height: 32),
-
-                      // Row 3: Split View (Chart & Feed)
-                      _buildSplitView(),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          // Row 3: Split View (Chart & Feed)
+          _buildSplitView(),
+        ],
       ),
     );
   }

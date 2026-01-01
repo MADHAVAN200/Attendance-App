@@ -1,131 +1,113 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../controllers/navigation_controller.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../navigation/navigation_controller.dart';
+import 'glass_container.dart';
 
 class AppSidebar extends StatelessWidget {
   const AppSidebar({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final nav = context.watch<NavigationController>();
+    // Glassmorphism Sidebar
+    return GlassContainer(
+      width: 280,
+      borderRadius: 0, // Sidebar usually square corners on left or handled by parent. 
+      // But standard glass has borders. Let's keep 0 for side-attached look or small radius.
+      // Actually usually sidebars are full height. GlassContainer has borderRadius. 
+      // Let's set it to 0 or leave defaults. For a sidebar, maybe 0?
+      // Let's use 0 for now as it attaches to the side.
+      blur: 8, // Reduced blur for better glass effect
+      child: ValueListenableBuilder<PageType>(
+        valueListenable: navigationNotifier,
+        builder: (context, currentPage, _) {
+          return Column(
+            children: [
+              // Sidebar Header (Matches CustomAppBar)
+              Container(
+                height: 70,
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                          ? Colors.white.withOpacity(0.1) 
+                          : Colors.grey[300]!,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  children: [
+                    // Optional Logo Icon
+                    Icon(
+                      Icons.change_history, // Placeholder logo icon
+                      color: Theme.of(context).primaryColor,
+                      size: 28,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'MANO',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).brightness == Brightness.dark 
+                            ? Colors.white 
+                            : Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 32), // Matches typical page content padding
+              
+              // Menu Items
+              ...PageType.values.where((p) => p != PageType.profile).map((page) => _buildMenuItem(
+                context, 
+                page,
+                currentPage == page,
+              )),
+            ],
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildMenuItem(BuildContext context, PageType page, bool isActive) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      width: 280, 
-      color: Theme.of(context).drawerTheme.backgroundColor ?? Theme.of(context).cardColor,
-      child: Column(
-        children: [
-          _buildHeader(context),
-          const SizedBox(height: 20),
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                   _buildNavItem(context, nav, index: 0, icon: Icons.dashboard_outlined, label: 'Dashboard'),
-                   _buildNavItem(context, nav, index: 1, icon: Icons.access_time, label: 'Live Attendance'),
-                   _buildNavItem(context, nav, index: 2, icon: Icons.schedule, label: 'My Attendance'),
-                   _buildNavItem(context, nav, index: 3, icon: Icons.people_outline, label: 'Employees'),
-                   _buildNavItem(context, nav, index: 4, icon: Icons.trending_up, label: 'Reports'),
-                   _buildNavItem(context, nav, index: 5, icon: Icons.event_note, label: 'Holidays'),
-                   _buildNavItem(context, nav, index: 6, icon: Icons.settings_outlined, label: 'Policy Engine'),
-                   _buildNavItem(context, nav, index: 7, icon: Icons.location_on_outlined, label: 'Geo Fencing'),
-                ],
-              ),
-            ),
-          ),
-          _buildLogout(context),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-      child: Row(
-        children: [
-          // Fallback logo if asset fails or simplified version
-          Image.asset(
-           'assets/mano.png',
-           height: 32,
-           errorBuilder: (c, o, s) => const Icon(Icons.change_history, size: 32, color: Color(0xFF5B60F6)),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            'MANO',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: const Color(0xFF5B60F6),
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.0,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNavItem(BuildContext context, NavigationController nav, {required int index, required IconData icon, required String label}) {
-    final isActive = nav.selectedIndex == index;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    final color = isActive ? const Color(0xFF5B60F6) : (isDark ? Colors.grey[400] : const Color(0xFF6B7280));
-    final bgColor = isActive ? const Color(0xFF5B60F6).withOpacity(isDark ? 0.2 : 0.1) : Colors.transparent;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: InkWell(
-        onTap: () => nav.setIndex(index),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: color, size: 22),
-              const SizedBox(width: 12),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: color,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                  fontSize: 15,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogout(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = isDark ? Colors.grey[400] : const Color(0xFF6B7280);
-
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: InkWell(
-        onTap: () {},
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: isActive 
+            ? (isDark ? Colors.white.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1))
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              Icon(Icons.logout, color: color, size: 22),
-              const SizedBox(width: 12),
-              Text(
-                'Logout',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+      ),
+      child: ListTile(
+        horizontalTitleGap: 8,
+        minLeadingWidth: 20,
+        leading: Icon(
+          page.icon,
+          color: isActive 
+              ? (isDark ? Colors.white : Theme.of(context).primaryColor)
+              : Colors.grey,
+        ),
+        title: Text(
+          page.title,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+            color: isActive 
+                ? (isDark ? Colors.white : Theme.of(context).primaryColor)
+                : (isDark ? Colors.grey[400] : Theme.of(context).primaryColor), // Inactive text, keep readable
           ),
         ),
+        onTap: () {
+          navigateTo(page);
+        },
       ),
     );
   }

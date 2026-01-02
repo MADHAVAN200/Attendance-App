@@ -4,19 +4,25 @@ import '../navigation/navigation_controller.dart';
 import 'glass_container.dart';
 
 class AppSidebar extends StatelessWidget {
-  const AppSidebar({super.key});
+  final VoidCallback? onLinkTap;
+
+  const AppSidebar({
+    super.key, 
+    this.onLinkTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     // Glassmorphism Sidebar
     return GlassContainer(
-      width: 280,
-      borderRadius: 0, // Sidebar usually square corners on left or handled by parent. 
-      // But standard glass has borders. Let's keep 0 for side-attached look or small radius.
-      // Actually usually sidebars are full height. GlassContainer has borderRadius. 
-      // Let's set it to 0 or leave defaults. For a sidebar, maybe 0?
-      // Let's use 0 for now as it attaches to the side.
-      blur: 8, // Reduced blur for better glass effect
+      width: isMobile ? 240 : 280,
+      blur: 60, // Stronger blur for iOS frosted effect
+      color: Theme.of(context).brightness == Brightness.dark 
+          ? Colors.black.withOpacity(0.2) // Explicit iOS dark glass
+          : Colors.white.withOpacity(0.2), // Explicit iOS light glass
+      borderRadius: 0, 
       child: ValueListenableBuilder<PageType>(
         valueListenable: navigationNotifier,
         builder: (context, currentPage, _) {
@@ -63,7 +69,10 @@ class AppSidebar extends StatelessWidget {
               const SizedBox(height: 32), // Matches typical page content padding
               
               // Menu Items
-              ...PageType.values.where((p) => p != PageType.profile).map((page) => _buildMenuItem(
+              ...PageType.values.where((p) {
+                if (isMobile) return true; // Show all (including profile) on mobile
+                return p != PageType.profile; // Hide profile on tablet/desktop (sidebar) as it's likely in AppBar or explicit
+              }).map((page) => _buildMenuItem(
                 context, 
                 page,
                 currentPage == page,
@@ -82,7 +91,7 @@ class AppSidebar extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: isActive 
-            ? (isDark ? Colors.white.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1))
+            ? (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05)) // Neutral grey for light mode active
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
@@ -92,8 +101,8 @@ class AppSidebar extends StatelessWidget {
         leading: Icon(
           page.icon,
           color: isActive 
-              ? (isDark ? Colors.white : Theme.of(context).primaryColor)
-              : Colors.grey,
+              ? (isDark ? Colors.white : Colors.black) // Black for light mode active
+              : (isDark ? Colors.grey : Colors.black54),
         ),
         title: Text(
           page.title,
@@ -101,14 +110,16 @@ class AppSidebar extends StatelessWidget {
             fontSize: 13,
             fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
             color: isActive 
-                ? (isDark ? Colors.white : Theme.of(context).primaryColor)
-                : (isDark ? Colors.grey[400] : Theme.of(context).primaryColor), // Inactive text, keep readable
+                ? (isDark ? Colors.white : Colors.black) // Black for light mode active
+                : (isDark ? Colors.grey[400] : Colors.black87),
           ),
         ),
         onTap: () {
           navigateTo(page);
+          onLinkTap?.call();
         },
       ),
     );
   }
 }
+

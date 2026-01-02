@@ -31,57 +31,71 @@ class StatCard extends StatelessWidget {
     final subTextColor = Theme.of(context).textTheme.bodySmall?.color;
 
     return GlassContainer(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16), // Reduced padding from 20 to 16
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Header
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: subTextColor,
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12, // Reduced from 13
+                    fontWeight: FontWeight.w500,
+                    color: subTextColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.all(8),
+                width: 28, // Reduced from 32
+                height: 28,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: baseColor.withOpacity(0.5)),
                   color: baseColor.withOpacity(0.1),
                 ),
-                child: Icon(icon, color: baseColor, size: 16),
+                child: Icon(icon, color: baseColor, size: 14), // Reduced from 16
               ),
             ],
           ),
           
           // Value
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                value,
-                style: GoogleFonts.poppins(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                total,
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: subTextColor,
-                ),
-              ),
-            ],
+          Expanded( // Use expanded to fill available space without fixed constraint issues
+             child: Column( // Wrapper to center nicely if needed, or just align
+               crossAxisAlignment: CrossAxisAlignment.start,
+               mainAxisAlignment: MainAxisAlignment.center,
+               children: [
+                 Row(
+                   crossAxisAlignment: CrossAxisAlignment.baseline,
+                   textBaseline: TextBaseline.alphabetic,
+                   children: [
+                     Text(
+                       value,
+                       style: GoogleFonts.poppins(
+                         fontSize: 24, // Reduced from 28
+                         fontWeight: FontWeight.bold,
+                         color: textColor,
+                       ),
+                     ),
+                     const SizedBox(width: 4),
+                     Text(
+                       total,
+                       style: GoogleFonts.poppins(
+                         fontSize: 12, // Reduced from 13
+                         color: subTextColor,
+                       ),
+                     ),
+                   ],
+                 ),
+               ],
+             ),
           ),
 
           // Footer (Trends)
@@ -91,23 +105,26 @@ class StatCard extends StatelessWidget {
                 Text(
                   percentage,
                   style: GoogleFonts.poppins(
-                    fontSize: 12,
+                    fontSize: 11, // Reduced from 12
                     fontWeight: FontWeight.w600,
                     color: isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
                   ),
                 ),
                 const SizedBox(width: 4),
-                Text(
-                  contextText,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: subTextColor,
+                Flexible(
+                  child: Text(
+                    contextText,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11, // Reduced from 12
+                      color: subTextColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             )
           else
-            const SizedBox(height: 16), // Spacer if no trend
+            const SizedBox(height: 16),
         ],
       ),
     );

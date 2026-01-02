@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../shared/widgets/glass_container.dart';
-
 import '../../../dashboard/tablet/widgets/stat_card.dart';
-import 'correction_requests_view.dart';
+import 'correction_requests_view.dart'; // Mobile version
 
-class LiveAttendanceView extends StatefulWidget {
-  const LiveAttendanceView({super.key});
+class MobileLiveAttendanceContent extends StatefulWidget {
+  const MobileLiveAttendanceContent({super.key});
 
   @override
-  State<LiveAttendanceView> createState() => _LiveAttendanceViewState();
+  State<MobileLiveAttendanceContent> createState() => _MobileLiveAttendanceContentState();
 }
 
-class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTickerProviderStateMixin {
+class _MobileLiveAttendanceContentState extends State<MobileLiveAttendanceContent> with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -29,24 +28,24 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Tabs
-        _buildTabs(context),
-        
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              // Tab 1: Live Dashboard
-              _buildLiveDashboard(context),
-              
-              // Tab 2: Correction Requests
-              const CorrectionRequestsView(),
-            ],
+    return NestedScrollView(
+      headerSliverBuilder: (context, innerBoxIsScrolled) {
+        return [
+          SliverToBoxAdapter(
+            child: _buildTabs(context),
           ),
-        ),
-      ],
+        ];
+      },
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // Tab 1: Live Dashboard
+          _buildLiveDashboard(context),
+          
+          // Tab 2: Correction Requests
+          const MobileCorrectionRequestsView(), 
+        ],
+      ),
     );
   }
 
@@ -55,10 +54,10 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(32, 24, 32, 24),
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       height: 48,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white, // Dark background for container
+        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
       ),
@@ -82,28 +81,28 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
           ],
         ),
         labelColor: Colors.white, 
-        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600], // Darker unselected text
+        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
         padding: const EdgeInsets.all(4), 
         labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
         tabs: [
-          const Tab(text: 'Live Dashboard'),
+          const Tab(text: 'Dashboard'), // Shortened text for mobile
           Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Correction Requests'),
-                const SizedBox(width: 8),
+                const Text('Requests'), // Shortened text
+                const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   decoration: BoxDecoration(
                     color: Colors.red, 
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     '5',
-                    style: GoogleFonts.poppins(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    style: GoogleFonts.poppins(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -115,54 +114,49 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
   }
 
   Widget _buildLiveDashboard(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. KPIs (2x2 Grid)
-          _buildKPIGrid(),
-          const SizedBox(height: 24),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+      physics: const BouncingScrollPhysics(), // Optional, NestedScrollView might override or coordinate
+      children: [
+        // 1. KPIs (2x2 Grid)
+        _buildKPIGrid(),
+        const SizedBox(height: 12),
 
-          // 2. Filters & Search (Stacked or wrapped)
-          _buildFilters(context),
-          const SizedBox(height: 16),
+        // 2. Filters & Search 
+        _buildFilters(context),
+        const SizedBox(height: 12),
 
-          // 3. Real-time Monitoring List (Replaces wide table)
-          _buildMonitoringList(context),
-        ],
-      ),
+        // 3. Real-time Monitoring List 
+        _buildMonitoringList(context),
+      ],
     );
   }
 
   Widget _buildKPIGrid() {
-    // Responsive Layout: 4 columns for Landscape, 2 for Portrait
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
-
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: isLandscape ? 4 : 2, // 4 cards in a row for Landscape
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: isLandscape ? 2.0 : 2.4, // Adjust ratio for 4-column width
+      crossAxisCount: 2, 
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.3, // Taller cards for Mobile width to prevent overflow
       children: const [
         StatCard(
           title: 'Total Present',
           value: '142',
           total: '/ 150',
           percentage: '+5%',
-          contextText: 'vs yesterday',
+          contextText: 'vs yst',
           isPositive: true,
           icon: Icons.people_alt,
           baseColor: Color(0xFF5B60F6),
         ),
         StatCard(
-          title: 'Late Arrivals',
+          title: 'Late',
           value: '12',
           total: '',
           percentage: '-2%',
-          contextText: 'vs yesterday',
+          contextText: 'vs yst',
           isPositive: true,
           icon: Icons.access_time_filled,
           baseColor: Color(0xFFF59E0B),
@@ -172,7 +166,7 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
           value: '8',
           total: '',
           percentage: '+1%',
-          contextText: 'vs yesterday',
+          contextText: 'vs yst',
           isPositive: false,
           icon: Icons.person_off,
           baseColor: Color(0xFFEF4444),
@@ -182,7 +176,7 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
           value: '45',
           total: '',
           percentage: '',
-          contextText: 'Currently',
+          contextText: 'Now',
           isPositive: true,
           icon: Icons.coffee,
           baseColor: Color(0xFF10B981),
@@ -219,7 +213,7 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
           ),
         ),
         const SizedBox(height: 12),
-        // Dropdown (Full width for easy touch)
+        // Dropdown
         Container(
           height: 44,
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -252,7 +246,7 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
   }
 
   Widget _buildMonitoringList(BuildContext context) {
-    // Using dummy list data for now
+    // Using dummy list data 
     final employees = [
       {'name': 'Sarah Wilson', 'role': 'UX Designer', 'in': '09:00 AM', 'out': '--', 'hrs': '4h 30m', 'status': 'Active', 'color': Colors.green},
       {'name': 'Mike Johnson', 'role': 'Developer', 'in': '09:15 AM', 'out': '--', 'hrs': '4h 15m', 'status': 'Late', 'color': Colors.orange},

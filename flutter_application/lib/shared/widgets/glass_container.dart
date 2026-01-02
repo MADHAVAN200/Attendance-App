@@ -20,7 +20,7 @@ class GlassContainer extends StatelessWidget {
     this.padding,
     this.margin,
     this.borderRadius = 16,
-    this.blur = 20,
+    this.blur = 40, // Stronger blur
     this.color,
     this.border,
   });
@@ -36,10 +36,11 @@ class GlassContainer extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
+          // No heavy shadows, just extremely subtle depth
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -50,17 +51,18 @@ class GlassContainer extends StatelessWidget {
           child: Container(
             padding: padding,
             decoration: BoxDecoration(
-              // Light: White with 0.6 opacity (approx) or purely transparent if using card color
-              // Dark: rgba(30, 41, 59, 0.55) -> 0xFF1E293B with 0.55 opacity
+              // iPhone Style: Very low opacity tint
               color: color ?? (isDark 
-                  ? const Color(0xFF1E293B).withOpacity(0.55) 
-                  : Colors.white.withOpacity(0.7)), 
+                  ? Colors.black.withOpacity(0.2) 
+                  : Colors.white.withOpacity(0.3)
+              ), 
               borderRadius: BorderRadius.circular(borderRadius),
               border: border ?? Border.all(
+                // Subtle border highlight (always white-ish for glass effect)
                 color: isDark 
-                    ? Colors.white.withOpacity(0.08) 
-                    : const Color(0xFF5B60F6).withOpacity(0.1), // Primary tint for light mode
-                width: 1,
+                    ? Colors.white.withOpacity(0.1) 
+                    : Colors.white.withOpacity(0.2), 
+                width: 1, // Keep it thin
               ),
             ),
             child: child,

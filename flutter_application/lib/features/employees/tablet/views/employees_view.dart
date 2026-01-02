@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../shared/widgets/glass_container.dart';
-
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../../../shared/widgets/glass_container.dart';
+import '../../models/employee_model.dart';
 import 'add_employee_view.dart';
 
 class EmployeesView extends StatefulWidget {
@@ -30,14 +27,14 @@ class _EmployeesViewState extends State<EmployeesView> {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          // Top Actions Bar
-          _buildTopActions(context),
+          // Top Filter Section
+          _buildFilterSection(context),
           const SizedBox(height: 24),
 
-          // Employees Table
+          // Employees List
           _buildEmployeesTable(context),
           const SizedBox(height: 24),
 
@@ -48,33 +45,34 @@ class _EmployeesViewState extends State<EmployeesView> {
     );
   }
 
-  Widget _buildTopActions(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+  Widget _buildFilterSection(BuildContext context) {
     return Row(
       children: [
-        // Search Input
+        // 1. Search Details (Flex 3)
         Expanded(
           flex: 3,
           child: GlassContainer(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             height: 50,
+            borderRadius: 12,
             child: Row(
               children: [
-                Icon(Icons.search, color: Theme.of(context).textTheme.bodySmall?.color),
+                Icon(Icons.search, color: Theme.of(context).textTheme.bodySmall?.color, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextField(
                     decoration: InputDecoration(
                       hintText: 'Search employees...',
                       hintStyle: GoogleFonts.poppins(
-                        color: Theme.of(context).textTheme.bodySmall?.color,
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                         fontSize: 14,
                       ),
                       border: InputBorder.none,
+                      contentPadding: const EdgeInsets.only(bottom: 4),
                     ),
                     style: GoogleFonts.poppins(
                       color: Theme.of(context).textTheme.bodyLarge?.color,
+                      fontSize: 14,
                     ),
                   ),
                 ),
@@ -82,46 +80,57 @@ class _EmployeesViewState extends State<EmployeesView> {
             ),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
 
-        // Status Filter
-        Expanded(
-          flex: 2,
-          child: GlassContainer(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            height: 50,
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: 'All Status',
-                icon: Icon(Icons.arrow_drop_down, color: Theme.of(context).textTheme.bodySmall?.color),
-                dropdownColor: Theme.of(context).cardColor,
-                items: ['All Status', 'Active', 'On Leave', 'Onboarding']
-                    .map((e) => DropdownMenuItem(
-                          value: e,
-                          child: Text(
-                            e, 
-                            style: GoogleFonts.poppins(
-                              color: Theme.of(context).textTheme.bodyLarge?.color,
-                              fontSize: 14,
-                            )
-                          ),
-                        ))
-                    .toList(),
-                onChanged: (_) {},
+        // 2. Status Dropdown (Fixed width or fit content)
+        Container(
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark 
+                ? Colors.white.withOpacity(0.05) 
+                : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.white.withOpacity(0.08) 
+                  : Theme.of(context).primaryColor.withOpacity(0.1),
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: 'All Status',
+              icon: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Icon(Icons.filter_list, size: 18, color: Theme.of(context).textTheme.bodySmall?.color),
               ),
+              dropdownColor: Theme.of(context).cardColor,
+              style: GoogleFonts.poppins(
+                color: Theme.of(context).textTheme.bodyLarge?.color,
+                fontSize: 14,
+              ),
+              items: ['All Status', 'Active', 'On Leave', 'Onboarding']
+                  .map((e) => DropdownMenuItem(
+                        value: e,
+                        child: Text(e),
+                      ))
+                  .toList(),
+              onChanged: (_) {},
             ),
           ),
         ),
-        const Spacer(flex: 2),
+        
+        const Spacer(),
 
-        // Action Buttons
+        // 3. Action Buttons
         _buildActionButton(
           context, 
           label: 'Bulk Upload', 
           icon: Icons.upload_file_outlined,
           isPrimary: false,
+          isCompact: false, // Show text as per image
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         _buildActionButton(
           context, 
           label: 'Add Employee', 
@@ -135,7 +144,8 @@ class _EmployeesViewState extends State<EmployeesView> {
   Widget _buildActionButton(BuildContext context, {
     required String label, 
     required IconData icon, 
-    required bool isPrimary
+    required bool isPrimary,
+    bool isCompact = false,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).primaryColor;
@@ -150,12 +160,13 @@ class _EmployeesViewState extends State<EmployeesView> {
       },
       child: Container(
         height: 50,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
           color: isPrimary ? primaryColor : (isDark ? Colors.white.withOpacity(0.05) : Colors.white),
           borderRadius: BorderRadius.circular(12),
           border: isPrimary ? null : Border.all(
-            color: isDark ? Colors.white.withOpacity(0.1) : primaryColor.withOpacity(0.2)
+            color: isDark ? Colors.white.withOpacity(0.08) : primaryColor.withOpacity(0.1)
           ),
           boxShadow: isPrimary ? [
             BoxShadow(
@@ -166,21 +177,25 @@ class _EmployeesViewState extends State<EmployeesView> {
           ] : null,
         ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon, 
               color: isPrimary ? Colors.white : (isDark ? Colors.white : primaryColor),
               size: 20
             ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                color: isPrimary ? Colors.white : (isDark ? Colors.white : primaryColor),
-                fontSize: 14,
+             if (!isCompact) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  color: isPrimary ? Colors.white : (isDark ? Colors.white : primaryColor),
+                  fontSize: 14,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -192,211 +207,395 @@ class _EmployeesViewState extends State<EmployeesView> {
     
     return GlassContainer(
       padding: EdgeInsets.zero,
-      child: SizedBox( // Wrap in SizedBox to avoid unbounded width issues inside some layouts
-        width: double.infinity,
-        child: DataTable(
-          headingRowColor: MaterialStateProperty.all(
-            isDark ? Colors.white.withOpacity(0.05) : const Color(0xFFF8FAFC)
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: SizedBox(
+          width: double.infinity,
+          child: DataTable(
+            headingRowColor: MaterialStateProperty.all(
+              Colors.transparent 
+            ),
+            columnSpacing: 16, // Reduced spacing to fit
+            horizontalMargin: 16, // Reduced margin to fit
+            showCheckboxColumn: false, // Hide checkbox, just use row click
+            dataRowMaxHeight: 85,
+            dividerThickness: 0,
+            // Columns: EMPLOYEE, ROLE & DEPT, PHONE, SHIFT, ACTIONS
+            columns: [
+              _buildDataColumn(context, 'EMPLOYEE'),
+              _buildDataColumn(context, 'ROLE & DEPT'),
+              _buildDataColumn(context, 'PHONE'),
+              _buildDataColumn(context, 'SHIFT'),
+              const DataColumn(
+                label: Expanded(
+                  child: Text('ACTIONS', textAlign: TextAlign.right)
+                ),
+              ), 
+            ],
+            rows: Employee.dummyData.map((e) => _buildDataRow(context, e)).toList(),
           ),
-          columnSpacing: 24,
-          horizontalMargin: 24,
-          dataRowMaxHeight: 72,
-          dividerThickness: 0, // Cleaner look
-          columns: [
-            _buildDataColumn(context, 'Employee', flex: 3),
-            _buildDataColumn(context, 'Role & Dept', flex: 2),
-            _buildDataColumn(context, 'Phone', flex: 2),
-            _buildDataColumn(context, 'Shift', flex: 2),
-            _buildDataColumn(context, 'Status', flex: 1),
-            const DataColumn(label: SizedBox(width: 40)), // Actions
-          ],
-          rows: [
-            _buildDataRow(context, 
-              name: 'Sarah Wilson',
-              email: 'sarah.w@company.com',
-              avatar: 'S',
-              role: 'UX Designer',
-              dept: 'Product',
-              phone: '+1 (555) 123-4567',
-              shift: '09:00 - 17:00',
-              status: 'Active',
-              color: Colors.blue,
-            ),
-            _buildDataRow(context, 
-              name: 'Mike Johnson',
-              email: 'mike.j@company.com',
-              avatar: 'M',
-              role: 'Senior Dev',
-              dept: 'Engineering',
-              phone: '+1 (555) 987-6543',
-              shift: '10:00 - 18:00',
-              status: 'On Leave',
-              color: Colors.orange,
-            ),
-             _buildDataRow(context, 
-              name: 'Anna Davis',
-              email: 'anna.d@company.com',
-              avatar: 'A',
-              role: 'HR Manager',
-              dept: 'Human Resources',
-              phone: '+1 (555) 456-7890',
-              shift: '08:00 - 16:00',
-              status: 'Active',
-              color: Colors.purple,
-            ),
-             _buildDataRow(context, 
-              name: 'James Wilson',
-              email: 'james.w@company.com',
-              avatar: 'J',
-              role: 'Sales Lead',
-              dept: 'Sales',
-              phone: '+1 (555) 222-3333',
-              shift: '09:00 - 17:00',
-              status: 'Active',
-              color: Colors.green,
-            ),
-            _buildDataRow(context, 
-              name: 'Emily Chen',
-              email: 'emily.c@company.com',
-              avatar: 'E',
-              role: 'Frontend Dev',
-              dept: 'Engineering',
-              phone: '+1 (555) 777-8888',
-              shift: '10:00 - 18:00',
-              status: 'Onboarding',
-              color: Colors.pink,
-            ),
-          ],
         ),
       ),
     );
   }
 
-  DataColumn _buildDataColumn(BuildContext context, String label, {int flex = 1}) {
+  DataColumn _buildDataColumn(BuildContext context, String label) {
     return DataColumn(
       label: Text(
-        label.toUpperCase(),
+        label,
         style: GoogleFonts.poppins(
           fontWeight: FontWeight.w600,
-          fontSize: 12,
-          letterSpacing: 1,
-          color: Theme.of(context).textTheme.bodySmall?.color,
+          fontSize: 11, // Smaller, uppercase header
+          letterSpacing: 0.5,
+          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
         ),
       ),
     );
   }
 
-  DataRow _buildDataRow(BuildContext context, {
-    required String name,
-    required String email,
-    required String avatar,
-    required String role,
-    required String dept,
-    required String phone,
-    required String shift,
-    required String status,
-    required Color color,
-  }) {
+  DataRow _buildDataRow(BuildContext context, Employee data) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
     final subTextColor = Theme.of(context).textTheme.bodySmall?.color;
 
     return DataRow(
+      onSelectChanged: (_) => _showEmployeeDetails(context, data),
+      color: MaterialStateProperty.resolveWith<Color?>(
+        (Set<MaterialState> states) {
+           return Colors.transparent; // Transparent rows
+        },
+      ),
       cells: [
-        // Employee
+        // Employee Details (Avatar + Name + Email)
         DataCell(
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: color.withOpacity(0.1),
-                child: Text(
-                  avatar,
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    color: color,
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: data.color.withOpacity(0.15),
+                  child: Text(
+                    data.avatar,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      color: data.color,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    name, 
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
-                    )
-                  ),
-                  Text(
-                    email, 
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: subTextColor,
-                    )
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      data.name, 
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                        fontSize: 14,
+                      )
+                    ),
+                    Text(
+                      data.email, 
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: subTextColor,
+                      )
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
-        // Role
+        // Role & Dept
         DataCell(
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(role, style: GoogleFonts.poppins(color: textColor, fontWeight: FontWeight.w500)),
-              Text(dept, style: GoogleFonts.poppins(fontSize: 12, color: subTextColor)),
+              Text(data.role, style: GoogleFonts.poppins(color: textColor, fontWeight: FontWeight.w500, fontSize: 13)),
+              const SizedBox(height: 2),
+              Text(data.department, style: GoogleFonts.poppins(fontSize: 11, color: subTextColor)),
             ],
           ),
         ),
         // Phone
-        DataCell(Text(phone, style: GoogleFonts.poppins(color: textColor))),
+        DataCell(
+          Text(data.phone, style: GoogleFonts.poppins(fontSize: 13, color: subTextColor)),
+        ),
         // Shift
         DataCell(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!)
-            ),
-            child: Text(
-              shift,
-              style: GoogleFonts.poppins(fontSize: 12, color: textColor),
-            ),
-          )
-        ),
-        // Status
-        DataCell(
-          Container(
-             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: _getStatusColor(status).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              status,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                fontSize: 11,
-                color: _getStatusColor(status),
-              ),
-            ),
-          )
+          Text(data.shift, style: GoogleFonts.poppins(fontSize: 13, color: subTextColor)),
         ),
         // Actions
         DataCell(
-          IconButton(
-            icon: const Icon(Icons.more_vert), 
-            color: subTextColor,
-            onPressed: () {},
-          )
+           Align(
+             alignment: Alignment.centerRight,
+             child: _buildActionsMenu(context),
+           )
         ),
       ],
+    );
+  }
+
+  void _showEmployeeDetails(BuildContext context, Employee employee) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        child: GlassContainer(
+          width: 450,
+          padding: const EdgeInsets.all(24),
+          borderRadius: 24,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                   CircleAvatar(
+                    radius: 32,
+                    backgroundColor: employee.color.withOpacity(0.15),
+                    child: Text(
+                      employee.avatar,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        color: employee.color,
+                        fontSize: 24,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        employee.name,
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      Text(
+                        employee.role,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, color: Theme.of(context).textTheme.bodySmall?.color),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Divider(color: Theme.of(context).dividerColor.withOpacity(0.1)),
+              const SizedBox(height: 24),
+              
+              // Details
+              _buildDetailRow(context, Icons.email_outlined, 'Email', employee.email),
+              const SizedBox(height: 16),
+              _buildDetailRow(context, Icons.phone_outlined, 'Phone', employee.phone),
+              const SizedBox(height: 16),
+              _buildDetailRow(context, Icons.work_outline, 'Department', employee.department),
+              const SizedBox(height: 16),
+              _buildDetailRow(context, Icons.access_time, 'Shift', employee.shift),
+              const SizedBox(height: 16),
+              _buildDetailRow(context, Icons.info_outline, 'Status', employee.status, isStatus: true),
+              
+              const SizedBox(height: 24),
+              
+              // Action Button (Close)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(
+                    'Close',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value, {bool isStatus = false}) {
+    final subTextColor = Theme.of(context).textTheme.bodySmall?.color;
+    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
+
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 18, color: Theme.of(context).primaryColor),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: subTextColor,
+                ),
+              ),
+              if (isStatus)
+                Container(
+                  margin: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(value).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    value,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _getStatusColor(value),
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: textColor,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionsMenu(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (TapDownDetails details) {
+        _showActionsMenu(context, details.globalPosition);
+      },
+      child: Container(
+        color: Colors.transparent, // Hit test target
+        padding: const EdgeInsets.all(8),
+        child: Icon(Icons.more_vert, color: Theme.of(context).textTheme.bodySmall?.color),
+      ),
+    );
+  }
+
+  void _showActionsMenu(BuildContext context, Offset tapPosition) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent, // No dark overlay for simple dropdown feel
+      builder: (context) => Stack(
+        children: [
+          Positioned(
+            top: tapPosition.dy,
+            right: MediaQuery.of(context).size.width - tapPosition.dx,
+            child: Material( // Required for InkWell visuals inside
+              color: Colors.transparent,
+              child: GlassContainer(
+                width: 160, // Smaller, dropdown-like width
+                padding: const EdgeInsets.all(8),
+                borderRadius: 16,
+                // Ensure proper shadow for "floating" feel since barrier is transparent
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildGlassActionButton(
+                      context, 
+                      icon: Icons.edit_outlined, 
+                      label: 'Edit', 
+                      onTap: () {
+                        Navigator.pop(context);
+                        // Handle edit
+                      }
+                    ),
+                    const SizedBox(height: 4),
+                    _buildGlassActionButton(
+                      context, 
+                      icon: Icons.delete_outline, 
+                      label: 'Delete', 
+                      isDestructive: true,
+                      onTap: () {
+                        Navigator.pop(context);
+                        // Handle delete
+                      }
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlassActionButton(BuildContext context, {
+    required IconData icon, 
+    required String label, 
+    required VoidCallback onTap,
+    bool isDestructive = false
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isDestructive ? Colors.redAccent : Theme.of(context).textTheme.bodyLarge?.color;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.transparent, // Clean look inside dropdown
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -407,41 +606,26 @@ class _EmployeesViewState extends State<EmployeesView> {
   }
 
   Widget _buildPagination(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Showing 1 to 5 of 24 entries',
+          'Showing 10 results',
           style: GoogleFonts.poppins(
             color: Theme.of(context).textTheme.bodySmall?.color,
-            fontSize: 12,
+            fontSize: 13,
           ),
         ),
-        const SizedBox(width: 16),
         Row(
           children: [
             IconButton(
               onPressed: () {}, 
-              icon: Icon(Icons.chevron_left, color: Theme.of(context).textTheme.bodyLarge?.color),
+              icon: Icon(Icons.chevron_left, size: 20, color: Theme.of(context).textTheme.bodyLarge?.color),
             ),
-             Container(
-              width: 32,
-              height: 32,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-                borderRadius: BorderRadius.circular(8),
-              ),
-               child: Text(
-                '1', 
-                style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)
-              ),
-             ),
+             const SizedBox(width: 8),
              IconButton(
               onPressed: () {}, 
-              icon: Icon(Icons.chevron_right, color: Theme.of(context).textTheme.bodyLarge?.color),
+              icon: Icon(Icons.chevron_right, size: 20, color: Theme.of(context).textTheme.bodyLarge?.color),
             ),
           ],
         )

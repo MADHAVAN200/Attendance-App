@@ -31,7 +31,7 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
       children: [
         // Tabs
         _buildTabs(context),
-        const SizedBox(height: 24),
+
 
         // Tab Content
         Expanded(
@@ -52,22 +52,37 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-      height: 50,
+      margin: const EdgeInsets.fromLTRB(32, 24, 32, 24),
+      height: 48,
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
       ),
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
           color: primaryColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isDark ? [
+            BoxShadow(
+              color: primaryColor.withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            )
+          ] : [
+            BoxShadow(
+              color: primaryColor.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            )
+          ],
         ),
         labelColor: Colors.white,
-        unselectedLabelColor: Colors.grey,
+        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
+        padding: const EdgeInsets.all(4),
         labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
         tabs: const [
           Tab(text: 'Automation Rules'),

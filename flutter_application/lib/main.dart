@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'shared/providers/theme_simple.dart';
+import 'shared/widgets/orientation_guard.dart';
 
 void main() {
   runApp(const AttendanceApp());
@@ -60,7 +61,8 @@ class AttendanceApp extends StatelessWidget {
             ),
           ),
           themeMode: currentMode,
-          home: const DashboardScreen(),
+          // Wrap DashboardScreen with OrientationGuard
+          home: const OrientationGuard(child: DashboardScreen()), 
         );
       },
     );

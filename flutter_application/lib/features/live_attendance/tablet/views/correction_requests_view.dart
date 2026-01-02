@@ -61,44 +61,44 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
+            // Header
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: Colors.purple.withOpacity(0.1),
+                child: Text('S', style: GoogleFonts.poppins(color: Colors.purple, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: Colors.purple.withOpacity(0.1),
-                      backgroundImage: const NetworkImage('https://i.pravatar.cc/150?u=1'), // Placeholder
+                    Row(
+                      children: [
+                        Text(
+                          'Sarah Wilson',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(height: 2),
                     Text(
-                      'Sarah Wilson',
+                      'Product Design', // "Tag" / Department
                       style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                        fontSize: 12,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
                       ),
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'Pending',
-                    style: GoogleFonts.poppins(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.orange,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12), // Reduced spacing
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -108,14 +108,14 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
                     Text(
                       'Request Type',
                       style: GoogleFonts.poppins(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: Theme.of(context).textTheme.bodySmall?.color,
                       ),
                     ),
                     Text(
                       'Missed Punch',
                       style: GoogleFonts.poppins(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
@@ -128,14 +128,14 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
                     Text(
                       'Date',
                       style: GoogleFonts.poppins(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: Theme.of(context).textTheme.bodySmall?.color,
                       ),
                     ),
                     Text(
                       'Oct 24, 2023',
                       style: GoogleFonts.poppins(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: Theme.of(context).textTheme.bodyLarge?.color,
                       ),
@@ -154,8 +154,9 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return GlassContainer(
-      padding: const EdgeInsets.all(24), // Reduced padding
+      padding: const EdgeInsets.all(20), // Further reduced padding
       child: Column(
+        mainAxisSize: MainAxisSize.min, // Wrap content height
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
@@ -165,7 +166,7 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
               Text(
                 'Request Details',
                 style: GoogleFonts.poppins(
-                  fontSize: 18, // Reduced font size
+                  fontSize: 16, // Smaller title
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
@@ -177,107 +178,103 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Compact button
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8), // More compact
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                    child: Text('Reject', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                    child: Text('Reject', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12)),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF5B60F6),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Compact button
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     child: Text(
-                      'Approve Request',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 13),
+                      'Approve',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 12),
                     ),
                   ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 24), // Reduced spacing
+          const SizedBox(height: 16),
 
-          // Metadata Grid
+          // Metadata Grid (Compact)
           Row(
             children: [
               Expanded(child: _buildDetailItem(context, 'Employee', 'Sarah Wilson')),
-              Expanded(child: _buildDetailItem(context, 'Department', 'Product Design')),
+              Expanded(child: _buildDetailItem(context, 'Dept', 'Product Design')),
               Expanded(child: _buildDetailItem(context, 'Manager', 'Alex Morgan')),
             ],
           ),
-          const SizedBox(height: 16), // Reduced spacing
-          const Divider(),
-          const SizedBox(height: 16), // Reduced spacing
+          const SizedBox(height: 16),
+          Divider(height: 1, thickness: 0.5),
+          const SizedBox(height: 16),
 
-          // Time Comparison
+          // Time Comparison (Compact)
           Row(
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(12), // Reduced padding
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                      color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
-                     borderRadius: BorderRadius.circular(12),
+                     borderRadius: BorderRadius.circular(8),
                      border: Border.all(color: Colors.red.withOpacity(0.2)),
                   ),
                   child: Column(
                     children: [
-                      Text('System Time', style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
-                      const SizedBox(height: 4),
-                      Text('09:45 AM', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
-                      Text('Recorded Check-in', style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
+                      Text('System', style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11)),
+                      Text('09:45 AM', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
                     ],
                   ),
                 ),
               ),
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12),
-                child: Icon(Icons.arrow_forward, color: Colors.grey, size: 20),
+                padding: EdgeInsets.symmetric(horizontal: 8),
+                child: Icon(Icons.arrow_forward, color: Colors.grey, size: 16),
               ),
               Expanded(
                 child: Container(
-                   padding: const EdgeInsets.all(12), // Reduced padding
+                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                      color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
-                     borderRadius: BorderRadius.circular(12),
+                     borderRadius: BorderRadius.circular(8),
                      border: Border.all(color: Colors.green.withOpacity(0.2)),
                   ),
                   child: Column(
                     children: [
-                      Text('Requested Time', style: GoogleFonts.poppins(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12)),
-                      const SizedBox(height: 4),
-                      Text('09:00 AM', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
-                      Text('Corrected Check-in', style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
+                      Text('Requested', style: GoogleFonts.poppins(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11)),
+                      Text('09:00 AM', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24), // Reduced spacing
+          const SizedBox(height: 16),
 
           // Justification
-          Text('Justification', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 13)),
-          const SizedBox(height: 8),
-          Expanded( // Use Expanded to make text area fill remaining space if needed, or just flexible
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12), // Reduced padding
-               decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
-                  borderRadius: BorderRadius.circular(12),
-               ),
-               child: Text(
-                 'I forgot to punch in when I arrived at the office. I was in a meeting with the design team immediately upon arrival.',
-                 style: GoogleFonts.poppins(color: Theme.of(context).textTheme.bodyMedium?.color, height: 1.4, fontSize: 13),
-                 maxLines: 3,
-                 overflow: TextOverflow.ellipsis,
-               ),
-            ),
+          Text('Justification', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 12)),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+             decoration: BoxDecoration(
+                color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+                borderRadius: BorderRadius.circular(8),
+             ),
+             child: Text(
+               'I forgot to punch in when I arrived at the office. I was in a meeting with the design team immediately upon arrival.',
+               style: GoogleFonts.poppins(color: Theme.of(context).textTheme.bodyMedium?.color, height: 1.3, fontSize: 12),
+             ),
           ),
 
           const SizedBox(height: 24), // Reduced spacing

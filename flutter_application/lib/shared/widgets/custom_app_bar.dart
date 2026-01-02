@@ -19,7 +19,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      height: 70,
+      // Height removed to allow content + padding to determine
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -28,7 +28,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          height: 70, // Content height
+          padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
           if (showDrawerButton)
@@ -37,15 +41,18 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               onPressed: () => Scaffold.of(context).openDrawer(),
             ),
             
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).textTheme.titleLarge?.color,
+          Expanded(
+            child: Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).textTheme.titleLarge?.color,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
-          const Spacer(),
           
           // Theme Switcher Button
           ValueListenableBuilder<ThemeMode>(
@@ -61,92 +68,91 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {},
-          ),
+
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {},
           ),
-          const SizedBox(width: 16),
-          // Admin User Profile
-          Theme(
-            data: Theme.of(context).copyWith(
-              splashColor: Colors.transparent,
-              highlightColor: Colors.transparent,
-            ),
-            child: PopupMenuButton<String>(
-              offset: const Offset(0, 60),
-              color: Colors.transparent,
-              elevation: 0,
-              surfaceTintColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              padding: EdgeInsets.zero,
-              enableFeedback: true,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              tooltip: 'Profile Options',
-              itemBuilder: (context) => [
-                PopupMenuItem<String>(
-                  enabled: false, 
-                  padding: EdgeInsets.zero,
-                  child: GlassContainer(
-                    width: 220,
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+          if (MediaQuery.of(context).size.width > 600) ...[
+            const SizedBox(width: 16),
+            // Admin User Profile
+            Theme(
+              data: Theme.of(context).copyWith(
+                splashColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+              ),
+              child: PopupMenuButton<String>(
+                offset: const Offset(0, 60),
+                color: Colors.transparent,
+                elevation: 0,
+                surfaceTintColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                padding: EdgeInsets.zero,
+                enableFeedback: true,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                tooltip: 'Profile Options',
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    enabled: false, 
+                    padding: EdgeInsets.zero,
+                    child: GlassContainer(
+                      width: 220,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildDropdownItem(context, icon: Icons.person_outline, text: 'View Profile', onTap: () {
+                             navigationNotifier.value = PageType.profile;
+                             Navigator.pop(context);
+                          }),
+                          Divider(height: 1, thickness: 1, color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey[200]),
+                          _buildDropdownItem(context, icon: Icons.logout, text: 'Logout', onTap: () {
+                            Navigator.pop(context);
+                            // Implement logout logic here
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged out successfully')));
+                          }, isDestructive: true),
+                        ],
+                      ),
+                    ),
+                  )
+                ],
+                child: Row(
+                  children: [
+                     Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        _buildDropdownItem(context, icon: Icons.person_outline, text: 'View Profile', onTap: () {
-                           navigationNotifier.value = PageType.profile;
-                           Navigator.pop(context);
-                        }),
-                        Divider(height: 1, thickness: 1, color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey[200]),
-                        _buildDropdownItem(context, icon: Icons.logout, text: 'Logout', onTap: () {
-                          Navigator.pop(context);
-                          // Implement logout logic here
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged out successfully')));
-                        }, isDestructive: true),
+                         Text(
+                          'Admin User',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                        Text(
+                          'Administrator',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                )
-              ],
-              child: Row(
-                children: [
-                   Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                       Text(
-                        'Admin User',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
-                        ),
-                      ),
-                      Text(
-                        'Administrator',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: const Color(0xFF5B60F6).withOpacity(0.2),
-                    child: Text('AU', style: GoogleFonts.poppins(color: const Color(0xFF5B60F6), fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: const Color(0xFF5B60F6).withOpacity(0.2),
+                      child: Text('AU', style: GoogleFonts.poppins(color: const Color(0xFF5B60F6), fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
-    );
+    )));
   }
 
   Widget _buildDropdownItem(BuildContext context, {required IconData icon, required String text, required VoidCallback onTap, bool isDestructive = false}) {
@@ -176,5 +182,5 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(70);
+  Size get preferredSize => const Size.fromHeight(80);
 }

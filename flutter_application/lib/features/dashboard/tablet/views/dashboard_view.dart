@@ -26,6 +26,12 @@ class DashboardView extends StatelessWidget {
 
           // Row 3: Split View (Chart & Feed)
           _buildSplitView(),
+          const SizedBox(height: 32),
+
+          // Row 4: Anomalies (Full Width)
+          AnomaliesCard(
+            anomalies: DashboardLogic.anomalies,
+          ),
         ],
       ),
     );
@@ -37,15 +43,18 @@ class DashboardView extends StatelessWidget {
         return Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10), // Gutter
-            child: StatCard(
-              title: data['title'],
-              value: data['value'],
-              total: data['total'],
-              percentage: data['percentage'],
-              contextText: data['context'],
-              isPositive: data['isPositive'],
-              icon: data['icon'],
-              baseColor: data['color'],
+             child: SizedBox(
+              height: 140, // Fixed height to constrain Expanded child
+              child: StatCard(
+                title: data['title'],
+                value: data['value'],
+                total: data['total'],
+                percentage: data['percentage'],
+                contextText: data['context'],
+                isPositive: data['isPositive'],
+                icon: data['icon'],
+                baseColor: data['color'],
+              ),
             ),
           ),
         );
@@ -95,9 +104,9 @@ class DashboardView extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Left Column: Chart (Flex 7 - 70%)
+        // Left Column: Chart (Flex 2 - 66%)
          const Expanded(
-          flex: 7,
+          flex: 2,
           child: SizedBox(
             height: 400,
             child: TrendsChart(),
@@ -105,19 +114,14 @@ class DashboardView extends StatelessWidget {
         ),
         const SizedBox(width: 24),
          
-        // Right Column: Feed & Anomalies (Flex 3 - 30%)
+        // Right Column: Feed (Flex 1 - 33%)
         Expanded(
-          flex: 3,
-          child: Column(
-            children: [
-              ActivityFeed(
-                activities: DashboardLogic.recentActivity,
-              ),
-              const SizedBox(height: 24),
-               AnomaliesCard(
-                anomalies: DashboardLogic.anomalies,
-              ),
-            ],
+          flex: 1,
+          child: SizedBox(
+            height: 400,
+            child: ActivityFeed(
+              activities: DashboardLogic.recentActivity,
+            ),
           ),
         ),
       ],

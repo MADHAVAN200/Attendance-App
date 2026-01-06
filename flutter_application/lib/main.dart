@@ -1,11 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv
 import 'features/dashboard/dashboard_screen.dart';
+import 'features/auth/login_screen.dart'; // Import new LoginScreen
 import 'shared/providers/theme_simple.dart';
 import 'shared/widgets/orientation_guard.dart';
+import 'shared/services/auth_service.dart';
 
-void main() {
-  runApp(const AttendanceApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
+
+  final authService = AuthService();
+  await authService.init();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider<AuthService>.value(value: authService),
+      ],
+      child: const AttendanceApp(),
+    ),
+  );
 }
 
 class AttendanceApp extends StatelessWidget {
@@ -19,52 +38,89 @@ class AttendanceApp extends StatelessWidget {
         return MaterialApp(
           title: 'Admin Dashboard',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF5B60F6),
-              primary: const Color(0xFF5B60F6),
-              background: const Color(0xFFF8FAFC),
-              surface: const Color(0xFFFFFFFF),
-              onSurface: const Color(0xFF0F172A),
-              secondary: const Color(0xFF64748B),
-            ),
-            scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-            fontFamily: GoogleFonts.poppins().fontFamily,
-            brightness: Brightness.light,
-            cardColor: const Color(0xFFFFFFFF),
-            dividerColor: const Color(0xFFE2E8F0),
-            textTheme: GoogleFonts.poppinsTextTheme(ThemeData.light().textTheme).apply(
-              bodyColor: const Color(0xFF0F172A),
-              displayColor: const Color(0xFF0F172A),
-            ),
-          ),
-          darkTheme: ThemeData(
-            useMaterial3: true,
-            colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF5B60F6),
-              primary: const Color(0xFF5B60F6),
-              background: const Color(0xFF0B1220),
-              surface: const Color(0xFF1E293B), // Base for glass, handled in widget mostly
-              onSurface: const Color(0xFFE5E7EB),
-              secondary: const Color(0xFF94A3B8),
-              brightness: Brightness.dark,
-            ),
-            scaffoldBackgroundColor: const Color(0xFF0B1220),
-            fontFamily: GoogleFonts.poppins().fontFamily,
-            brightness: Brightness.dark,
-            cardColor: const Color(0xFF1E293B), 
-            dividerColor: const Color(0xFF334155),
-            textTheme: GoogleFonts.poppinsTextTheme(ThemeData.dark().textTheme).apply(
-              bodyColor: const Color(0xFFE5E7EB),
-              displayColor: const Color(0xFFE5E7EB),
-            ),
-          ),
+          theme: _buildTheme(Brightness.light),
+          darkTheme: _buildTheme(Brightness.dark),
           themeMode: currentMode,
-          // Wrap DashboardScreen with OrientationGuard
-          home: const OrientationGuard(child: DashboardScreen()), 
+          // Check for existing session or show login
+          home: const AuthWrapper(), 
         );
       },
     );
+  }
+
+  ThemeData _buildTheme(Brightness brightness) {
+    final isDark = brightness == Brightness.dark;
+    return ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: ColorScheme.fromSeed(
+        brightness: brightness, // Explicitly match the brightness
+        seedColor: const Color(0xFF5B60F6),
+        primary: const Color(0xFF5B60F6),
+        background: isDark ? const Color(0xFF0B1220) : const Color(0xFFF8FAFC),
+        surface: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF),
+        onSurface: isDark ? const Color(0xFFE5E7EB) : const Color(0xFF0F172A),
+        secondary: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+      ),
+      scaffoldBackgroundColor: isDark ? const Color(0xFF0B1220) : const Color(0xFFF8FAFC),
+      fontFamily: GoogleFonts.poppins().fontFamily,
+      cardColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF),
+      dividerColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+      textTheme: GoogleFonts.poppinsTextTheme(
+        isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme
+      ).apply(
+        bodyColor: isDark ? const Color(0xFFE5E7EB) : const Color(0xFF0F172A),
+        displayColor: isDark ? const Color(0xFFE5E7EB) : const Color(0xFF0F172A),
+      ),
+    );
+  }
+}
+
+class AuthWrapper extends StatefulWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  bool _isLoading = true;
+  bool _isAuthenticated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    // Check auth status (Refresh -> Get User)
+    final user = await authService.checkAuthStatus();
+    
+    if (mounted) {
+      setState(() {
+        _isAuthenticated = user != null;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_isAuthenticated) {
+      return const OrientationGuard(child: DashboardScreen());
+    }
+
+    // Use the new LoginScreen
+    return const LoginScreen();
   }
 }

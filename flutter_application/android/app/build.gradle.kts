@@ -17,8 +17,8 @@ android {
 
     defaultConfig {
         applicationId = "co.mano.attendance"
-        minSdk = flutter.minSdkVersion  // Android 5.0 (Lollipop) - Broader compatibility
-        targetSdk = 35  // Android 15 - Required by Play Store
+        minSdk = flutter.minSdkVersion // Required for webview_flutter
+        targetSdk = 35
         versionCode = 4 
         versionName = "1.0.2"
         multiDexEnabled = true // Fixes "crash" due to method limit on older devices

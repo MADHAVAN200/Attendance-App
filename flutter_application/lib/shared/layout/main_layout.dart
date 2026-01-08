@@ -27,7 +27,7 @@ class MainLayout extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: isDark
               ? [const Color(0xFF0F172A), const Color(0xFF334155)]
-              : [const Color(0xFFF1F5F9), const Color(0xFFCBD5E1)], // Slightly darker gradient for glass effect visibility
+              : [const Color(0xFFF8FAFC), const Color(0xFFF8FAFC)], // Solid color #F8FAFC simulated via gradient or could changes to color
         ),
       ),
       child: Scaffold(

@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../shared/services/auth_service.dart';
-import '../../shared/constants/api_constants.dart';
-import '../dashboard/dashboard_screen.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+import 're_captcha_v2.dart';
 import 'mobile/views/login_mobile_portrait.dart';
 import 'tablet/views/login_tablet_portrait.dart';
 import 'tablet/views/login_tablet_landscape.dart';
+import '../../shared/services/auth_service.dart';
+import '../../main.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,105 +18,89 @@ class LoginScreen extends StatefulWidget {
 }
 
 class LoginScreenState extends State<LoginScreen> {
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-  
+  final formKey = GlobalKey<FormState>();
+  final identifierController = TextEditingController();
+  final passwordController = TextEditingController();
+
   bool isLoading = false;
   bool isPasswordVisible = false;
-
   String? captchaToken;
 
-  @override
-  void initState() {
-    super.initState();
-    // ReCaptcha V2 is handled by the widget in the view
-  }
-  
   void togglePasswordVisibility() {
-    setState(() {
-      isPasswordVisible = !isPasswordVisible;
-    });
+    setState(() => isPasswordVisible = !isPasswordVisible);
   }
 
   void setCaptchaToken(String token) {
-    setState(() {
-      captchaToken = token;
-    });
+    setState(() => captchaToken = token);
   }
 
   Future<void> handleLogin() async {
     if (!formKey.currentState!.validate()) return;
 
     if (captchaToken == null) {
-       _showError('Please complete the Captcha verification.');
-       return;
+      _showError('Please complete CAPTCHA verification');
+      return;
     }
 
     setState(() => isLoading = true);
 
     try {
-      if (!mounted) return;
-      final authService = Provider.of<AuthService>(context, listen: false);
-      
-      await authService.login(
-        emailController.text.trim(),
+      final auth = Provider.of<AuthService>(context, listen: false);
+      // Determine if input looks like an email for tracking, 
+      // but send as 'user_input' to backend regardless
+      await auth.login(
+        identifierController.text.trim(),
         passwordController.text,
         captchaToken!,
       );
 
-      if (mounted) {
-         Navigator.of(context).pushReplacement(
-           MaterialPageRoute(builder: (_) => const DashboardScreen()),
-         );
-      }
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AttendanceApp()),
+      );
     } catch (e) {
-      if (mounted) {
-        _showError(e.toString().replaceAll('Exception: ', ''));
-        // Reset (Optional: technically we might want to reload the webview, but for now user can just re-click if needed or we assume token is single-use)
-        setState(() => captchaToken = null); 
-      }
+      _showError(e.toString());
+      setState(() => captchaToken = null);
     } finally {
-      if (mounted) setState(() => isLoading = false);
+      setState(() => isLoading = false);
     }
   }
 
-  void _showError(String message) {
+  void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
+        content: Text(msg),
+        backgroundColor: Theme.of(context).colorScheme.error,
       ),
     );
   }
 
+  Widget buildCaptcha() {
+    // Pass current theme brightness to customize ReCaptcha appearance if desired
+    return ReCaptchaV2(
+      siteKey: dotenv.env['RECAPTCHA_SITE_KEY'] ?? 'missing-key',
+      onVerified: setCaptchaToken,
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
-    // Force Immersive Mode
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // Mobile Breakpoint
           if (constraints.maxWidth < 600) {
             return LoginMobilePortrait(controller: this);
           }
-
           return OrientationBuilder(
-            builder: (context, orientation) {
-              if (orientation == Orientation.portrait) {
-                return LoginTabletPortrait(controller: this);
-              } else {
-                // Check if it's a small landscape screen (like mobile landscape) or tablet
-                if (constraints.maxWidth < 900) {
-                   // Fallback to mobile portrait style for small landscape or implement MobileLandscape if needed
-                   // For now, reusing MobilePortrait usually works well enough or TabletPortrait
-                   return LoginMobilePortrait(controller: this); 
-                }
-                return LoginTabletLandscape(controller: this);
-              }
+            builder: (_, orientation) {
+              return orientation == Orientation.portrait
+                  ? LoginTabletPortrait(controller: this)
+                  : LoginTabletLandscape(controller: this);
             },
           );
         },

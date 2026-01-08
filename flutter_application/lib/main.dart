@@ -65,6 +65,10 @@ class AttendanceApp extends StatelessWidget {
       scaffoldBackgroundColor: isDark ? const Color(0xFF0B1220) : const Color(0xFFF8FAFC),
       fontFamily: GoogleFonts.poppins().fontFamily,
       cardColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF),
+      cardTheme: CardThemeData(
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFFFFFFF),
+        surfaceTintColor: Colors.transparent,
+      ),
       dividerColor: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
       textTheme: GoogleFonts.poppinsTextTheme(
         isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme

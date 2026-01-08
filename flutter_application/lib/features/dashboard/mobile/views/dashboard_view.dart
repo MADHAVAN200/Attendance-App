@@ -7,6 +7,8 @@ import '../../tablet/widgets/activity_feed.dart';
 import '../../tablet/widgets/trends_chart.dart';
 import '../../tablet/widgets/anomalies_card.dart';
 import '../../dashboard.dart'; // Import for DashboardLogic
+import '../../../../shared/navigation/navigation_controller.dart'; // Import Navigation
+import '../../../policy_engine/tablet/views/policy_engine_view.dart'; // Import PolicyEngineView
 
 class MobileDashboardContent extends StatelessWidget {
   const MobileDashboardContent({super.key});
@@ -68,7 +70,15 @@ class MobileDashboardContent extends StatelessWidget {
                         context, 
                         action['title'], 
                         action['icon'], 
-                        action['color']
+                        action['color'],
+                        () {
+                          if (action['page'] != null) {
+                            if (action['initialTab'] != null) {
+                              PolicyEngineView.initialTabNotifier.value = action['initialTab'] as int;
+                            }
+                            navigateTo(action['page'] as PageType);
+                          }
+                        },
                       ),
                     );
                   }).toList(),
@@ -137,32 +147,42 @@ class MobileDashboardContent extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActionItem(BuildContext context, String title, IconData icon, Color color) {
+  Widget _buildQuickActionItem(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
     return GlassContainer(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
+      padding: EdgeInsets.zero, // Remove padding from container to let InkWell scale
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16), // Match GlassContainer radius if implied, usually we need to match styling
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                    ),
+                  ),
+                ),
+                Icon(Icons.arrow_forward_ios, size: 14, color: Theme.of(context).textTheme.bodySmall?.color),
+              ],
             ),
-            child: Icon(icon, color: color, size: 24),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                color: Theme.of(context).textTheme.bodyLarge?.color,
-              ),
-            ),
-          ),
-          Icon(Icons.arrow_forward_ios, size: 14, color: Theme.of(context).textTheme.bodySmall?.color),
-        ],
+        ),
       ),
     );
   }

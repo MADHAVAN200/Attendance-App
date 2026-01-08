@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../../../shared/navigation/navigation_controller.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../../../auth/login_screen.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../main.dart';
 
 class ProfileView extends StatelessWidget {
   const ProfileView({super.key});
@@ -16,14 +21,34 @@ class ProfileView extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Details Row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _buildContactInfoCard(context)),
-              const SizedBox(width: 24),
-              Expanded(child: _buildEmploymentDetailsCard(context)),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+               // Threshold for Tablet Portrait (e.g., < 900 or even < 600 depending on content)
+               // Using 900 to match previous logic for consistency
+               final isPortrait = constraints.maxWidth < 900;
+
+               if (isPortrait) {
+                 return Column(
+                   children: [
+                     _buildContactInfoCard(context),
+                     const SizedBox(height: 24),
+                     _buildEmploymentDetailsCard(context),
+                   ],
+                 );
+               }
+
+               return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildContactInfoCard(context)),
+                  const SizedBox(width: 24),
+                  Expanded(child: _buildEmploymentDetailsCard(context)),
+                ],
+              );
+            },
           ),
+          const SizedBox(height: 24),
+          _buildLogoutCard(context),
         ],
       ),
     );
@@ -234,6 +259,46 @@ class ProfileView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLogoutCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        final authService = Provider.of<AuthService>(context, listen: false);
+        await authService.logout();
+        
+            if (context.mounted) {
+               // Reset internal navigation state
+               navigationNotifier.value = PageType.dashboard;
+
+              Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            }
+      },
+      child: GlassContainer(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        color: Colors.red.withOpacity(0.1), // Distinctive red tint
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.logout, color: Colors.red),
+            const SizedBox(width: 12),
+            Text(
+              'Log Out',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.red,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

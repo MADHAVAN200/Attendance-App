@@ -7,6 +7,8 @@ import '../widgets/activity_feed.dart';
 import '../widgets/anomalies_card.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/trends_chart.dart';
+import '../../../../shared/navigation/navigation_controller.dart';
+import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 
 class TabletLandscape extends StatelessWidget {
   const TabletLandscape({super.key});
@@ -117,6 +119,14 @@ class TabletLandscape extends StatelessWidget {
               subtitle: data['subtitle'],
               icon: data['icon'],
               color: data['color'],
+              onTap: () {
+                if (data['page'] != null) {
+                  if (data['initialTab'] != null) {
+                    PolicyEngineView.initialTabNotifier.value = data['initialTab'] as int;
+                  }
+                  navigateTo(data['page'] as PageType);
+                }
+              },
             );
           },
         ),

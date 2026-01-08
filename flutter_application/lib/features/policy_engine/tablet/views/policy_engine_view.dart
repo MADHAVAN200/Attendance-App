@@ -6,6 +6,8 @@ import 'add_shift_dialog.dart';
 class PolicyEngineView extends StatefulWidget {
   const PolicyEngineView({super.key});
 
+  static final ValueNotifier<int> initialTabNotifier = ValueNotifier<int>(0);
+
   @override
   State<PolicyEngineView> createState() => _PolicyEngineViewState();
 }
@@ -16,7 +18,16 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    // Use the notifier value as initial index, then reset to 0
+    final initialIndex = PolicyEngineView.initialTabNotifier.value;
+    _tabController = TabController(length: 2, vsync: this, initialIndex: initialIndex);
+    
+    // Defer reset to next frame to ensure it's used
+    if (initialIndex != 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        PolicyEngineView.initialTabNotifier.value = 0;
+      });
+    }
   }
 
   @override
@@ -93,32 +104,68 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
   }
 
   Widget _buildAutomationRules(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 1. Left: Toolbox
-          Expanded(
-            flex: 2,
-            child: _buildToolbox(context),
-          ),
-          const SizedBox(width: 24),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isPortrait = constraints.maxWidth < 900;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
 
-          // 2. Center: Canvas
-          Expanded(
-            flex: 5,
-            child: _buildCanvas(context),
-          ),
-          const SizedBox(width: 24),
+        if (isPortrait) {
+          return Center(
+             child: Column(
+               mainAxisAlignment: MainAxisAlignment.center,
+               children: [
+                 Icon(Icons.screen_rotation, size: 64, color: Colors.grey[400]),
+                 const SizedBox(height: 24),
+                 Text(
+                   'Please rotate your device',
+                   style: GoogleFonts.poppins(
+                     fontSize: 20,
+                     fontWeight: FontWeight.w600,
+                     color: isDark ? Colors.white : Colors.black87,
+                   ),
+                 ),
+                 const SizedBox(height: 8),
+                 Text(
+                   'Automation Rules are only available in landscape mode',
+                   style: GoogleFonts.poppins(
+                     fontSize: 14,
+                     color: Colors.grey[500],
+                   ),
+                   textAlign: TextAlign.center,
+                 ),
+               ],
+             ),
+           );
+        }
 
-          // 3. Right: Properties Panel
-          Expanded(
-            flex: 3,
-            child: _buildPropertiesPanel(context),
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. Left: Toolbox
+              Expanded(
+                flex: 2,
+                child: _buildToolbox(context),
+              ),
+              const SizedBox(width: 24),
+
+              // 2. Center: Canvas
+              Expanded(
+                flex: 5,
+                child: _buildCanvas(context),
+              ),
+              const SizedBox(width: 24),
+
+              // 3. Right: Properties Panel
+              Expanded(
+                flex: 3,
+                child: _buildPropertiesPanel(context),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      }
     );
   }
 
@@ -483,54 +530,108 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
           const SizedBox(height: 24),
 
           // Shifts Grid
+          // Shifts Grid
           Expanded(
-            child: SingleChildScrollView(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _buildShiftCard(
-                      context,
-                      title: 'General Shift',
-                      type: 'FIXED',
-                      timing: '09:00 - 18:00',
-                      duration: '9h 00m',
-                      gracePeriod: '15 Mins',
-                      overtime: 'On (> 9h)',
-                      icon: Icons.access_time_filled,
-                      color: Colors.blue,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // Determine if we should stack vertically or horizontally
+                // Use a threshold or orientation check. Tablet Portrait is usually < 800-900 width
+                final isPortrait = constraints.maxWidth < 900; 
+
+                if (isPortrait) {
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 32),
+                    child: Column(
+                      children: [
+                        _buildShiftCard(
+                          context,
+                          title: 'General Shift',
+                          type: 'FIXED',
+                          timing: '09:00 - 18:00',
+                          duration: '9h 00m',
+                          gracePeriod: '15 Mins',
+                          overtime: 'On (> 9h)',
+                          icon: Icons.access_time_filled,
+                          color: Colors.blue,
+                        ),
+                        const SizedBox(height: 24),
+                        _buildShiftCard(
+                          context,
+                          title: 'Morning Shift',
+                          type: 'ROTATIONAL',
+                          timing: '06:00 - 14:00',
+                          duration: '9h 00m',
+                          gracePeriod: '10 Mins',
+                          overtime: 'Off',
+                          icon: Icons.wb_sunny_outlined,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(height: 24),
+                        _buildShiftCard(
+                          context,
+                          title: 'Night Shift',
+                          type: 'NIGHT',
+                          timing: '22:00 - 06:00',
+                          duration: '9h 00m',
+                          gracePeriod: '30 Mins',
+                          overtime: 'On (> 8h)',
+                          icon: Icons.nightlight_round,
+                          color: Colors.deepPurple,
+                        ),
+                      ],
                     ),
+                  );
+                }
+
+                return SingleChildScrollView(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _buildShiftCard(
+                          context,
+                          title: 'General Shift',
+                          type: 'FIXED',
+                          timing: '09:00 - 18:00',
+                          duration: '9h 00m',
+                          gracePeriod: '15 Mins',
+                          overtime: 'On (> 9h)',
+                          icon: Icons.access_time_filled,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: _buildShiftCard(
+                          context,
+                          title: 'Morning Shift',
+                          type: 'ROTATIONAL',
+                          timing: '06:00 - 14:00',
+                          duration: '9h 00m',
+                          gracePeriod: '10 Mins',
+                          overtime: 'Off',
+                          icon: Icons.wb_sunny_outlined,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: _buildShiftCard(
+                          context,
+                          title: 'Night Shift',
+                          type: 'NIGHT',
+                          timing: '22:00 - 06:00',
+                          duration: '9h 00m',
+                          gracePeriod: '30 Mins',
+                          overtime: 'On (> 8h)',
+                          icon: Icons.nightlight_round,
+                          color: Colors.deepPurple,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 24),
-                  Expanded(
-                    child: _buildShiftCard(
-                      context,
-                      title: 'Morning Shift',
-                      type: 'ROTATIONAL',
-                      timing: '06:00 - 14:00',
-                      duration: '9h 00m',
-                      gracePeriod: '10 Mins',
-                      overtime: 'Off',
-                      icon: Icons.wb_sunny_outlined,
-                      color: Colors.green,
-                    ),
-                  ),
-                  const SizedBox(width: 24),
-                  Expanded(
-                    child: _buildShiftCard(
-                      context,
-                      title: 'Night Shift',
-                      type: 'NIGHT',
-                      timing: '22:00 - 06:00',
-                      duration: '9h 00m',
-                      gracePeriod: '30 Mins',
-                      overtime: 'On (> 8h)',
-                      icon: Icons.nightlight_round,
-                      color: Colors.deepPurple,
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],

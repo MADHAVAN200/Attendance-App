@@ -21,7 +21,7 @@ class AppSidebar extends StatelessWidget {
       blur: 60, // Stronger blur for iOS frosted effect
       color: Theme.of(context).brightness == Brightness.dark 
           ? Colors.black.withOpacity(0.2) // Explicit iOS dark glass
-          : Colors.white.withOpacity(0.2), // Explicit iOS light glass
+          : const Color(0xFFFFFFFF), // Solid White for Light Mode
       borderRadius: 0, 
       child: ValueListenableBuilder<PageType>(
         valueListenable: navigationNotifier,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../shared/navigation/navigation_controller.dart';
 
 class DashboardLogic {
   // KPI Data
@@ -52,18 +53,22 @@ class DashboardLogic {
       'subtitle': 'Create new user profile',
       'icon': Icons.person_add_outlined,
       'color': const Color(0xFF6366F1),
+      'page': PageType.employees,
     },
     {
       'title': 'Generate Report',
       'subtitle': 'Download monthly stats',
       'icon': Icons.description_outlined,
       'color': const Color(0xFF3B82F6),
+      'page': PageType.reports,
     },
     {
       'title': 'Manage Shifts',
       'subtitle': 'Update work schedules',
       'icon': Icons.work_outline,
       'color': const Color(0xFF8B5CF6),
+      'page': PageType.policyEngine,
+      'initialTab': 1, // Shift Configuration Tab index
     },
   ];
 

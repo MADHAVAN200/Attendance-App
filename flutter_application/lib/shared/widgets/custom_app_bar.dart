@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/theme_simple.dart';
 import 'glass_container.dart';
+import 'package:provider/provider.dart';
+import '../../features/auth/login_screen.dart';
+import '../services/auth_service.dart';
 import '../navigation/navigation_controller.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
@@ -106,10 +109,24 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                              Navigator.pop(context);
                           }),
                           Divider(height: 1, thickness: 1, color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey[200]),
-                          _buildDropdownItem(context, icon: Icons.logout, text: 'Logout', onTap: () {
-                            Navigator.pop(context);
-                            // Implement logout logic here
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logged out successfully')));
+                          _buildDropdownItem(context, icon: Icons.logout, text: 'Logout', onTap: () async {
+                            Navigator.pop(context); // Close dropdown
+                            
+                            // Perform logout
+                            final auth = Provider.of<AuthService>(context, listen: false);
+                            await auth.logout();
+                            
+                            if (context.mounted) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                (route) => false,
+                              );
+                              
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Logged out successfully')),
+                              );
+                            }
                           }, isDestructive: true),
                         ],
                       ),

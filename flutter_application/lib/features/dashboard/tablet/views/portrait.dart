@@ -14,6 +14,8 @@ import '../../../attendance/tablet/views/my_attendance_view.dart';
 import '../../../live_attendance/tablet/views/live_attendance_view.dart';
 import '../../../reports/tablet/views/reports_view.dart';
 import '../../../holidays/tablet/views/holidays_view.dart';
+import '../../../policy_engine/tablet/views/policy_engine_view.dart';
+import '../../../profile/tablet/views/profile_view.dart';
 
 class TabletPortrait extends StatelessWidget {
   const TabletPortrait({super.key});
@@ -77,32 +79,7 @@ class TabletPortrait extends StatelessWidget {
                         case PageType.holidays:
                            return const HolidaysView();
                         case PageType.policyEngine:
-                           return Center(
-                             child: Column(
-                               mainAxisAlignment: MainAxisAlignment.center,
-                               children: [
-                                 Icon(Icons.screen_rotation, size: 64, color: Colors.grey[400]),
-                                 const SizedBox(height: 24),
-                                 Text(
-                                   'Please rotate your device',
-                                   style: GoogleFonts.poppins(
-                                     fontSize: 20,
-                                     fontWeight: FontWeight.w600,
-                                     color: isDark ? Colors.white : Colors.black87,
-                                   ),
-                                 ),
-                                 const SizedBox(height: 8),
-                                 Text(
-                                   'Policy Engine is only available in landscape mode',
-                                   style: GoogleFonts.poppins(
-                                     fontSize: 14,
-                                     color: Colors.grey[500],
-                                   ),
-                                   textAlign: TextAlign.center,
-                                 ),
-                               ],
-                             ),
-                           );
+                           return const PolicyEngineView();
                         case PageType.geoFencing:
                            return Center(
                              child: Column(
@@ -130,6 +107,8 @@ class TabletPortrait extends StatelessWidget {
                                ],
                              ),
                            );
+                        case PageType.profile:
+                           return const ProfileView();
                         default:
                           return Center(child: Text('Page: ${currentPage.title}'));
                       }
@@ -237,26 +216,26 @@ class DashboardContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 105, // Increased height to prevent overflow
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: DashboardLogic.quickActions.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 16),
-            itemBuilder: (context, index) {
-              final data = DashboardLogic.quickActions[index];
-              return SizedBox(
-                width: 280, // Fixed width for each card
-                child: ActionCard(
-                  title: data['title'],
-                  subtitle: data['subtitle'],
-                  icon: data['icon'],
-                  color: data['color'],
-                ),
-              );
-            },
-          ),
+        Column(
+          children: DashboardLogic.quickActions.map((data) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: ActionCard(
+                title: data['title'],
+                subtitle: data['subtitle'],
+                icon: data['icon'],
+                color: data['color'],
+                onTap: () {
+                  if (data['page'] != null) {
+                    if (data['initialTab'] != null) {
+                      PolicyEngineView.initialTabNotifier.value = data['initialTab'] as int;
+                    }
+                    navigateTo(data['page'] as PageType);
+                  }
+                },
+              ),
+            );
+          }).toList(),
         ),
       ],
     );

@@ -29,6 +29,30 @@ class GlassContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
+    if (!isDark) {
+      return Container(
+        width: width,
+        height: height,
+        margin: margin,
+        decoration: BoxDecoration(
+          color: color ?? Colors.white,
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: border ?? Border.all(color: Colors.grey[200]!, width: 1),
+          boxShadow: [
+             BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: padding ?? EdgeInsets.zero,
+          child: child,
+        ),
+      );
+    }
+
     return Container(
       width: width,
       height: height,
@@ -52,16 +76,11 @@ class GlassContainer extends StatelessWidget {
             padding: padding,
             decoration: BoxDecoration(
               // iPhone Style: Very low opacity tint
-              color: color ?? (isDark 
-                  ? Colors.black.withOpacity(0.2) 
-                  : Colors.white.withOpacity(0.3)
-              ), 
+              color: color ?? Colors.black.withOpacity(0.2),
               borderRadius: BorderRadius.circular(borderRadius),
               border: border ?? Border.all(
                 // Subtle border highlight (always white-ish for glass effect)
-                color: isDark 
-                    ? Colors.white.withOpacity(0.1) 
-                    : Colors.white.withOpacity(0.2), 
+                color: Colors.white.withOpacity(0.1),
                 width: 1, // Keep it thin
               ),
             ),

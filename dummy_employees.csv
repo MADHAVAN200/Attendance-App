@@ -1,0 +1,5 @@
+Name,Email,Phone,Department,Designation,Password
+John Doe,john.doe@example.com,9876543210,Engineering,Manager,Mano@123
+Jane Smith,jane.smith@example.com,9876543211,Human Resources,HR Executive,Mano@123
+Alice Johnson,alice.j@example.com,9876543212,Sales,Sales Executive,Mano@123
+Bob Brown,bob.b@example.com,9876543213,Engineering,Intern,Mano@123

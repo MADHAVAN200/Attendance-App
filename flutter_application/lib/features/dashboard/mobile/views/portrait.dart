@@ -5,7 +5,7 @@ import '../../../../shared/widgets/custom_app_bar.dart'; // Import CustomAppBar
 import '../../../../shared/navigation/navigation_controller.dart';
 import 'dashboard_view.dart';
 import '../../../employees/tablet/views/employees_view.dart';
-import '../../../employees/mobile/views/employees_view.dart';
+import '../../../employees/mobile/views/employees_mobile_view.dart';
 import '../../../attendance/mobile/views/my_attendance_view.dart';
 import '../../../attendance/tablet/views/my_attendance_view.dart';
 import '../../../live_attendance/mobile/views/live_attendance_view.dart';
@@ -76,7 +76,7 @@ class MobilePortrait extends StatelessWidget {
       
       // Reusing Tablet Views where compatible or placeholders
       case PageType.employees:
-         return const MobileEmployeesContent();
+         return const EmployeesMobileView();
       
       case PageType.myAttendance:
          return const MobileMyAttendanceContent();

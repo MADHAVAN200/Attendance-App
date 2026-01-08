@@ -132,4 +132,7 @@ class AuthService {
     final response = await _dio.get(ApiConstants.me);
     return response.data;
   }
+  
+  // Expose Dio client for other services to reuse auth headers/interceptors
+  Dio get dio => _dio;
 }

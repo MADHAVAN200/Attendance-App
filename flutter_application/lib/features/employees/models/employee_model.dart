@@ -1,90 +1,81 @@
-import 'package:flutter/material.dart';
-
 class Employee {
-  final String id;
-  final String name;
+  final int userId;
+  final String userName;
   final String email;
-  final String avatar;
-  final String role;
-  final String department;
-  final String shift;
-  final String status;
-  final String phone;
-  final Color color;
+  final String? phoneNo;
+  final String userType;
+  final String? designation;
+  final int? designationId;
+  final String? department;
+  final int? departmentId;
+  final String? shift;
+  final int? shiftId;
 
-  const Employee({
-    required this.id,
-    required this.name,
+  Employee({
+    required this.userId,
+    required this.userName,
     required this.email,
-    required this.avatar,
-    required this.role,
-    required this.department,
-    required this.shift,
-    required this.status,
-    required this.phone,
-    required this.color,
+    this.phoneNo,
+    required this.userType,
+    this.designation,
+    this.designationId,
+    this.department,
+    this.departmentId,
+    this.shift,
+    this.shiftId,
   });
 
-  static List<Employee> get dummyData => [
-    const Employee(
-      id: '1',
-      name: 'Sarah Wilson',
-      email: 'sarah.w@company.com',
-      avatar: 'S',
-      role: 'UX Designer',
-      department: 'Product',
-      shift: '09:00 - 17:00',
-      status: 'Active',
-      phone: '9876543210',
-      color: Colors.blue,
-    ),
-    const Employee(
-      id: '2',
-      name: 'Mike Johnson',
-      email: 'mike.j@company.com',
-      avatar: 'M',
-      role: 'Senior Dev',
-      department: 'Engineering',
-      shift: '10:00 - 18:00',
-      status: 'On Leave',
-      phone: '9876543211',
-      color: Colors.orange,
-    ),
-    const Employee(
-      id: '3',
-      name: 'Anna Davis',
-      email: 'anna.d@company.com',
-      avatar: 'A',
-      role: 'HR Manager',
-      department: 'Human Resources',
-      shift: '08:00 - 16:00',
-      status: 'Active',
-      phone: '9876543212',
-      color: Colors.purple,
-    ),
-    const Employee(
-      id: '4',
-      name: 'James Wilson',
-      email: 'james.w@company.com',
-      avatar: 'J',
-      role: 'Sales Lead',
-      department: 'Sales',
-      shift: '09:00 - 17:00',
-      status: 'Active',
-      phone: '9876543213',
-      color: Colors.green,
-    ),
-    const Employee(
-      id: '5',
-      name: 'Emily Chen',
-      email: 'emily.c@company.com',
-      avatar: 'E',
-      role: 'Frontend Dev',
-      department: 'Engineering',
-      shift: '10:00 - 18:00',
-      status: 'Onboarding',
-      phone: '9876543214',
-      color: Colors.pink,
-    ),
-  ];
+  factory Employee.fromJson(Map<String, dynamic> json) {
+    return Employee(
+      userId: json['user_id'],
+      userName: json['user_name'],
+      email: json['email'],
+      phoneNo: json['phone_no'],
+      userType: json['user_type'],
+      designation: json['desg_name'],
+      designationId: json['desg_id'],
+      department: json['dept_name'],
+      departmentId: json['dept_id'],
+      shift: json['shift_name'],
+      shiftId: json['shift_id'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'user_id': userId,
+      'user_name': userName,
+      'email': email,
+      'phone_no': phoneNo,
+      'user_type': userType,
+      'desg_id': designationId,
+      'dept_id': departmentId,
+      'shift_id': shiftId,
+    };
+  }
+}
+
+// Simple models for Dropdowns
+class Department {
+  final int id;
+  final String name;
+  Department({required this.id, required this.name});
+  factory Department.fromJson(Map<String, dynamic> json) => 
+      Department(id: json['dept_id'], name: json['dept_name']);
+}
+
+class Designation {
+  final int id;
+  final String name;
+  Designation({required this.id, required this.name});
+  factory Designation.fromJson(Map<String, dynamic> json) => 
+      Designation(id: json['desg_id'], name: json['desg_name']);
+}
+
+class Shift {
+  final int id;
+  final String name;
+  Shift({required this.id, required this.name});
+  factory Shift.fromJson(Map<String, dynamic> json) => 
+      Shift(id: json['shift_id'], name: json['shift_name']);
 }

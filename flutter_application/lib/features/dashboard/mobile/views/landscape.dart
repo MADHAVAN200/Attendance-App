@@ -11,7 +11,8 @@ import '../../tablet/widgets/stat_card.dart';
 import '../../tablet/widgets/trends_chart.dart';
 
 // Corrected relative imports for other views
-import '../../../employees/mobile/views/employees_view.dart';
+// Corrected relative imports for other views
+import '../../../employees/mobile/views/employees_mobile_view.dart';
 import '../../../attendance/mobile/views/my_attendance_view.dart';
 import '../../../live_attendance/mobile/views/live_attendance_view.dart';
 import '../../../reports/mobile/views/reports_view.dart';
@@ -62,7 +63,7 @@ class MobileLandscape extends StatelessWidget {
         return const MobileDashboardLandscapeContent();
       
       case PageType.employees:
-         return const MobileEmployeesContent();
+         return const EmployeesMobileView();
       
       case PageType.myAttendance:
          return const MobileMyAttendanceContent();

@@ -19,4 +19,7 @@ class ApiConfig {
   static const String timeOut = '/attendance/timeout';
   static const String myRecords = '/attendance/records';
   static const String adminAttendance = '/attendance/records/admin';
+  
+  // Holiday Routes
+  static const String holidays = '/holiday';
 }

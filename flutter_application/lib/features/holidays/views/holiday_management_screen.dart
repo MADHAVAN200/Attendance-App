@@ -1,0 +1,760 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:csv/csv.dart';
+import 'dart:convert';
+import 'dart:io'; 
+import '../../../../shared/widgets/glass_container.dart';
+import '../services/holiday_service.dart';
+import '../models/holiday_model.dart';
+// Note: Assuming API Config or Service handles Errors properly roughly.
+
+class HolidayManagementScreen extends StatefulWidget {
+  final HolidayService holidayService;
+  const HolidayManagementScreen({super.key, required this.holidayService});
+
+  @override
+  _HolidayManagementScreenState createState() => _HolidayManagementScreenState();
+}
+
+class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
+  List<Holiday> _holidays = [];
+  List<Holiday> _filteredHolidays = [];
+  bool _isLoading = false;
+  final TextEditingController _searchCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchHolidays();
+    _searchCtrl.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final query = _searchCtrl.text.toLowerCase();
+    setState(() {
+      _filteredHolidays = _holidays.where((h) {
+        return h.name.toLowerCase().contains(query) ||
+               h.date.contains(query) ||
+               h.type.toLowerCase().contains(query);
+      }).toList();
+    });
+  }
+
+  Future<void> _fetchHolidays() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await widget.holidayService.getHolidays();
+      setState(() {
+        // Ensure data is not null
+        _holidays = data;
+        _filteredHolidays = data;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error fetching holidays: $e")));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _deleteHoliday(int id) async {
+    try {
+      await widget.holidayService.deleteHolidays([id]);
+      _fetchHolidays();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Deleted successfully")));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Delete failed: $e")));
+      }
+    }
+  }
+
+  void _showAddDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => _HolidayFormDialog(
+        onSubmit: (data) async {
+          try {
+            await widget.holidayService.addHoliday(data);
+            Navigator.pop(ctx);
+            _fetchHolidays();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Holiday Added")));
+            }
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+          }
+        },
+      ),
+    );
+  }
+
+  void _showEditDialog(Holiday holiday) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _HolidayFormDialog(
+        initialData: holiday,
+        onSubmit: (data) async {
+          try {
+            await widget.holidayService.updateHoliday(holiday.id, data);
+            Navigator.pop(ctx);
+            _fetchHolidays();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Holiday Updated")));
+            }
+          } catch (e) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+          }
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    // Background handling manually if not handled by parent layout 
+    // But usually this screen is nested. We'll assume the background is already consistent 
+    // (Dark gradient or Light grey). If it's pure transparent, the list might be hard to read 
+    // without a container, but the design shows a container.
+
+    return Scaffold(
+      backgroundColor: Colors.transparent, 
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            // 1. Header (Search + Actions)
+            _buildHeader(context, isDark),
+            const SizedBox(height: 20),
+            
+            // 2. Main Content (Table)
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filteredHolidays.isEmpty
+                      ? Center(child: Text("No holidays found", style: GoogleFonts.poppins(color: Colors.grey)))
+                      : _buildHolidayTable(context, isDark),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, bool isDark) {
+    // Layout: 
+    // [Search Bar (Expanded)]  [Import CSV]  [+ Add Holiday]
+    // On Mobile: Search bar on one row, buttons on next? Or compressed.
+    
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+           _buildSearchField(context, isDark),
+           const SizedBox(height: 12),
+           Row(
+             children: [
+               Expanded(child: _buildImportButton(context, isDark)),
+               const SizedBox(width: 12),
+               Expanded(child: _buildAddButton(context)),
+             ],
+           )
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(child: _buildSearchField(context, isDark)),
+        const SizedBox(width: 16),
+        _buildImportButton(context, isDark),
+        const SizedBox(width: 12),
+        _buildAddButton(context),
+      ],
+    );
+  }
+
+  Widget _buildSearchField(BuildContext context, bool isDark) {
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B).withOpacity(0.5) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300,
+        ),
+      ),
+      child: TextField(
+        controller: _searchCtrl,
+        style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87),
+        decoration: InputDecoration(
+          hintText: 'Search holidays...',
+          hintStyle: GoogleFonts.poppins(color: Colors.grey),
+          prefixIcon: const Icon(Icons.search, color: Colors.grey),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 13), // Center vertically
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImportButton(BuildContext context, bool isDark) {
+    return TextButton.icon(
+      onPressed: _importCSV,
+      icon: Icon(Icons.upload_file, size: 18, color: isDark ? Colors.white70 : Colors.black87),
+      label: Text(
+        "Import CSV", 
+        style: GoogleFonts.poppins(color: isDark ? Colors.white70 : Colors.black87, fontWeight: FontWeight.w500)
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        backgroundColor: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+        shape: RoundedRectangleBorder(
+           borderRadius: BorderRadius.circular(12),
+           side: BorderSide(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300)
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton(BuildContext context) {
+    return ElevatedButton.icon(
+      onPressed: _showAddDialog,
+      icon: const Icon(Icons.add, size: 18, color: Colors.white),
+      label: Text(
+        "Holiday",
+        style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF6366F1), // Indigo Primary
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 0,
+      ),
+    );
+  }
+
+  Widget _buildHolidayTable(BuildContext context, bool isDark) {
+    // If Mobile (< 700), use ListView of Cards.
+    // If Tablet/Desktop (>= 700), use Header Row + ListView of Rows.
+    final isMobile = MediaQuery.of(context).size.width < 700;
+
+    return GlassContainer(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      color: isDark ? const Color(0xFF0F172A).withOpacity(0.4) : Colors.white,
+      border: isDark ? null : Border.all(color: Colors.grey.shade200),
+      child: Column(
+        children: [
+          // Table Header
+          if (!isMobile) 
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                children: [
+                   Expanded(flex: 3, child: _tableHeader("HOLIDAY NAME")),
+                   Expanded(flex: 2, child: _tableHeader("DATE")),
+                   Expanded(flex: 2, child: _tableHeader("TYPE")),
+                   SizedBox(width: 80, child: _tableHeader("ACTIONS", alignRight: true)),
+                ],
+              ),
+            ),
+          
+          if (!isMobile) const Divider(height: 1, color: Colors.white12),
+
+          Expanded(
+            child: ListView.separated(
+              itemCount: _filteredHolidays.length,
+              separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100),
+              itemBuilder: (context, index) {
+                final holiday = _filteredHolidays[index];
+                if (isMobile) {
+                  return _buildMobileCard(holiday, isDark);
+                } else {
+                  return _buildDesktopRow(holiday, isDark);
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tableHeader(String text, {bool alignRight = false}) {
+    return Text(
+      text,
+      textAlign: alignRight ? TextAlign.end : TextAlign.start,
+      style: GoogleFonts.poppins(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        color: Colors.grey,
+        letterSpacing: 0.5,
+      ),
+    );
+  }
+
+  Widget _buildDesktopRow(Holiday holiday, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        children: [
+          // 1. Name
+          Expanded(
+            flex: 3,
+            child: InkWell( // Make name clickable for edit
+              onTap: () => _showEditDialog(holiday),
+              child: Text(
+                holiday.name,
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+            ),
+          ),
+          
+          // 2. Date
+          Expanded(
+            flex: 2,
+            child: Row(
+              children: [
+                Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey[500]),
+                const SizedBox(width: 8),
+                Text(
+                  _formatDate(holiday.date),
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[400],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 3. Type
+          Expanded(
+            flex: 2,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _buildTypeChip(holiday.type),
+            ),
+          ),
+
+          // 4. Actions
+          SizedBox(
+            width: 80,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                onPressed: () => _showDeleteConfirm(holiday.id),
+                tooltip: "Delete",
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileCard(Holiday holiday, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: InkWell(
+        onTap: () => _showEditDialog(holiday),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    holiday.name,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+                _buildTypeChip(holiday.type),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey[500]),
+                const SizedBox(width: 8),
+                Text(
+                  _formatDate(holiday.date),
+                  style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[400]),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                  onPressed: () => _showDeleteConfirm(holiday.id),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeChip(String type) {
+    // Colors based on type
+    Color bgColor;
+    Color textColor;
+
+    switch (type.toLowerCase()) {
+      case 'public':
+        bgColor = const Color(0xFF6366F1).withOpacity(0.1); // Indigo tint
+        textColor = const Color(0xFF818CF8);
+        break;
+      case 'optional':
+        bgColor = const Color(0xFFF59E0B).withOpacity(0.1); // Amber tint
+        textColor = const Color(0xFFFBBF24);
+        break;
+      default:
+        bgColor = Colors.grey.withOpacity(0.1);
+        textColor = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        type,
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(String isoDate) {
+    try {
+      final dt = DateTime.parse(isoDate);
+      return DateFormat('EEE, d MMM yyyy').format(dt);
+    } catch (e) {
+      return isoDate;
+    }
+  }
+
+  void _showDeleteConfirm(int id) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: isDark 
+            ? GlassContainer(
+                padding: const EdgeInsets.all(24),
+                color: const Color(0xFF0F172A).withOpacity(0.5),
+                child: _buildDeleteContent(ctx, id, isDark),
+              )
+            : Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: _buildDeleteContent(ctx, id, isDark),
+              ),
+        );
+      }
+    );
+  }
+
+  Widget _buildDeleteContent(BuildContext ctx, int id, bool isDark) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Delete Holiday?",
+          style: GoogleFonts.poppins(
+            fontSize: 20, 
+            fontWeight: FontWeight.w600, 
+            color: isDark ? Colors.white : Colors.black87
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          "Are you sure you want to delete this holiday?",
+          style: GoogleFonts.poppins(
+            fontSize: 14, 
+            color: isDark ? Colors.grey[400] : Colors.grey[700]
+          ),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx), 
+              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey))
+            ),
+            const SizedBox(width: 8),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _deleteHoliday(id);
+              }, 
+              child: Text(
+                "Delete", 
+                style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.w600)
+              )
+            ),
+          ],
+        )
+      ],
+    );
+  }
+
+  Future<void> _importCSV() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+        final input = file.openRead();
+        final fields = await input.transform(utf8.decoder).transform(const CsvToListConverter()).toList();
+
+        if (fields.isEmpty) return;
+
+        // Expect contents: Name, Date, Type
+        // Skip header if first row looks like header
+        int startRow = 0;
+        if (fields[0].isNotEmpty && fields[0][0].toString().toLowerCase().contains('name')) {
+          startRow = 1;
+        }
+
+        final List<Map<String, dynamic>> batch = [];
+        for (int i = startRow; i < fields.length; i++) {
+          final row = fields[i];
+          if (row.length < 2) continue; // Skip invalid rows
+
+          // Safe row access
+          final name = row[0].toString();
+          // Date Parsing: Try to handle YYYY-MM-DD
+          final date = row[1].toString(); 
+          final type = row.length > 2 ? row[2].toString() : 'Public';
+          
+          if (name.isNotEmpty && date.isNotEmpty) {
+             batch.add({
+               "holiday_name": name,
+               "holiday_date": date,
+               "holiday_type": type,
+             });
+          }
+        }
+
+        if (batch.isNotEmpty) {
+          setState(() => _isLoading = true);
+          await widget.holidayService.addBulkHolidays(batch);
+          _fetchHolidays();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Imported ${batch.length} holidays")));
+          }
+        } else {
+           if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No valid data found in CSV")));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Import Failed: $e")));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+}
+
+class _HolidayFormDialog extends StatefulWidget {
+  final Function(Map<String, dynamic>) onSubmit;
+  final Holiday? initialData; // Add support for editing
+
+  const _HolidayFormDialog({required this.onSubmit, this.initialData});
+
+  @override
+  __HolidayFormDialogState createState() => __HolidayFormDialogState();
+}
+
+class __HolidayFormDialogState extends State<_HolidayFormDialog> {
+  late TextEditingController _nameCtrl; // Late init
+  late DateTime _selectedDate;
+  late String _type;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.initialData?.name ?? '');
+    _selectedDate = widget.initialData != null 
+        ? DateTime.parse(widget.initialData!.date) 
+        : DateTime.now();
+    _type = widget.initialData?.type ?? "Public";
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Dialog(
+       backgroundColor: Colors.transparent,
+       child: isDark 
+          ? GlassContainer(
+              padding: const EdgeInsets.all(24),
+              color: const Color(0xFF0F172A).withOpacity(0.5),
+              child: _buildContent(isDark),
+            )
+          : Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: _buildContent(isDark),
+            ),
+    );
+  }
+
+  Widget _buildContent(bool isDark) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Add Holiday",
+          style: GoogleFonts.poppins(
+            fontSize: 20, 
+            fontWeight: FontWeight.w600, 
+            color: isDark ? Colors.white : Colors.black87
+          ),
+        ),
+        const SizedBox(height: 24),
+        TextField(
+          controller: _nameCtrl,
+          style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87),
+          decoration: InputDecoration(
+            labelText: "Holiday Name",
+            labelStyle: TextStyle(color: isDark ? Colors.grey : Colors.grey[700]),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.grey)),
+            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF6366F1))),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Text(
+              "Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate)}",
+              style: GoogleFonts.poppins(color: isDark ? Colors.grey[300] : Colors.black87),
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _selectedDate,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2030),
+                  builder: (ctx, child) {
+                    return Theme(
+                      data: isDark ? ThemeData.dark() : ThemeData.light(),
+                      child: child!,
+                    );
+                  }
+                );
+                if (picked != null) setState(() => _selectedDate = picked);
+              },
+              child: const Text("Pick Date"),
+            )
+          ],
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<String>(
+          value: _type,
+          dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87),
+          items: ["Public", "Optional", "Observance"].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+          onChanged: (val) => setState(() => _type = val!),
+          decoration: InputDecoration(
+            labelText: "Type",
+            labelStyle: TextStyle(color: isDark ? Colors.grey : Colors.grey[700]),
+            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.grey)),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: () => Navigator.pop(context), 
+              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey))
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                if (_nameCtrl.text.isEmpty) return;
+                widget.onSubmit({
+                  "holiday_name": _nameCtrl.text,
+                  "holiday_date": DateFormat('yyyy-MM-dd').format(_selectedDate),
+                  "holiday_type": _type,
+                  // "applicable_json": ["All Locations"]
+                });
+              },
+              child: Text(
+                widget.initialData == null ? "Add" : "Update", 
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)
+              ),
+            )
+          ],
+        )
+      ],
+    );
+  }
+
+
+}

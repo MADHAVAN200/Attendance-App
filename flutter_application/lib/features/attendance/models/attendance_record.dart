@@ -1,5 +1,6 @@
 class AttendanceRecord {
   final int attendanceId;
+  final int? userId; // Link to user
   final String? timeIn; // ISO String
   final String? timeOut; // ISO String
   final double? timeInLat;
@@ -15,6 +16,7 @@ class AttendanceRecord {
 
   AttendanceRecord({
     required this.attendanceId,
+    this.userId,
     this.timeIn,
     this.timeOut,
     this.timeInLat,
@@ -32,6 +34,7 @@ class AttendanceRecord {
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
     return AttendanceRecord(
       attendanceId: json['attendance_id'] ?? 0,
+      userId: json['user_id'],
       timeIn: _parseDate(json['time_in']),
       timeOut: _parseDate(json['time_out']),
       timeInLat: _toDouble(json['time_in_lat']),

@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../../../shared/widgets/glass_container.dart';
-
+import '../../../../shared/widgets/glass_date_picker.dart';
+import '../../../../shared/services/auth_service.dart';
 import '../../../dashboard/tablet/widgets/stat_card.dart';
+import '../../../employees/services/employee_service.dart';
+import '../../../employees/models/employee_model.dart';
+import '../../../attendance/services/attendance_service.dart';
+import '../../../attendance/models/attendance_record.dart';
+import '../../../attendance/models/live_attendance_item.dart';
 import 'correction_requests_view.dart';
 
 class LiveAttendanceView extends StatefulWidget {
@@ -14,11 +22,101 @@ class LiveAttendanceView extends StatefulWidget {
 
 class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  
+  // Data State
+  DateTime _selectedDate = DateTime.now();
+  List<LiveAttendanceItem> _items = [];
+  bool _isLoading = false;
+  
+  // Cache
+  final Map<String, List<LiveAttendanceItem>> _dashboardCache = {};
+  
+  // Stats
+  int _present = 0;
+  int _active = 0;
+  int _absent = 0;
+  int _late = 0;
+
+  late EmployeeService _employeeService;
+  late AttendanceService _attendanceService;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    
+    final authService = Provider.of<AuthService>(context, listen: false);
+    _employeeService = EmployeeService(authService);
+    _attendanceService = AttendanceService(authService.dio);
+    
+    _fetchDashboardData();
+  }
+
+  Future<void> _fetchDashboardData({bool forceRefresh = false}) async {
+    if (!mounted) return;
+    
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+    // 1. Check Cache
+    if (!forceRefresh && _dashboardCache.containsKey(dateStr)) {
+      _updateStateWithItems(_dashboardCache[dateStr]!);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final dio = Provider.of<AuthService>(context, listen: false).dio;
+
+      final results = await Future.wait([
+        _employeeService.getEmployees(dio), 
+        _attendanceService.getAdminAttendanceRecords(dateStr)
+      ]);
+
+      final users = results[0] as List<Employee>;
+      final records = results[1] as List<AttendanceRecord>;
+
+      final merged = mergeAttendanceData(users, records);
+      
+      merged.sort((a, b) {
+        if (a.status == "Absent" && b.status != "Absent") return 1;
+        if (a.status != "Absent" && b.status == "Absent") return -1;
+        return 0;
+      });
+
+      // 2. Update Cache
+      _dashboardCache[dateStr] = merged;
+
+      if (mounted) {
+        _updateStateWithItems(merged);
+      }
+
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _updateStateWithItems(List<LiveAttendanceItem> items) {
+    setState(() {
+      _items = items;
+      _present = items.where((i) => i.status == "Present").length;
+      _active = items.where((i) => i.status == "Active").length;
+      _absent = items.where((i) => i.status == "Absent").length;
+      _late = items.where((i) => i.isLate).length;
+    });
+  }
+
+  List<LiveAttendanceItem> mergeAttendanceData(List<Employee> users, List<AttendanceRecord> records) {
+    return users.map((user) {
+      final userRecs = records.where((r) => r.userId == user.userId).toList();
+      final record = userRecs.isNotEmpty ? userRecs.first : null;
+      return LiveAttendanceItem(user: user, record: record);
+    }).toList();
   }
 
   @override
@@ -58,7 +156,7 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
       margin: const EdgeInsets.fromLTRB(32, 24, 32, 24),
       height: 48,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white, // Dark background for container
+        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
       ),
@@ -82,7 +180,7 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
           ],
         ),
         labelColor: Colors.white, 
-        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600], // Darker unselected text
+        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
         padding: const EdgeInsets.all(4), 
@@ -115,77 +213,129 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
   }
 
   Widget _buildLiveDashboard(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. KPIs (2x2 Grid)
+          // Date Selector
+          _buildDateSelector(context),
+          const SizedBox(height: 12),
+          
+          // 1. KPIs
           _buildKPIGrid(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-          // 2. Filters & Search (Stacked or wrapped)
+          // 2. Filters 
           _buildFilters(context),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
 
-          // 3. Real-time Monitoring List (Replaces wide table)
+          // 3. List
           _buildMonitoringList(context),
         ],
       ),
     );
   }
 
+  Widget _buildDateSelector(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        InkWell(
+          onTap: () async {
+            await showDialog(
+              context: context,
+              builder: (context) => GlassDatePicker(
+                initialDate: _selectedDate,
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+                onDateSelected: (newDate) {
+                  setState(() => _selectedDate = newDate);
+                  _fetchDashboardData();
+                },
+              ),
+            );
+          },
+          child: GlassContainer(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            borderRadius: 12,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today, 
+                  size: 16, 
+                  color: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.white 
+                      : Theme.of(context).primaryColor
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildKPIGrid() {
-    // Responsive Layout: 4 columns for Landscape, 2 for Portrait
     final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final totalEmployees = _items.length;
 
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: isLandscape ? 4 : 2, // 4 cards in a row for Landscape
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: isLandscape ? 2.0 : 2.4, // Adjust ratio for 4-column width
-      children: const [
+      crossAxisCount: isLandscape ? 4 : 2,
+      crossAxisSpacing: 20,
+      mainAxisSpacing: 20,
+      childAspectRatio: isLandscape ? 2.0 : 2.4,
+      children: [
         StatCard(
           title: 'Total Present',
-          value: '142',
-          total: '/ 150',
-          percentage: '+5%',
-          contextText: 'vs yesterday',
+          value: '$_present',
+          total: '/ $totalEmployees',
+          percentage: '',
+          contextText: 'For Selected Date',
           isPositive: true,
           icon: Icons.people_alt,
-          baseColor: Color(0xFF5B60F6),
+          baseColor: const Color(0xFF5B60F6),
         ),
         StatCard(
           title: 'Late Arrivals',
-          value: '12',
+          value: '$_late',
           total: '',
-          percentage: '-2%',
-          contextText: 'vs yesterday',
-          isPositive: true,
+          percentage: '',
+          contextText: 'Late Check-ins',
+          isPositive: false,
           icon: Icons.access_time_filled,
-          baseColor: Color(0xFFF59E0B),
+          baseColor: const Color(0xFFF59E0B),
         ),
         StatCard(
           title: 'Absent',
-          value: '8',
-          total: '',
-          percentage: '+1%',
-          contextText: 'vs yesterday',
-          isPositive: false,
-          icon: Icons.person_off,
-          baseColor: Color(0xFFEF4444),
-        ),
-        StatCard(
-          title: 'On Break',
-          value: '45',
+          value: '$_absent',
           total: '',
           percentage: '',
-          contextText: 'Currently',
+          contextText: 'Not checked in',
+          isPositive: false,
+          icon: Icons.person_off,
+          baseColor: const Color(0xFFEF4444),
+        ),
+        StatCard(
+          title: 'Active Now',
+          value: '$_active',
+          total: '',
+          percentage: '',
+          contextText: 'Currently clocked in',
           isPositive: true,
           icon: Icons.coffee,
-          baseColor: Color(0xFF10B981),
+          baseColor: const Color(0xFF10B981),
         ),
       ],
     );
@@ -252,42 +402,55 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
   }
 
   Widget _buildMonitoringList(BuildContext context) {
-    // Using dummy list data for now
-    final employees = [
-      {'name': 'Sarah Wilson', 'role': 'UX Designer', 'in': '09:00 AM', 'out': '--', 'hrs': '4h 30m', 'status': 'Active', 'color': Colors.green},
-      {'name': 'Mike Johnson', 'role': 'Developer', 'in': '09:15 AM', 'out': '--', 'hrs': '4h 15m', 'status': 'Late', 'color': Colors.orange},
-      {'name': 'Anna Davis', 'role': 'Product Owner', 'in': '--', 'out': '--', 'hrs': '--', 'status': 'Absent', 'color': Colors.red},
-      {'name': 'James Wilson', 'role': 'QA Engineer', 'in': '08:30 AM', 'out': '12:30 PM', 'hrs': '4h 00m', 'status': 'On Break', 'color': Colors.blue},
-    ];
+    if (_items.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Text('No attendance records found for this date.', style: GoogleFonts.poppins(color: Colors.grey)),
+        ),
+      );
+    }
 
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: employees.length,
-      separatorBuilder: (c, i) => const SizedBox(height: 12),
+      itemCount: _items.length,
+      separatorBuilder: (c, i) => const SizedBox(height: 20),
       itemBuilder: (context, index) {
-        final emp = employees[index];
-        return _buildMonitoringCard(context, emp);
+        final item = _items[index];
+        return _buildMonitoringCard(context, item);
       },
     );
   }
 
-  Widget _buildMonitoringCard(BuildContext context, Map<String, dynamic> emp) {
-    final color = emp['color'] as Color;
+  Widget _buildMonitoringCard(BuildContext context, LiveAttendanceItem item) {
+    Color color;
+    switch (item.statusLabel) {
+      case "Active": color = Colors.blue; break;
+      case "Late Active": color = Colors.blueAccent; break; 
+      case "Present": color = Colors.green; break;
+      case "Late": color = Colors.orange; break;
+      default: color = Colors.grey;
+    }
     
+    final inTime = item.record?.timeIn != null ? _formatTime(item.record!.timeIn) : '--';
+    final outTime = item.record?.timeOut != null ? _formatTime(item.record!.timeOut) : '--';
+    // Calc hours if both present? Or just raw
+    final hrs = '--'; // Todo: calculate duration if needed
+
     return GlassContainer(
       padding: const EdgeInsets.all(16),
       borderRadius: 16,
       child: Column(
         children: [
-          // Row 1: Profile + Status + Action
+          // Row 1: Profile + Status
           Row(
             children: [
               CircleAvatar(
                 radius: 20,
                 backgroundColor: color.withOpacity(0.1),
                 child: Text(
-                  (emp['name'] as String)[0], 
+                  item.name.isNotEmpty ? item.name[0].toUpperCase() : '?', 
                   style: GoogleFonts.poppins(color: color, fontWeight: FontWeight.bold),
                 ),
               ),
@@ -297,7 +460,7 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      emp['name'],
+                      item.name, // Use userName from LiveAttendanceItem
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -305,7 +468,7 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
                       ),
                     ),
                     Text(
-                      emp['role'],
+                      "${item.designation} • ${item.department}",
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Theme.of(context).textTheme.bodySmall?.color,
@@ -323,19 +486,13 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
                   border: Border.all(color: color.withOpacity(0.2)),
                 ),
                 child: Text(
-                  emp['status'],
+                  item.statusLabel,
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: color,
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              // Actions Stacked/Icon
-               GestureDetector(
-                onTap: () {},
-                child: Icon(Icons.more_vert, color: Theme.of(context).textTheme.bodySmall?.color, size: 20),
               ),
             ],
           ),
@@ -344,18 +501,28 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
           Divider(height: 1, color: Theme.of(context).dividerColor.withOpacity(0.5)),
           const SizedBox(height: 12),
 
-          // Row 2: Metrics (In / Out / Hrs)
+          // Row 2: Metrics
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildMetricItem(context, 'Time In', emp['in']),
-              _buildMetricItem(context, 'Time Out', emp['out']),
-              _buildMetricItem(context, 'Work Hrs', emp['hrs']),
+              _buildMetricItem(context, 'Time In', inTime),
+              _buildMetricItem(context, 'Time Out', outTime),
+              _buildMetricItem(context, 'Shift', item.user.shift ?? 'General'),
             ],
           ),
         ],
       ),
     );
+  }
+
+  String _formatTime(String? isoTime) {
+    if (isoTime == null) return '--';
+    try {
+      final dt = DateTime.parse(isoTime);
+      return DateFormat('hh:mm a').format(dt);
+    } catch (e) {
+      return ''; 
+    }
   }
 
   Widget _buildMetricItem(BuildContext context, String label, String value) {

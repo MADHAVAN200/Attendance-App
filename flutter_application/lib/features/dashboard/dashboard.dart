@@ -63,6 +63,13 @@ class DashboardLogic {
       'page': PageType.reports,
     },
     {
+      'title': 'Live Monitor',
+      'subtitle': 'Real-time attendance',
+      'icon': Icons.admin_panel_settings_outlined,
+      'color': const Color(0xFFEF4444), // Red
+      'page': PageType.liveAttendance,
+    },
+    {
       'title': 'Manage Shifts',
       'subtitle': 'Update work schedules',
       'icon': Icons.work_outline,

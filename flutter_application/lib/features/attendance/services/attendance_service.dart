@@ -26,6 +26,25 @@ class AttendanceService {
     }
   }
 
+  // 1.5 Get Admin Records
+  Future<List<AttendanceRecord>> getAdminAttendanceRecords(String date) async {
+    try {
+      final response = await _dio.get(ApiConfig.adminAttendance, queryParameters: {
+        'date_from': date,
+        'date_to': date,
+        'limit': 200, 
+      });
+
+      if (response.statusCode == 200 && response.data['ok']) {
+        final List<dynamic> list = response.data['data'];
+        return list.map((json) => AttendanceRecord.fromJson(json)).toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception('Failed to fetch live records: $e');
+    }
+  }
+
   // 2. Time In
   Future<Map<String, dynamic>> timeIn({
     required double latitude,

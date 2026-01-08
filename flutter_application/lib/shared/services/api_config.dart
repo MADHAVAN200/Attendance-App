@@ -18,4 +18,5 @@ class ApiConfig {
   static const String timeIn = '/attendance/timein';
   static const String timeOut = '/attendance/timeout';
   static const String myRecords = '/attendance/records';
+  static const String adminAttendance = '/attendance/records/admin';
 }

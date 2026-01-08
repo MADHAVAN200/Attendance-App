@@ -1,70 +1,102 @@
-
-import 'package:flutter/material.dart';
-
 class AttendanceRecord {
-  final String date;
-  final String timeIn;
-  final String timeOut;
-  final String location;
-  final String status;
-  final String totalHours;
-  final Color statusColor;
+  final int attendanceId;
+  final String? timeIn; // ISO String
+  final String? timeOut; // ISO String
+  final double? timeInLat;
+  final double? timeInLng;
+  final double? timeOutLat;
+  final double? timeOutLng;
+  final String? timeInAddress;
+  final String? timeOutAddress;
+  final String? timeInImage; // URL
+  final String? timeOutImage; // URL
+  final int lateMinutes;
+  final String status; // 'PRESENT', 'ABSENT', etc.
 
   AttendanceRecord({
-    required this.date,
-    required this.timeIn,
-    required this.timeOut,
-    required this.location,
+    required this.attendanceId,
+    this.timeIn,
+    this.timeOut,
+    this.timeInLat,
+    this.timeInLng,
+    this.timeOutLat,
+    this.timeOutLng,
+    this.timeInAddress,
+    this.timeOutAddress,
+    this.timeInImage,
+    this.timeOutImage,
+    this.lateMinutes = 0,
     required this.status,
-    required this.totalHours,
-    required this.statusColor,
   });
 
-  static List<AttendanceRecord> dummyData = [
-    AttendanceRecord(
-      date: 'Today, 02 Jan',
-      timeIn: '09:30 AM',
-      timeOut: '--:--',
-      location: 'Office - HQ',
-      status: 'Present',
-      totalHours: '4h 12m',
-      statusColor: const Color(0xFF10B981),
-    ),
-    AttendanceRecord(
-      date: 'Yesterday, 01 Jan',
-      timeIn: '09:15 AM',
-      timeOut: '06:45 PM',
-      location: 'Office - HQ',
-      status: 'On Time',
-      totalHours: '9h 30m',
-      statusColor: const Color(0xFF10B981),
-    ),
-    AttendanceRecord(
-      date: '31 Dec 2025',
-      timeIn: '09:45 AM',
-      timeOut: '06:15 PM',
-      location: 'Remote',
-      status: 'Late',
-      totalHours: '8h 30m',
-      statusColor: const Color(0xFFF59E0B),
-    ),
-    AttendanceRecord(
-      date: '30 Dec 2025',
-      timeIn: '--:--',
-      timeOut: '--:--',
-      location: '-',
-      status: 'On Leave',
-      totalHours: '0h',
-      statusColor: const Color(0xFFEF4444),
-    ),
-    AttendanceRecord(
-      date: '29 Dec 2025',
-      timeIn: '09:30 AM',
-      timeOut: '06:30 PM',
-      location: 'Office - HQ',
-      status: 'On Time',
-      totalHours: '9h 00m',
-      statusColor: const Color(0xFF10B981),
-    ),
-  ];
+  factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
+    return AttendanceRecord(
+      attendanceId: json['attendance_id'] ?? 0,
+      timeIn: _parseDate(json['time_in']),
+      timeOut: _parseDate(json['time_out']),
+      timeInLat: _toDouble(json['time_in_lat']),
+      timeInLng: _toDouble(json['time_in_lng']),
+      timeOutLat: _toDouble(json['time_out_lat']),
+      timeOutLng: _toDouble(json['time_out_lng']),
+      timeInAddress: json['time_in_address'],
+      timeOutAddress: json['time_out_address'],
+      timeInImage: json['time_in_image'], 
+      timeOutImage: json['time_out_image'],
+      lateMinutes: json['late_minutes'] ?? 0,
+      status: json['status'] ?? 'Draft',
+    );
+  }
+  
+  static double? _toDouble(dynamic val) {
+    if (val == null) return null;
+    return (val is num) ? val.toDouble() : double.tryParse(val.toString());
+  }
+
+  static String? _parseDate(dynamic val) {
+    if (val == null) return null;
+    // If it's already ISO (common case), DateTime.parse works
+    try {
+      // Try standard parse first
+      return DateTime.parse(val.toString()).toIso8601String();
+    } catch (_) {
+      // Handle JS Date string: "Thu Jan 08 2026 11:48:36 GMT+0000 (Coordinated Universal Time)"
+      try {
+        final str = val.toString();
+        // Extract the part we can parse: "Jan 08 2026 11:48:36" (Skip Day Name)
+        // RegEx to grab "Mon Jan 08 2026 11:48:36" part or similar?
+        // Let's simplified approach: Split by space.
+        // Parts: Thu, Jan, 08, 2026, 11:48:36, GMT+0000, ...
+        // We can construct a parseable string manually or use DateFormat.
+        // NOTE: DateFormat requires specific locale sometimes.
+        
+        // Simpler: Just return the string as is? 
+        // NO, the UI uses DateTime.parse(record.timeIn!). 
+        // So we MUST return a valid ISO string here or null.
+        
+        // Let's try to parse "Jan 08 2026 11:48:36"
+        // Thu Jan 08 2026 11:48:36 ...
+        // 0   1   2  3    4
+        final parts = str.split(' ');
+        if (parts.length >= 5) {
+           // parts[1] = Jan, parts[2] = 08, parts[3] = 2026, parts[4] = 11:48:36
+           final monthStr = parts[1];
+           final day = parts[2];
+           final year = parts[3];
+           final time = parts[4];
+           
+           final months = {
+             'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
+             'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+           };
+           final month = months[monthStr] ?? '01';
+           
+           // ISO: YYYY-MM-DDTHH:mm:ss
+           return "$year-$month-${day.padLeft(2, '0')}T$time";
+        }
+        return null; // Fail safe
+      } catch (e) {
+        return null;
+      }
+    }
+  }
 }

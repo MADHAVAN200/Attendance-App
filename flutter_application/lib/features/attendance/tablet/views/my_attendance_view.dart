@@ -1,8 +1,17 @@
-
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/widgets/glass_date_picker.dart';
+import '../../../../shared/services/auth_service.dart';
 import '../../models/attendance_record.dart';
+import '../../services/attendance_service.dart';
 
 class MyAttendanceView extends StatefulWidget {
   const MyAttendanceView({super.key});
@@ -12,18 +21,187 @@ class MyAttendanceView extends StatefulWidget {
 }
 
 class _MyAttendanceViewState extends State<MyAttendanceView> {
-  // Toggle basic states for visual feedback
-  bool _isCheckedIn = true;
+  late AttendanceService _attendanceService;
+  List<AttendanceRecord> _records = [];
+  final Map<String, List<AttendanceRecord>> _recordsCache = {}; // Cache
+  bool _isLoading = false;
+  final ImagePicker _picker = ImagePicker();
+  DateTime _selectedDate = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    final dio = Provider.of<AuthService>(context, listen: false).dio;
+    _attendanceService = AttendanceService(dio);
+    _fetchRecords();
+  }
+
+  Future<void> _fetchRecords() async {
+    if (!mounted) return;
+    
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+    // Check Cache
+    if (_recordsCache.containsKey(dateStr)) {
+      if (mounted) {
+        setState(() {
+          _records = _recordsCache[dateStr]!;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final data = await _attendanceService.getMyRecords(fromDate: dateStr, toDate: dateStr);
+      if (mounted) {
+        setState(() {
+          _records = data;
+          _recordsCache[dateStr] = data; // Store in cache
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error fetching records: $e")));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<Position?> _getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Location services are disabled.")));
+      return null;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Location permission denied.")));
+        return null;
+      }
+    }
+    
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Location permission permanently denied.")));
+      return null;
+    }
+
+    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  }
+
+  Future<void> _handleAttendanceAction(bool isTimeIn) async {
+    // 1. Get Location
+    final position = await _getCurrentLocation();
+    if (position == null) return;
+
+    // 1. Permission Check with Settings Prompt
+    var status = await Permission.camera.status;
+    if (!status.isGranted) {
+      status = await Permission.camera.request();
+      if (status.isPermanentlyDenied) {
+        if (mounted) {
+           showDialog(
+             context: context, 
+             builder: (ctx) => AlertDialog(
+               title: const Text("Permission Required"),
+               content: const Text("Camera access is needed to mark attendance. Please enable it in settings."),
+               actions: [
+                 TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+                 TextButton(
+                   onPressed: () { 
+                     Navigator.pop(ctx); 
+                     openAppSettings(); 
+                   }, 
+                   child: const Text("Open Settings")
+                 ),
+               ]
+             )
+           );
+        }
+        return;
+      }
+      if (!status.isGranted) return; // Denied but not permanently
+    }
+
+    // 2. Capture Selfie (System Camera)
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera, 
+        preferredCameraDevice: CameraDevice.front,
+        maxWidth: 600, 
+        imageQuality: 80,
+      );
+      
+      if (photo == null) return; // User canceled
+
+      // Show loading
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      // 3. Submit
+      try {
+        if (isTimeIn) {
+          await _attendanceService.timeIn(
+            latitude: position.latitude,
+            longitude: position.longitude,
+            imageFile: File(photo.path),
+          );
+        } else {
+          await _attendanceService.timeOut(
+            latitude: position.latitude,
+            longitude: position.longitude,
+            imageFile: File(photo.path),
+          );
+        }
+        
+        if (mounted) {
+          Navigator.pop(context); // Close loading
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isTimeIn ? "Time In Successful!" : "Time Out Successful!"), backgroundColor: Colors.green));
+          
+          // Invalidate cache for today as data changed
+          final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          _recordsCache.remove(todayStr);
+
+          _fetchRecords(); // Refresh list
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed: $e"), backgroundColor: Colors.red));
+        }
+      }
+    } catch (e) {
+       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Camera Error: $e")));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Determine active state for buttons based on last record
+    bool isCheckedIn = false;
+    if (_records.isNotEmpty) {
+      final activeRecord = _records.any((r) => r.timeOut == null);
+      isCheckedIn = activeRecord;
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Top Actions (Stacked Time In / Time Out)
-          _buildActionButtons(context),
+          _buildActionButtons(context, isCheckedIn),
           
           const SizedBox(height: 32),
 
@@ -41,7 +219,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, bool isCheckedIn) {
     // Stacked vertically as requested using Glass Cards
     return Column(
       children: [
@@ -49,26 +227,22 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
         _buildLargeActionButton(
           context,
           label: 'Time In',
-          subLabel: _isCheckedIn ? 'Checked in at 09:30 AM' : 'Start your shift',
+          subLabel: isCheckedIn ? 'You are currently checked in' : 'Start your shift',
           icon: Icons.login,
           color: const Color(0xFF10B981), // Green
-          isActive: !_isCheckedIn, // Example logic: disable if already checked in? Or just show state
-          onTap: () {
-            setState(() => _isCheckedIn = true);
-          },
+          isActive: !isCheckedIn,
+          onTap: () => _handleAttendanceAction(true),
         ),
         const SizedBox(height: 16),
         // Time Out Button
         _buildLargeActionButton(
           context,
           label: 'Time Out',
-          subLabel: _isCheckedIn ? 'End current shift' : 'Not checked in',
+          subLabel: isCheckedIn ? 'End current shift' : 'Not checked in',
           icon: Icons.logout,
           color: const Color(0xFFEF4444), // Red
-          isActive: _isCheckedIn,
-          onTap: () {
-            setState(() => _isCheckedIn = false);
-          },
+          isActive: isCheckedIn,
+          onTap: () => _handleAttendanceAction(false),
         ),
       ],
     );
@@ -85,14 +259,12 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return InkWell(
-      onTap: onTap,
+      onTap: isActive ? onTap : null, // Fix: Disable tap if not active
       borderRadius: BorderRadius.circular(20),
       child: GlassContainer(
         height: 100,
         width: double.infinity,
         borderRadius: 20,
-        // We can override color to give it a slight tint of the action color if active
-        // But let's stick to consistent glass style and use the icon/text for color
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
@@ -120,7 +292,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                      color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(isActive ? 1.0 : 0.5),
                     ),
                   ),
                   Text(
@@ -143,8 +315,6 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
   }
 
   Widget _buildDateSelector(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Row(
       children: [
         Text(
@@ -156,39 +326,41 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
           ),
         ),
         const Spacer(),
-        GlassContainer(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          borderRadius: 12,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              InkWell(
-                onTap: () {},
-                child: Icon(Icons.chevron_left, size: 20, color: Theme.of(context).textTheme.bodyLarge?.color),
+        InkWell(
+          onTap: () async {
+            await showDialog(
+              context: context,
+              builder: (context) => GlassDatePicker(
+                isLarge: true, // Larger for tablet
+                initialDate: _selectedDate,
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+                onDateSelected: (newDate) {
+                  setState(() => _selectedDate = newDate);
+                  _fetchRecords();
+                },
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today, size: 14, color: Theme.of(context).primaryColor),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Wed, 02 Jan 2026',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                  ],
+            );
+          },
+          child: GlassContainer(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            borderRadius: 12,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.calendar_today, size: 14, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
-              ),
-              InkWell(
-                onTap: () {},
-                child: Icon(Icons.chevron_right, size: 20, color: Theme.of(context).textTheme.bodyLarge?.color),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -196,58 +368,34 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
   }
 
   Widget _buildHistoryList(BuildContext context) {
-    // Dummy Data for Multiple Sessions in a Day
-    final sessions = [
-      {
-        'session': 'Session 1',
-        'inTime': '09:30 AM',
-        'inLocation': 'Reception Area',
-        'inImage': Colors.blue.shade100, // Placeholder color for image
-        'outTime': '01:00 PM',
-        'outLocation': 'Main Exit',
-        'outImage': Colors.blue.shade200,
-        'duration': '3h 30m',
-        'status': 'Completed',
-        'color': Colors.green,
-      },
-      {
-        'session': 'Session 2',
-        'inTime': '02:00 PM',
-        'inLocation': 'Side Entrance',
-        'inImage': Colors.orange.shade100,
-        'outTime': '06:30 PM',
-        'outLocation': 'Main Exit',
-        'outImage': Colors.orange.shade200,
-        'duration': '4h 30m',
-        'status': 'Completed',
-        'color': Colors.green,
-      },
-      {
-        'session': 'Session 3',
-        'inTime': '08:00 PM',
-        'inLocation': 'Remote Login',
-        'inImage': Colors.purple.shade100,
-        'outTime': null, // Active
-        'outLocation': null,
-        'outImage': null,
-        'duration': 'Running',
-        'status': 'Active',
-        'color': Colors.blue,
-      },
-    ];
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (_records.isEmpty) {
+      return Center(
+        child: Text(
+          "No records for this date",
+          style: GoogleFonts.poppins(
+            color: Colors.grey,
+            fontSize: 16
+          )
+        )
+      );
+    }
 
     return ListView.separated(
-      itemCount: sessions.length,
+      itemCount: _records.length,
       separatorBuilder: (c, i) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        return _buildSessionCard(context, sessions[index]);
+        return _buildSessionCard(context, _records[index]);
       },
     );
   }
 
-  Widget _buildSessionCard(BuildContext context, Map<String, dynamic> session) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final statusColor = session['color'] as Color;
+  Widget _buildSessionCard(BuildContext context, AttendanceRecord record) {
+    final statusColor = record.status == 'ABSENT' ? Colors.red : Colors.green; // Logic can be improved
+    final statusText = record.timeOut == null ? "Running" : "Completed"; 
 
     return GlassContainer(
       padding: const EdgeInsets.all(16),
@@ -271,7 +419,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                    RotatedBox(
                      quarterTurns: 3,
                      child: Text(
-                       '${session['status']}', // "Completed"
+                       statusText,
                        style: GoogleFonts.poppins(
                          fontSize: 10,
                          fontWeight: FontWeight.w600,
@@ -294,9 +442,9 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                      child: _buildPunchBlock(
                        context, 
                        type: 'TIME IN', 
-                       time: session['inTime'], 
-                       location: session['inLocation'], 
-                       imageColor: session['inImage'],
+                       time: _formatTime(record.timeIn), 
+                       location: record.timeInAddress ?? 'Unknown', 
+                       imageUrl: record.timeInImage,
                        icon: Icons.login,
                        accentColor: const Color(0xFF10B981),
                      ),
@@ -311,7 +459,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                          Icon(Icons.arrow_forward, size: 16, color: Colors.grey.withOpacity(0.5)),
                          const SizedBox(height: 4),
                          Text(
-                           session['duration'],
+                           "View", 
                            style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500),
                          )
                        ],
@@ -320,13 +468,13 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
       
                    // OUT PUNCH
                    Expanded(
-                     child: session['outTime'] != null 
+                     child: record.timeOut != null 
                        ? _buildPunchBlock(
                            context, 
                            type: 'TIME OUT', 
-                           time: session['outTime'], 
-                           location: session['outLocation'], 
-                           imageColor: session['outImage'],
+                           time: _formatTime(record.timeOut), 
+                           location: record.timeOutAddress ?? 'Unknown Location', 
+                           imageUrl: record.timeOutImage,
                            icon: Icons.logout,
                            accentColor: const Color(0xFFEF4444),
                          )
@@ -341,11 +489,21 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
     );
   }
 
+  String _formatTime(String? isoTime) {
+    if (isoTime == null) return '--:--';
+    try {
+      final dt = DateTime.parse(isoTime);
+      return DateFormat('hh:mm a').format(dt);
+    } catch (e) {
+      return 'Err'; 
+    }
+  }
+
   Widget _buildPunchBlock(BuildContext context, {
     required String type,
     required String time,
     required String location,
-    required Color? imageColor,
+    required String? imageUrl,
     required IconData icon,
     required Color accentColor,
   }) {
@@ -379,40 +537,83 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
           Row(
             children: [
                // Avatar / Photo Placeholder
-               Container(
-                 width: 36,
-                 height: 36,
-                 decoration: BoxDecoration(
-                   color: imageColor ?? Colors.grey[300],
-                   shape: BoxShape.circle,
-                   border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
-                   boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
+               GestureDetector(
+                 onTap: imageUrl != null && imageUrl.isNotEmpty ? () {
+                   showDialog(
+                     context: context,
+                     builder: (ctx) => Dialog(
+                       backgroundColor: Colors.transparent,
+                       surfaceTintColor: Colors.transparent,
+                       child: Column(
+                         mainAxisSize: MainAxisSize.min,
+                         children: [
+                           Container(
+                             clipBehavior: Clip.antiAlias,
+                             decoration: BoxDecoration(
+                               borderRadius: BorderRadius.circular(16),
+                               color: Colors.black,
+                             ),
+                             child: CachedNetworkImage(
+                               imageUrl: imageUrl,
+                               fit: BoxFit.contain,
+                               placeholder: (context, url) => const SizedBox(height: 200, width: 200, child: Center(child: CircularProgressIndicator())),
+                               errorWidget: (context, url, error) => const SizedBox(height: 200, width: 200, child: Icon(Icons.error, color: Colors.white)),
+                             ),
+                           ),
+                           const SizedBox(height: 12),
+                           IconButton(
+                             onPressed: () => Navigator.pop(ctx),
+                             icon: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.close, color: Colors.black)),
+                           ),
+                         ],
+                       ),
+                     ),
+                   );
+                 } : null,
+                 child: Container(
+                   width: 40,
+                   height: 40,
+                   clipBehavior: Clip.antiAlias,
+                   decoration: BoxDecoration(
+                     color: Colors.black, // Dark background for photos
+                     borderRadius: BorderRadius.circular(8),
+                     border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
+                   ),
+                   child: imageUrl != null && imageUrl.isNotEmpty
+                       ? CachedNetworkImage(
+                           imageUrl: imageUrl,
+                           fit: BoxFit.contain, // best for no cropping
+                           placeholder: (context, url) => const Icon(Icons.person, size: 20, color: Colors.grey),
+                           errorWidget: (context, url, error) => const Icon(Icons.person_off, size: 20, color: Colors.grey),
+                         )
+                       : Icon(Icons.person, size: 24, color: Colors.white.withOpacity(0.8)),
                  ),
-                 child: Icon(Icons.person, size: 20, color: Colors.white.withOpacity(0.8)),
                ),
                const SizedBox(width: 10),
-               Column(
-                 crossAxisAlignment: CrossAxisAlignment.start,
-                 children: [
-                   Text(
-                     time,
-                     style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Theme.of(context).textTheme.bodyLarge?.color),
-                   ),
-                   Row(
-                     children: [
-                       Icon(Icons.place, size: 10, color: Colors.grey),
-                       const SizedBox(width: 2),
-                       SizedBox(
-                         width: 60, // Constrain width
-                         child: Text(
-                           location,
-                           style: GoogleFonts.poppins(fontSize: 10, color: Theme.of(context).textTheme.bodySmall?.color),
-                           overflow: TextOverflow.ellipsis,
+               Expanded(
+                 child: Column(
+                   crossAxisAlignment: CrossAxisAlignment.start,
+                   children: [
+                     Text(
+                       time,
+                       style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Theme.of(context).textTheme.bodyLarge?.color),
+                     ),
+                     Row(
+                       children: [
+                         Icon(Icons.place, size: 10, color: Colors.grey),
+                         const SizedBox(width: 2),
+                         Expanded(
+                           child: Text(
+                             location,
+                             style: GoogleFonts.poppins(fontSize: 10, color: Theme.of(context).textTheme.bodySmall?.color),
+                             overflow: TextOverflow.ellipsis,
+                           ),
                          ),
-                       ),
-                     ],
-                   ),
-                 ],
+                       ],
+                     ),
+                   ],
+                 ),
                ),
             ],
           ),
@@ -443,12 +644,11 @@ class DottedBorderContainer extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.3), style: BorderStyle.none), // Placeholder for dotted
+        border: Border.all(color: Colors.grey.withOpacity(0.3), style: BorderStyle.none), 
       ),
-      // Using a standard container with dashed border simulation if needed, or simple grey border
       child: Container(
          decoration: BoxDecoration(
-           border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1), // Solid for now, simpler
+           border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1), 
            borderRadius: BorderRadius.circular(12),
          ),
          child: child,
@@ -456,4 +656,3 @@ class DottedBorderContainer extends StatelessWidget {
     );
   }
 }
-

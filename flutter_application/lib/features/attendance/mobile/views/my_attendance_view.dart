@@ -1,6 +1,17 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/widgets/glass_date_picker.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../../models/attendance_record.dart';
+import '../../services/attendance_service.dart';
 
 class MobileMyAttendanceContent extends StatefulWidget {
   const MobileMyAttendanceContent({super.key});
@@ -10,56 +21,189 @@ class MobileMyAttendanceContent extends StatefulWidget {
 }
 
 class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
-  bool _isCheckedIn = true;
+  late AttendanceService _attendanceService;
+  List<AttendanceRecord> _records = [];
+  final Map<String, List<AttendanceRecord>> _recordsCache = {}; // Cache
+  bool _isLoading = false;
+  final ImagePicker _picker = ImagePicker();
+  DateTime _selectedDate = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    final dio = Provider.of<AuthService>(context, listen: false).dio;
+    _attendanceService = AttendanceService(dio);
+    _fetchRecords();
+  }
+
+  Future<void> _fetchRecords() async {
+    if (!mounted) return;
+
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    
+    // Check Cache
+    if (_recordsCache.containsKey(dateStr)) {
+      if (mounted) {
+        setState(() {
+          _records = _recordsCache[dateStr]!;
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final data = await _attendanceService.getMyRecords(fromDate: dateStr, toDate: dateStr);
+      if (mounted) {
+        setState(() {
+          _records = data;
+          _recordsCache[dateStr] = data; // Store in cache
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error fetching records: $e")));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<Position?> _getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Location services are disabled.")));
+      return null;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Location permission denied.")));
+        return null;
+      }
+    }
+    
+    if (permission == LocationPermission.deniedForever) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Location permission permanently denied.")));
+      return null;
+    }
+
+    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  }
+
+  Future<void> _handleAttendanceAction(bool isTimeIn) async {
+    // 1. Get Location
+    final position = await _getCurrentLocation();
+    if (position == null) return;
+
+    // 1. Permission Check with Settings Prompt
+    var status = await Permission.camera.status;
+    if (!status.isGranted) {
+      status = await Permission.camera.request();
+      if (status.isPermanentlyDenied) {
+        if (mounted) {
+           showDialog(
+             context: context, 
+             builder: (ctx) => AlertDialog(
+               title: const Text("Permission Required"),
+               content: const Text("Camera access is needed to mark attendance. Please enable it in settings."),
+               actions: [
+                 TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+                 TextButton(
+                   onPressed: () { 
+                     Navigator.pop(ctx); 
+                     openAppSettings(); 
+                   }, 
+                   child: const Text("Open Settings")
+                 ),
+               ]
+             )
+           );
+        }
+        return;
+      }
+      if (!status.isGranted) return; // Denied but not permanently
+    }
+
+    // 2. Capture Selfie (System Camera)
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera, 
+        preferredCameraDevice: CameraDevice.front,
+        maxWidth: 600, 
+        imageQuality: 80,
+      );
+      
+      if (photo == null) return; // User canceled
+
+      // Show loading
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      // 3. Submit
+      try {
+        if (isTimeIn) {
+          await _attendanceService.timeIn(
+            latitude: position.latitude,
+            longitude: position.longitude,
+            imageFile: File(photo.path),
+          );
+        } else {
+          await _attendanceService.timeOut(
+            latitude: position.latitude,
+            longitude: position.longitude,
+            imageFile: File(photo.path),
+          );
+        }
+        
+        if (mounted) {
+          Navigator.pop(context); // Close loading
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isTimeIn ? "Time In Successful!" : "Time Out Successful!"), backgroundColor: Colors.green));
+          
+          // Invalidate cache for today as data changed
+          final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          _recordsCache.remove(todayStr);
+          
+          _fetchRecords(); // Refresh list
+        }
+      } catch (e) {
+        if (mounted) {
+          Navigator.pop(context); // Close loading
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed: $e"), backgroundColor: Colors.red));
+        }
+      }
+    } catch (e) {
+       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Camera Error: $e")));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Dummy Data
-    final sessions = [
-      {
-        'session': 'Session 1',
-        'inTime': '09:30 AM',
-        'inLocation': 'Reception Area',
-        'inImage': Colors.blue.shade100, 
-        'outTime': '01:00 PM',
-        'outLocation': 'Main Exit',
-        'outImage': Colors.blue.shade200,
-        'duration': '3h 30m',
-        'status': 'Completed',
-        'color': Colors.green,
-      },
-      {
-        'session': 'Session 2',
-        'inTime': '02:00 PM',
-        'inLocation': 'Side Entrance',
-        'inImage': Colors.orange.shade100,
-        'outTime': '06:30 PM',
-        'outLocation': 'Main Exit',
-        'outImage': Colors.orange.shade200,
-        'duration': '4h 30m',
-        'status': 'Completed',
-        'color': Colors.green,
-      },
-      {
-        'session': 'Session 3',
-        'inTime': '08:00 PM',
-        'inLocation': 'Remote Login',
-        'inImage': Colors.purple.shade100,
-        'outTime': null, 
-        'outLocation': null,
-        'outImage': null,
-        'duration': 'Running',
-        'status': 'Active',
-        'color': Colors.blue,
-      },
-    ];
+    // Determine active state for buttons based on last record
+    bool isCheckedIn = false;
+    if (_records.isNotEmpty) {
+      // Logic: If last record has no Time Out, we are checked in.
+      // Assuming records are sorted or we take the latest. Better sorting might be needed API side.
+      // Simple logic: Check if ANY record today has no timeOut.
+      final activeRecord = _records.any((r) => r.timeOut == null);
+      isCheckedIn = activeRecord;
+    }
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       physics: const BouncingScrollPhysics(),
       children: [
-        // 1. Top Actions (Stacked Time In / Time Out)
-        _buildActionButtons(context),
+        // 1. Top Actions
+        _buildActionButtons(context, isCheckedIn),
         
         const SizedBox(height: 32),
 
@@ -69,41 +213,42 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
         const SizedBox(height: 16),
 
         // 3. Attendance History List
-        ...sessions.map((session) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildSessionCard(context, session),
-        )),
+        if (_isLoading)
+           const Center(child: CircularProgressIndicator())
+        else if (_records.isEmpty)
+           Center(child: Text("No records for this date", style: GoogleFonts.poppins(color: Colors.grey)))
+        else
+           ..._records.map((record) => Padding(
+             padding: const EdgeInsets.only(bottom: 12),
+             child: _buildSessionCard(context, record),
+           )),
       ],
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, bool isCheckedIn) {
     return Column(
       children: [
-        // Time In Button
+        // Time In
         _buildLargeActionButton(
           context,
           label: 'Time In',
-          subLabel: _isCheckedIn ? 'Checked in at 09:30 AM' : 'Start your shift',
+          subLabel: isCheckedIn ? 'You are currently checked in' : 'Start your shift',
           icon: Icons.login,
           color: const Color(0xFF10B981), // Green
-          isActive: !_isCheckedIn, 
-          onTap: () {
-            setState(() => _isCheckedIn = true);
-          },
+          isActive: !isCheckedIn, 
+          onTap: () => _handleAttendanceAction(true),
         ),
         const SizedBox(height: 16),
-        // Time Out Button
+        // Time Out
         _buildLargeActionButton(
           context,
           label: 'Time Out',
-          subLabel: _isCheckedIn ? 'End current shift' : 'Not checked in',
+          subLabel: isCheckedIn ? 'End current shift' : 'Not checked in',
           icon: Icons.logout,
           color: const Color(0xFFEF4444), // Red
-          isActive: _isCheckedIn,
-          onTap: () {
-            setState(() => _isCheckedIn = false);
-          },
+          isActive: isCheckedIn,
+          onTap: () => _handleAttendanceAction(false),
         ),
       ],
     );
@@ -120,7 +265,7 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return InkWell(
-      onTap: onTap,
+      onTap: isActive ? onTap : null, // Disable tap if not active? Or allow for error msg? User requested specific logic.
       borderRadius: BorderRadius.circular(20),
       child: GlassContainer(
         height: 100,
@@ -139,7 +284,7 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
                 ),
                 child: Icon(
                   icon,
-                  color: isActive ? color : (isDark ? Colors.grey : Colors.grey),
+                  color: isActive ? color : Colors.grey,
                   size: 28,
                 ),
               ),
@@ -153,7 +298,7 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                      color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(isActive ? 1.0 : 0.5),
                     ),
                   ),
                   Text(
@@ -181,7 +326,7 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
       children: [
         Flexible(
           child: Text(
-            'Todays Activity',
+            'Activity',
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.w600,
@@ -192,51 +337,50 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
           ),
         ),
         const SizedBox(width: 8),
-        GlassContainer(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          borderRadius: 12,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              InkWell(
-                onTap: () {},
-                child: Icon(Icons.chevron_left, size: 20, color: Theme.of(context).textTheme.bodyLarge?.color),
+        InkWell(
+          onTap: () async {
+            await showDialog(
+              context: context,
+              builder: (context) => GlassDatePicker(
+                initialDate: _selectedDate,
+                firstDate: DateTime(2020),
+                lastDate: DateTime.now(),
+                onDateSelected: (newDate) {
+                  setState(() => _selectedDate = newDate);
+                  _fetchRecords();
+                },
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today, size: 14, color: Theme.of(context).primaryColor),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Wed, 02 Jan',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                  ],
+            );
+          },
+          child: GlassContainer(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            borderRadius: 12,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.calendar_today, size: 14, color: Theme.of(context).primaryColor),
+                const SizedBox(width: 8),
+                Text(
+                  DateFormat('EEE, dd MMM').format(_selectedDate),
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
-              ),
-              InkWell(
-                onTap: () {},
-                child: Icon(Icons.chevron_right, size: 20, color: Theme.of(context).textTheme.bodyLarge?.color),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
-
-
-  Widget _buildSessionCard(BuildContext context, Map<String, dynamic> session) {
-    // Basic coloring
+  Widget _buildSessionCard(BuildContext context, AttendanceRecord record) {
+    // Colors
     const greenColor = Color(0xFF10B981);
-    const redColor = Color(0xFFEF4444);
+    final statusColor = record.status == 'ABSENT' ? Colors.red : Colors.green;
 
     return GlassContainer(
       padding: const EdgeInsets.all(20),
@@ -270,7 +414,7 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
                   width: 12,
                   height: 12,
                   decoration: BoxDecoration(
-                    color: session['outTime'] != null ? redColor : Colors.grey,
+                    color: record.timeOut != null ? Colors.red : Colors.grey,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -287,18 +431,18 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
                   // IN Info
                   _buildTimeInfo(
                     context, 
-                    time: session['inTime'], 
-                    location: session['inLocation'] ?? 'Unknown Location'
+                    time: _formatTime(record.timeIn), 
+                    location: record.timeInAddress ?? 'Unknown Location'
                   ),
                   
                   const SizedBox(height: 24), // Spacing between In and Out
 
                   // OUT Info
-                  session['outTime'] != null 
+                  record.timeOut != null 
                     ? _buildTimeInfo(
                         context, 
-                        time: session['outTime'], 
-                        location: session['outLocation'] ?? 'Unknown Location'
+                        time: _formatTime(record.timeOut), 
+                        location: record.timeOutAddress ?? 'Unknown Location' 
                       )
                     : Text(
                         'Currently Active',
@@ -313,19 +457,29 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
             ),
             const SizedBox(width: 12),
 
-            // 3. Images Column
+            // 3. Images Column (Placeholder or Actual Image)
             Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildAvatar(session['inImage']),
-                if (session['outTime'] != null)
-                  _buildAvatar(session['outImage']),
+                _buildAvatar(context, record.timeInImage),
+                if (record.timeOut != null)
+                  _buildAvatar(context, record.timeOutImage),
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  String _formatTime(String? isoTime) {
+    if (isoTime == null) return '--:--';
+    try {
+      final dt = DateTime.parse(isoTime);
+      return DateFormat('hh:mm a').format(dt);
+    } catch (e) {
+      return 'Err'; 
+    }
   }
 
   Widget _buildTimeInfo(BuildContext context, {required String time, required String location}) {
@@ -355,23 +509,65 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
     );
   }
 
-  Widget _buildAvatar(Color? colorPlaceholder) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: colorPlaceholder ?? Colors.grey[300],
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          )
-        ],
+  Widget _buildAvatar(BuildContext context, String? imageUrl) {
+    return GestureDetector(
+      onTap: imageUrl != null && imageUrl.isNotEmpty ? () {
+         showDialog(
+           context: context,
+           builder: (ctx) => Dialog(
+             backgroundColor: Colors.transparent,
+             surfaceTintColor: Colors.transparent,
+             child: Column(
+               mainAxisSize: MainAxisSize.min,
+               children: [
+                 Container(
+                   clipBehavior: Clip.antiAlias,
+                   decoration: BoxDecoration(
+                     borderRadius: BorderRadius.circular(16),
+                     color: Colors.black,
+                   ),
+                   child: CachedNetworkImage(
+                     imageUrl: imageUrl,
+                     fit: BoxFit.contain,
+                     placeholder: (context, url) => const SizedBox(height: 200, width: 200, child: Center(child: CircularProgressIndicator())),
+                     errorWidget: (context, url, error) => const SizedBox(height: 200, width: 200, child: Icon(Icons.error, color: Colors.white)),
+                   ),
+                 ),
+                 const SizedBox(height: 12),
+                 IconButton(
+                   onPressed: () => Navigator.pop(ctx),
+                   icon: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.close, color: Colors.black)),
+                 ),
+               ],
+             ),
+           ),
+         );
+      } : null,
+      child: Container(
+        width: 40,
+        height: 40,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            )
+          ],
+        ),
+        child: imageUrl != null && imageUrl.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain,
+                placeholder: (context, url) => const Icon(Icons.person, size: 20, color: Colors.grey),
+                errorWidget: (context, url, error) => const Icon(Icons.person_off, size: 20, color: Colors.grey),
+              )
+            : Icon(Icons.person, size: 24, color: Colors.white.withOpacity(0.9)),
       ),
-      child: Icon(Icons.person, size: 24, color: Colors.white.withOpacity(0.9)),
     );
   }
 }

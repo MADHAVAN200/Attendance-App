@@ -13,4 +13,9 @@ class ApiConfig {
   static const String departments = '/admin/departments';
   static const String designations = '/admin/designations';
   static const String shifts = '/admin/shifts';
+
+  // Attendance Routes
+  static const String timeIn = '/attendance/timein';
+  static const String timeOut = '/attendance/timeout';
+  static const String myRecords = '/attendance/records';
 }

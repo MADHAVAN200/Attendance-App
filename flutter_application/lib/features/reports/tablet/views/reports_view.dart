@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../../services/report_service.dart';
 
 class ReportsView extends StatefulWidget {
   const ReportsView({super.key});
@@ -11,20 +15,116 @@ class ReportsView extends StatefulWidget {
 
 class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _selectedReportType = 'Detailed Log';
-  String _selectedMonth = 'October 2023';
-  String _selectedFormat = 'Excel';
+  late ReportService _reportService;
+  
+  // State
+  String _selectedReportType = 'matrix_monthly';
+  String _selectedFormat = 'xlsx';
+  DateTime _selectedDate = DateTime.now();
+  
+  Map<String, dynamic>? _previewData;
+  bool _isLoadingPreview = false;
+  bool _isDownloading = false;
+
+  final Map<String, String> _reportTypes = {
+    'matrix_daily': 'Daily Matrix',
+    'matrix_weekly': 'Weekly Matrix',
+    'matrix_monthly': 'Monthly Matrix',
+    'lateness_report': 'Lateness Report',
+    'attendance_detailed': 'Detailed Log',
+    'attendance_summary': 'Monthly Summary',
+    'employee_master': 'Employee Master'
+  };
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    
+    // Initialize Service using Provider's Dio
+    final authService = Provider.of<AuthService>(context, listen: false);
+    _reportService = ReportService(authService.dio);
+    
+    _fetchPreview();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  bool get _requiresMonth => [
+    'matrix_monthly', 'lateness_report', 'attendance_detailed', 'attendance_summary'
+  ].contains(_selectedReportType);
+
+  bool get _requiresDate => ['matrix_daily', 'matrix_weekly'].contains(_selectedReportType);
+
+  String _fmtMonth(DateTime d) => "${d.year}-${d.month.toString().padLeft(2, '0')}";
+  String _fmtDate(DateTime d) => "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+  String _displayMonth(DateTime d) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return "${months[d.month-1]} ${d.year}";
+  }
+
+  Future<void> _fetchPreview() async {
+    if (_selectedReportType == 'employee_master') {
+       // Maybe no preview or minimal?
+    }
+    
+    setState(() => _isLoadingPreview = true);
+    try {
+      final data = await _reportService.getPreview(
+        type: _selectedReportType,
+        month: _requiresMonth ? _fmtMonth(_selectedDate) : null,
+        date: _requiresDate ? _fmtDate(_selectedDate) : null,
+      );
+      if (mounted) setState(() => _previewData = data);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Preview Failed: $e")));
+    } finally {
+      if (mounted) setState(() => _isLoadingPreview = false);
+    }
+  }
+
+  Future<void> _handleDownload() async {
+    setState(() => _isDownloading = true);
+    try {
+      final path = await _reportService.downloadReport(
+        type: _selectedReportType,
+        format: _selectedFormat,
+        month: _requiresMonth ? _fmtMonth(_selectedDate) : null,
+        date: _requiresDate ? _fmtDate(_selectedDate) : null,
+      );
+      
+      if (path != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text("Report Saved: $path"), action: SnackBarAction(label: "Open", onPressed: () {
+             OpenFilex.open(path);
+           }))
+        );
+        // Auto open if desired?
+        // OpenFilex.open(path);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Download Failed: $e")));
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
+  Future<void> _pickDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      helpText: _requiresMonth ? "SELECT MONTH (Pick any day)" : "SELECT DATE",
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+      _fetchPreview();
+    }
   }
 
   @override
@@ -43,6 +143,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
         Expanded(
           child: TabBarView(
             controller: _tabController,
+            physics: const NeverScrollableScrollPhysics(), // Prevent horizontal swipe conflicts
             children: [
               _buildDataPreview(context),
               _buildExportHistory(context),
@@ -64,47 +165,52 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
           // Row 1: Select Month & Report Type
           Row(
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'SELECT MONTH',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).textTheme.bodySmall?.color,
-                        letterSpacing: 0.5,
+              if (_requiresMonth || _requiresDate) ...[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _requiresMonth ? 'SELECT MONTH' : 'SELECT DATE',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      height: 48,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today, size: 16, color: Theme.of(context).primaryColor),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _selectedMonth,
-                              style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => _pickDate(context),
+                        child: Container(
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
                           ),
-                          Icon(Icons.arrow_drop_down, size: 20, color: Theme.of(context).textTheme.bodySmall?.color),
-                        ],
+                          child: Row(
+                            children: [
+                              Icon(Icons.calendar_today, size: 16, color: Theme.of(context).primaryColor),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _requiresMonth ? _displayMonth(_selectedDate) : _fmtDate(_selectedDate),
+                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Icon(Icons.arrow_drop_down, size: 20, color: Theme.of(context).textTheme.bodySmall?.color),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
+                const SizedBox(width: 16),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,7 +235,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
-                          value: _selectedReportType,
+                          value: _reportTypes.containsKey(_selectedReportType) ? _selectedReportType : _reportTypes.keys.first,
                           icon: Icon(Icons.arrow_drop_down, color: Theme.of(context).textTheme.bodySmall?.color),
                           isExpanded: true,
                           elevation: 16,
@@ -140,15 +246,17 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                           ),
                           dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
                           onChanged: (String? newValue) {
-                            setState(() {
-                              _selectedReportType = newValue!;
-                            });
+                            if (newValue != null) {
+                              setState(() {
+                                _selectedReportType = newValue;
+                              });
+                              _fetchPreview();
+                            }
                           },
-                          items: <String>['Detailed Log', 'Overtime', 'Late Arrivals']
-                              .map<DropdownMenuItem<String>>((String value) {
+                          items: _reportTypes.entries.map<DropdownMenuItem<String>>((entry) {
                             return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value, overflow: TextOverflow.ellipsis),
+                              value: entry.key,
+                              child: Text(entry.value, overflow: TextOverflow.ellipsis),
                             );
                           }).toList(),
                         ),
@@ -164,7 +272,6 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
           // Row 2: File Format & Download
           Row(
             children: [
-              // Segmented Control
               // Segmented Control
               Expanded(
                 child: Column(
@@ -188,7 +295,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
-                        children: ['Excel', 'CSV', 'PDF'].map((format) {
+                        children: ['xlsx', 'csv', 'pdf'].map((format) {
                           final isSelected = _selectedFormat == format;
                           return Expanded(
                             child: GestureDetector(
@@ -203,7 +310,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                                   boxShadow: isSelected && !isDark ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 2, offset: const Offset(0, 1))] : null,
                                 ),
                                 child: Text(
-                                  format,
+                                  format.toUpperCase(),
                                   style: GoogleFonts.poppins(
                                     fontSize: 12,
                                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -241,10 +348,12 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                         height: 48,
                         width: double.infinity, // Fill full width of the column
                         child: ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.download, size: 20), // Slightly larger icon
+                          onPressed: _isDownloading ? null : _handleDownload,
+                          icon: _isDownloading 
+                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.download, size: 20),
                           label: Text(
-                            'Export Report', // More descriptive
+                            _isDownloading ? 'Downloading...' : 'Export Report',
                             style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
                           ),
                           style: ElevatedButton.styleFrom(
@@ -302,34 +411,45 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
   }
 
   Widget _buildDataPreview(BuildContext context) {
-    // 5 Columns: Date, Employee, Shift, Work Hours, Status
+    if (_isLoadingPreview) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (_previewData == null || _previewData!['rows'] == null || (_previewData!['rows'] as List).isEmpty) {
+      return Center(
+         child: Text("No data available for selected filters", style: GoogleFonts.poppins(color: Colors.grey))
+      );
+    }
+    
+    final columns = _previewData!['columns'] as List;
+    final rows = _previewData!['rows'] as List;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
       child: GlassContainer(
         padding: EdgeInsets.zero,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
-          child: DataTable(
-            columnSpacing: 12, // Tight spacing
-            horizontalMargin: 16,
-            headingRowColor: MaterialStateProperty.all(Colors.transparent),
-            dataRowMaxHeight: 60,
-            columns: [
-              _buildColumnHeader(context, 'DATE'),
-              _buildColumnHeader(context, 'EMPLOYEE'),
-              _buildColumnHeader(context, 'SHIFT'),
-              _buildColumnHeader(context, 'HOURS'),
-              const DataColumn(label: Expanded(child: Text('STATUS', textAlign: TextAlign.right))), // Align Status right
-            ],
-            rows: [
-              _buildDataRow(context, 'Oct 24', 'Sarah Wilson', '09:00 - 18:00', '9h 00m', 'Present', Colors.green),
-              _buildDataRow(context, 'Oct 24', 'Mike Johnson', '09:00 - 18:00', '9h 00m', 'Late', Colors.orange),
-              _buildDataRow(context, 'Oct 24', 'Anna Davis', '09:00 - 18:00', '0', 'Absent', Colors.red),
-              _buildDataRow(context, 'Oct 24', 'James Wilson', '10:00 - 19:00', '9h 00m', 'Present', Colors.green),
-              _buildDataRow(context, 'Oct 24', 'Lisa Brown', '09:00 - 18:00', '9h 00m', 'Present', Colors.green),
-              _buildDataRow(context, 'Oct 23', 'Sarah Wilson', '09:00 - 18:00', '9h 00m', 'Present', Colors.green),
-              _buildDataRow(context, 'Oct 23', 'Mike Johnson', '09:00 - 18:00', '8h 55m', 'Present', Colors.green),
-            ],
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 24,
+              horizontalMargin: 24,
+              headingRowColor: MaterialStateProperty.all(Colors.transparent),
+              dataRowMaxHeight: 60,
+              columns: columns.map((c) => _buildColumnHeader(context, c.toString())).toList(),
+              rows: rows.map((row) {
+                 final cells = row as List;
+                 return DataRow(
+                   cells: cells.map((cell) => DataCell(
+                     Text(
+                       cell?.toString() ?? '-', 
+                       style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).textTheme.bodyLarge?.color)
+                     )
+                   )).toList()
+                 );
+              }).toList(),
+            ),
           ),
         ),
       ),
@@ -339,10 +459,10 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
   DataColumn _buildColumnHeader(BuildContext context, String label) {
     return DataColumn(
       label: Text(
-        label,
+        label.toUpperCase(),
         style: GoogleFonts.poppins(
           fontWeight: FontWeight.w600,
-          fontSize: 10,
+          fontSize: 11,
           color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
           letterSpacing: 0.5,
         ),
@@ -350,50 +470,17 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
     );
   }
 
-  DataRow _buildDataRow(BuildContext context, String date, String name, String shift, String hours, String status, Color color) {
-    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
-    final subColor = Theme.of(context).textTheme.bodySmall?.color;
-    
-    return DataRow(
-      cells: [
-        DataCell(Text(date, style: GoogleFonts.poppins(color: subColor, fontSize: 12))),
-        DataCell(
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(name, style: GoogleFonts.poppins(color: textColor, fontWeight: FontWeight.w500, fontSize: 13)),
-              // Optional: Add Role subtext if space
-            ],
-          ),
-        ),
-        DataCell(Text(shift, style: GoogleFonts.poppins(color: subColor, fontSize: 12))),
-        DataCell(Text(hours, style: GoogleFonts.poppins(color: textColor, fontSize: 12, fontWeight: FontWeight.w500))),
-        DataCell(
-          Align(
-            alignment: Alignment.centerRight,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                status,
-                style: GoogleFonts.poppins(color: color, fontSize: 11, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildExportHistory(BuildContext context) {
+    // Static Placeholder for now, as backend doesn't provide history endpoint
+    final history = [
+      {'name': 'Attendance_Log_Oct2023.xlsx', 'date': 'Oct 25, 10:30 AM'},
+      {'name': 'Monthly_Matrix_Sep2023.pdf', 'date': 'Sep 30, 06:00 PM'},
+    ];
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
-        children: [1, 2, 3].map((e) => Padding(
+        children: history.map((e) => Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: GlassContainer(
             padding: const EdgeInsets.all(16),
@@ -402,18 +489,18 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.indigo.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.table_chart, color: Colors.green, size: 20),
+                  child: const Icon(Icons.table_chart, color: Colors.indigo, size: 20),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Attendance_Log_Oct2023.xlsx', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color)),
-                      Text('Exported on Oct 25, 10:30 AM', style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
+                      Text(e['name']!, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                      Text('Exported on ${e['date']}', style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
                     ],
                   ),
                 ),

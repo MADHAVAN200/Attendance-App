@@ -28,5 +28,9 @@ class ApiConfig {
   static const String locations = '/locations'; 
   static const String assignments = '/locations/assignments';
   static const String adminUsers = '/admin/users'; // For fetching users with ?workLocation=true
+  // Reports Routes
+  static const String reportsPreview = '/admin/reports/preview';
+  static const String reportsDownload = '/admin/reports/download';
+
   static const String nominatimUrl = 'https://nominatim.openstreetmap.org/reverse';
 }

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../../services/report_service.dart';
 
 class MobileReportsContent extends StatefulWidget {
   const MobileReportsContent({super.key});
@@ -11,20 +15,110 @@ class MobileReportsContent extends StatefulWidget {
 
 class _MobileReportsContentState extends State<MobileReportsContent> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _selectedReportType = 'Detailed Log';
-  String _selectedMonth = 'October 2023';
-  String _selectedFormat = 'Excel';
+  late ReportService _reportService;
+
+  // State
+  String _selectedReportType = 'matrix_monthly';
+  String _selectedFormat = 'xlsx';
+  DateTime _selectedDate = DateTime.now();
+
+  Map<String, dynamic>? _previewData;
+  bool _isLoadingPreview = false;
+  bool _isDownloading = false;
+
+  final Map<String, String> _reportTypes = {
+    'matrix_daily': 'Daily Matrix',
+    'matrix_weekly': 'Weekly Matrix',
+    'matrix_monthly': 'Monthly Matrix',
+    'lateness_report': 'Lateness Report',
+    'attendance_detailed': 'Detailed Log',
+    'attendance_summary': 'Monthly Summary',
+    'employee_master': 'Employee Master'
+  };
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    
+    // Initialize Service
+    final authService = Provider.of<AuthService>(context, listen: false);
+    _reportService = ReportService(authService.dio);
+    
+    _fetchPreview();
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  bool get _requiresMonth => [
+    'matrix_monthly', 'lateness_report', 'attendance_detailed', 'attendance_summary'
+  ].contains(_selectedReportType);
+
+  bool get _requiresDate => ['matrix_daily', 'matrix_weekly'].contains(_selectedReportType);
+
+  String _fmtMonth(DateTime d) => "${d.year}-${d.month.toString().padLeft(2, '0')}";
+  String _fmtDate(DateTime d) => "${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}";
+  String _displayMonth(DateTime d) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return "${months[d.month-1]} ${d.year}";
+  }
+
+  Future<void> _fetchPreview() async {
+    setState(() => _isLoadingPreview = true);
+    try {
+      final data = await _reportService.getPreview(
+        type: _selectedReportType,
+        month: _requiresMonth ? _fmtMonth(_selectedDate) : null,
+        date: _requiresDate ? _fmtDate(_selectedDate) : null,
+      );
+      if (mounted) setState(() => _previewData = data);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Preview Failed: $e")));
+    } finally {
+      if (mounted) setState(() => _isLoadingPreview = false);
+    }
+  }
+
+  Future<void> _handleDownload() async {
+    setState(() => _isDownloading = true);
+    try {
+      final path = await _reportService.downloadReport(
+        type: _selectedReportType,
+        format: _selectedFormat,
+        month: _requiresMonth ? _fmtMonth(_selectedDate) : null,
+        date: _requiresDate ? _fmtDate(_selectedDate) : null,
+      );
+      
+      if (path != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text("Report Saved: $path"), action: SnackBarAction(label: "Open", onPressed: () {
+             OpenFilex.open(path);
+           }))
+        );
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Download Failed: $e")));
+    } finally {
+      if (mounted) setState(() => _isDownloading = false);
+    }
+  }
+
+  Future<void> _pickDate(BuildContext context) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      helpText: _requiresMonth ? "SELECT MONTH (Pick any day)" : "SELECT DATE",
+    );
+    if (picked != null) {
+      setState(() => _selectedDate = picked);
+      _fetchPreview();
+    }
   }
 
   @override
@@ -41,11 +135,7 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
         _buildTabs(context),
         const SizedBox(height: 16),
 
-        // Tab Content (Fixed Height or wrapped)
-        // Since we are in a ListView, we can't use Expanded TabBarView easily without defined height.
-        // We will use AnimatedBuilder or just a custom content switcher for simplicity in ListView.
-        // Or we use the property `shrinkWrap: true` on TabBarView inside a Container with height?
-        // Better: Just use AnimatedBuilder like we did for LiveAttendance.
+        // Tab Content
         AnimatedBuilder(
           animation: _tabController,
           builder: (context, child) {
@@ -66,42 +156,46 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Select Month
-          Text(
-            'SELECT MONTH',
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-              letterSpacing: 0.5,
+          // 1. Select Month/Date
+          if (_requiresMonth || _requiresDate) ...[
+            Text(
+              _requiresMonth ? 'SELECT MONTH' : 'SELECT DATE',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).textTheme.bodySmall?.color,
+                letterSpacing: 0.5,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            height: 48,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _selectedMonth,
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () => _pickDate(context),
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
                 ),
-                Icon(Icons.arrow_drop_down, size: 20, color: Theme.of(context).textTheme.bodySmall?.color),
-              ],
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today, size: 16, color: Theme.of(context).primaryColor),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _requiresMonth ? _displayMonth(_selectedDate) : _fmtDate(_selectedDate),
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Icon(Icons.arrow_drop_down, size: 20, color: Theme.of(context).textTheme.bodySmall?.color),
+                  ],
+                ),
+              ),
             ),
-          ),
-
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
+          ],
 
           // 2. Report Type
           Text(
@@ -124,7 +218,7 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: _selectedReportType,
+                value: _reportTypes.containsKey(_selectedReportType) ? _selectedReportType : _reportTypes.keys.first,
                 icon: Icon(Icons.arrow_drop_down, color: Theme.of(context).textTheme.bodySmall?.color),
                 isExpanded: true,
                 elevation: 16,
@@ -135,15 +229,17 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
                 ),
                 dropdownColor: Theme.of(context).cardColor,
                 onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedReportType = newValue!;
-                  });
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedReportType = newValue;
+                    });
+                    _fetchPreview();
+                  }
                 },
-                items: <String>['Detailed Log', 'Overtime', 'Late Arrivals']
-                    .map<DropdownMenuItem<String>>((String value) {
+                items: _reportTypes.entries.map<DropdownMenuItem<String>>((entry) {
                   return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value, overflow: TextOverflow.ellipsis),
+                    value: entry.key,
+                    child: Text(entry.value, overflow: TextOverflow.ellipsis),
                   );
                 }).toList(),
               ),
@@ -171,7 +267,7 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
-              children: ['Excel', 'CSV', 'PDF'].map((format) {
+              children: ['xlsx', 'csv', 'pdf'].map((format) {
                 final isSelected = _selectedFormat == format;
                 return Expanded(
                   child: GestureDetector(
@@ -186,7 +282,7 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
                         boxShadow: isSelected && !isDark ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 2, offset: const Offset(0, 1))] : null,
                       ),
                       child: Text(
-                        format,
+                        format.toUpperCase(),
                         style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -209,10 +305,12 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
             height: 48,
             width: double.infinity, 
             child: ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.download, size: 20), 
+              onPressed: _isDownloading ? null : _handleDownload,
+              icon: _isDownloading
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.download, size: 20),
               label: Text(
-                'Export Report', 
+                _isDownloading ? 'Downloading...' : 'Export Report', 
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
               ),
               style: ElevatedButton.styleFrom(
@@ -264,7 +362,19 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
   }
 
   Widget _buildDataPreview(BuildContext context) {
-    // SingleChildScrollView for horizontal scrolling of DataTable
+    if (_isLoadingPreview) {
+      return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+    }
+    
+    if (_previewData == null || _previewData!['rows'] == null || (_previewData!['rows'] as List).isEmpty) {
+      return Center(
+         child: Padding(padding: const EdgeInsets.all(20), child: Text("No data available", style: GoogleFonts.poppins(color: Colors.grey)))
+      );
+    }
+
+    final columns = _previewData!['columns'] as List;
+    final rows = _previewData!['rows'] as List;
+
     return GlassContainer(
       padding: EdgeInsets.zero,
       child: ClipRRect(
@@ -276,21 +386,18 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
             horizontalMargin: 16,
             headingRowColor: MaterialStateProperty.all(Colors.transparent),
             dataRowMaxHeight: 60,
-            columns: [
-              _buildColumnHeader(context, 'DATE'),
-              _buildColumnHeader(context, 'EMPLOYEE'),
-              _buildColumnHeader(context, 'SHIFT'),
-              _buildColumnHeader(context, 'HOURS'),
-              const DataColumn(label: Text('STATUS')), // Left aligned for scrolling table usually better or standard
-            ],
-            rows: [
-              _buildDataRow(context, 'Oct 24', 'Sarah Wilson', '09:00 - 18:00', '9h 00m', 'Present', Colors.green),
-              _buildDataRow(context, 'Oct 24', 'Mike Johnson', '09:00 - 18:00', '9h 00m', 'Late', Colors.orange),
-              _buildDataRow(context, 'Oct 24', 'Anna Davis', '09:00 - 18:00', '0', 'Absent', Colors.red),
-              _buildDataRow(context, 'Oct 24', 'James Wilson', '10:00 - 19:00', '9h 00m', 'Present', Colors.green),
-              _buildDataRow(context, 'Oct 24', 'Lisa Brown', '09:00 - 18:00', '9h 00m', 'Present', Colors.green),
-              _buildDataRow(context, 'Oct 23', 'Sarah Wilson', '09:00 - 18:00', '9h 00m', 'Present', Colors.green),
-            ],
+            columns: columns.map((c) => _buildColumnHeader(context, c.toString())).toList(),
+            rows: rows.map((row) {
+                 final cells = row as List;
+                 return DataRow(
+                   cells: cells.map((cell) => DataCell(
+                     Text(
+                       cell?.toString() ?? '-', 
+                       style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).textTheme.bodyLarge?.color)
+                     )
+                   )).toList()
+                 );
+            }).toList(),
           ),
         ),
       ),
@@ -300,7 +407,7 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
   DataColumn _buildColumnHeader(BuildContext context, String label) {
     return DataColumn(
       label: Text(
-        label,
+        label.toUpperCase(),
         style: GoogleFonts.poppins(
           fontWeight: FontWeight.w600,
           fontSize: 10,
@@ -311,44 +418,15 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
     );
   }
 
-  DataRow _buildDataRow(BuildContext context, String date, String name, String shift, String hours, String status, Color color) {
-    final textColor = Theme.of(context).textTheme.bodyLarge?.color;
-    final subColor = Theme.of(context).textTheme.bodySmall?.color;
-    
-    return DataRow(
-      cells: [
-        DataCell(Text(date, style: GoogleFonts.poppins(color: subColor, fontSize: 12))),
-        DataCell(
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(name, style: GoogleFonts.poppins(color: textColor, fontWeight: FontWeight.w500, fontSize: 13)),
-            ],
-          ),
-        ),
-        DataCell(Text(shift, style: GoogleFonts.poppins(color: subColor, fontSize: 12))),
-        DataCell(Text(hours, style: GoogleFonts.poppins(color: textColor, fontSize: 12, fontWeight: FontWeight.w500))),
-        DataCell(
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              status,
-              style: GoogleFonts.poppins(color: color, fontSize: 11, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _buildExportHistory(BuildContext context) {
+     // Static Placeholder
+    final history = [
+      {'name': 'Attendance_Log.xlsx', 'date': 'Oct 25, 10:30 AM'},
+      {'name': 'Monthly_Matrix.pdf', 'date': 'Sep 30, 06:00 PM'},
+    ];
+
     return Column(
-      children: [1, 2, 3].map((e) => Padding(
+      children: history.map((e) => Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: GlassContainer(
           padding: const EdgeInsets.all(16),
@@ -362,13 +440,13 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
                 ),
                 child: const Icon(Icons.table_chart, color: Colors.green, size: 20),
               ),
-              const SizedBox(width: 12), // Reduced spacing
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Attendance_Log.xlsx', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color), overflow: TextOverflow.ellipsis),
-                    Text('Oct 25, 10:30 AM', style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
+                    Text(e['name']!, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color), overflow: TextOverflow.ellipsis),
+                    Text(e['date']!, style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
                   ],
                 ),
               ),

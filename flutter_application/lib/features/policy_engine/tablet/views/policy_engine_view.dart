@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../../models/shift_model.dart';
+import '../../services/shift_service.dart';
 import 'add_shift_dialog.dart';
 
 class PolicyEngineView extends StatefulWidget {
@@ -14,20 +18,178 @@ class PolicyEngineView extends StatefulWidget {
 
 class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late ShiftService _shiftService;
+  List<Shift> _shifts = [];
+  bool _isLoadingShifts = true;
 
   @override
   void initState() {
     super.initState();
-    // Use the notifier value as initial index, then reset to 0
     final initialIndex = PolicyEngineView.initialTabNotifier.value;
     _tabController = TabController(length: 2, vsync: this, initialIndex: initialIndex);
     
-    // Defer reset to next frame to ensure it's used
     if (initialIndex != 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         PolicyEngineView.initialTabNotifier.value = 0;
       });
     }
+
+    // Initialize Service
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+       final dio = Provider.of<AuthService>(context, listen: false).dio;
+       _shiftService = ShiftService(dio);
+       _fetchShifts();
+    });
+  }
+
+  Future<void> _fetchShifts() async {
+    setState(() => _isLoadingShifts = true);
+    try {
+      final data = await _shiftService.getShifts();
+      if (mounted) setState(() => _shifts = data);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error loading shifts: $e")));
+    } finally {
+      if (mounted) setState(() => _isLoadingShifts = false);
+    }
+  }
+
+  Future<void> _deleteShift(int id) async {
+     try {
+       await _shiftService.deleteShift(id);
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Shift deleted")));
+         _fetchShifts();
+       }
+     } catch (e) {
+       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to delete: $e")));
+     }
+  }
+
+  void _showDeleteConfirm(int id) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: ConstrainedBox(
+             constraints: const BoxConstraints(maxWidth: 400),
+             child: GlassContainer(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                      // Icon
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.delete_outline, color: Colors.red, size: 32),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Title
+                      Text(
+                        "Delete Shift?",
+                        style: GoogleFonts.poppins(
+                           fontSize: 18,
+                           fontWeight: FontWeight.w600,
+                           color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      
+                      // Message
+                      Text(
+                        "Are you sure you want to delete this shift? This action cannot be undone.",
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(
+                           fontSize: 14,
+                           color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // Actions
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                side: BorderSide(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: Text(
+                                "Cancel",
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _deleteShift(id);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                "Delete",
+                                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                   ],
+                ),
+             ),
+          ),
+        );
+      }
+    );
+  }
+
+  void _openShiftDialog({Shift? shift}) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AddShiftDialog(
+        existingShift: shift,
+        onSubmit: (newShift) async {
+           try {
+             if (shift?.id != null) {
+               await _shiftService.updateShift(shift!.id!, newShift);
+             } else {
+               await _shiftService.createShift(newShift);
+             }
+             if (mounted) {
+                Navigator.pop(ctx);
+                _fetchShifts();
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Shift Saved")));
+             }
+           } catch(e) {
+             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+           }
+        },
+      )
+    );
   }
 
   @override
@@ -62,44 +224,53 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
     final primaryColor = Theme.of(context).primaryColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(32, 24, 32, 24),
-      height: 48,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        indicator: BoxDecoration(
-          color: primaryColor,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: isDark ? [
-            BoxShadow(
-              color: primaryColor.withOpacity(0.4),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            )
-          ] : [
-            BoxShadow(
-              color: primaryColor.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            )
-          ],
-        ),
-        labelColor: Colors.white,
-        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
-        padding: const EdgeInsets.all(4),
-        labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
-        tabs: const [
-          Tab(text: 'Automation Rules'),
-          Tab(text: 'Shift Configuration'),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+        final margin = isMobile ? 16.0 : 32.0;
+
+        return Container(
+          margin: EdgeInsets.fromLTRB(margin, 24, margin, 24),
+          height: 48,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
+          ),
+          child: TabBar(
+            controller: _tabController,
+            isScrollable: isMobile,
+            tabAlignment: isMobile ? TabAlignment.start : TabAlignment.fill,
+            indicator: BoxDecoration(
+              color: primaryColor,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: isDark ? [
+                BoxShadow(
+                  color: primaryColor.withOpacity(0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                )
+              ] : [
+                BoxShadow(
+                  color: primaryColor.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                )
+              ],
+            ),
+            labelColor: Colors.white,
+            unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
+            indicatorSize: TabBarIndicatorSize.tab,
+            dividerColor: Colors.transparent,
+            padding: const EdgeInsets.all(4),
+            labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+            tabs: const [
+              Tab(text: 'Automation Rules'),
+              Tab(text: 'Shift Configuration'),
+            ],
+          ),
+        );
+      }
     );
   }
 
@@ -521,114 +692,45 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
   }
 
   Widget _buildShiftConfiguration(BuildContext context) {
+    if (_isLoadingShifts) return const Center(child: CircularProgressIndicator()); 
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Header Section
           _buildHelperHeader(context),
           const SizedBox(height: 24),
 
           // Shifts Grid
-          // Shifts Grid
           Expanded(
-            child: LayoutBuilder(
+            child: _shifts.isEmpty 
+              ? Center(child: Text("No shifts found", style: GoogleFonts.poppins(color: Colors.grey)))
+              : LayoutBuilder(
               builder: (context, constraints) {
                 // Determine if we should stack vertically or horizontally
-                // Use a threshold or orientation check. Tablet Portrait is usually < 800-900 width
                 final isPortrait = constraints.maxWidth < 900; 
 
-                if (isPortrait) {
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.only(bottom: 32),
-                    child: Column(
-                      children: [
-                        _buildShiftCard(
-                          context,
-                          title: 'General Shift',
-                          type: 'FIXED',
-                          timing: '09:00 - 18:00',
-                          duration: '9h 00m',
-                          gracePeriod: '15 Mins',
-                          overtime: 'On (> 9h)',
-                          icon: Icons.access_time_filled,
-                          color: Colors.blue,
-                        ),
-                        const SizedBox(height: 24),
-                        _buildShiftCard(
-                          context,
-                          title: 'Morning Shift',
-                          type: 'ROTATIONAL',
-                          timing: '06:00 - 14:00',
-                          duration: '9h 00m',
-                          gracePeriod: '10 Mins',
-                          overtime: 'Off',
-                          icon: Icons.wb_sunny_outlined,
-                          color: Colors.green,
-                        ),
-                        const SizedBox(height: 24),
-                        _buildShiftCard(
-                          context,
-                          title: 'Night Shift',
-                          type: 'NIGHT',
-                          timing: '22:00 - 06:00',
-                          duration: '9h 00m',
-                          gracePeriod: '30 Mins',
-                          overtime: 'On (> 8h)',
-                          icon: Icons.nightlight_round,
-                          color: Colors.deepPurple,
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
+                // We'll wrap in Wrap or Grid or ListView depending on layout.
+                // Reusing _buildShiftCard for each item.
                 return SingleChildScrollView(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _buildShiftCard(
-                          context,
-                          title: 'General Shift',
-                          type: 'FIXED',
-                          timing: '09:00 - 18:00',
-                          duration: '9h 00m',
-                          gracePeriod: '15 Mins',
-                          overtime: 'On (> 9h)',
-                          icon: Icons.access_time_filled,
-                          color: Colors.blue,
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      Expanded(
-                        child: _buildShiftCard(
-                          context,
-                          title: 'Morning Shift',
-                          type: 'ROTATIONAL',
-                          timing: '06:00 - 14:00',
-                          duration: '9h 00m',
-                          gracePeriod: '10 Mins',
-                          overtime: 'Off',
-                          icon: Icons.wb_sunny_outlined,
-                          color: Colors.green,
-                        ),
-                      ),
-                      const SizedBox(width: 24),
-                      Expanded(
-                        child: _buildShiftCard(
-                          context,
-                          title: 'Night Shift',
-                          type: 'NIGHT',
-                          timing: '22:00 - 06:00',
-                          duration: '9h 00m',
-                          gracePeriod: '30 Mins',
-                          overtime: 'On (> 8h)',
-                          icon: Icons.nightlight_round,
-                          color: Colors.deepPurple,
-                        ),
-                      ),
-                    ],
+                  padding: const EdgeInsets.only(bottom: 32),
+                  child: Wrap(
+                    spacing: 24,
+                    runSpacing: 24,
+                    alignment: WrapAlignment.start,
+                    children: _shifts.map<Widget>((shift) {
+                       final itemWidth = isPortrait ? constraints.maxWidth : (constraints.maxWidth - 48) / 3;
+                       
+                       return SizedBox(
+                         width: itemWidth,
+                         child: _buildShiftCard(
+                            context,
+                            shift: shift,
+                         ),
+                       );
+                    }).toList(),
                   ),
                 );
               },
@@ -670,10 +772,7 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
           ),
           ElevatedButton.icon(
             onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => const AddShiftDialog(),
-              );
+               _openShiftDialog();
             },
             icon: const Icon(Icons.add, size: 18),
             label: Text(
@@ -696,16 +795,20 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
 
   Widget _buildShiftCard(
     BuildContext context, {
-    required String title,
-    required String type,
-    required String timing,
-    required String duration,
-    required String gracePeriod,
-    required String overtime,
-    required IconData icon,
-    required Color color,
+    required Shift shift,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = Colors.indigoAccent;
+    final icon = Icons.access_time_filled;
+    
+    // Calculate duration (simple approximation if needed, or pass from backend)
+    // Display shift data
+    final title = shift.name;
+    final type = "Shift"; // Backend doesn't seem to have type yet, or maybe 'shift_name' implies it?
+    final timing = "${shift.startTime} - ${shift.endTime}";
+    final gracePeriod = "${shift.gracePeriodMins} Mins";
+    final overtime = shift.isOvertimeEnabled ? "On (> ${shift.overtimeThresholdHours}h)" : "Off";
+    
     
     return GlassContainer(
       padding: const EdgeInsets.all(24),
@@ -724,31 +827,42 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
                 child: Icon(icon, color: color, size: 20),
               ),
               const SizedBox(width: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                      color: Theme.of(context).textTheme.bodyLarge?.color,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    type,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey,
-                      letterSpacing: 0.5,
+                    const SizedBox(height: 2),
+                    Text(
+                      type,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const Spacer(),
-              IconButton(onPressed: () {}, icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey)),
+              IconButton(
+                onPressed: () => _openShiftDialog(shift: shift), 
+                icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey)
+              ),
+              IconButton(
+                onPressed: () {
+                   if (shift.id != null) _showDeleteConfirm(shift.id!);
+                }, 
+                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey)
+              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -758,10 +872,10 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
           // Details List
           _buildDetailRow(context, 'Timing', timing, isBold: true),
           const SizedBox(height: 12),
-          _buildDetailRow(context, 'Duration', duration),
-          const SizedBox(height: 16),
-          const Divider(height: 1, thickness: 1, color: Colors.white10),
-          const SizedBox(height: 16),
+          // _buildDetailRow(context, 'Duration', duration), // Duration omitted for simplicity or calculated
+          // const SizedBox(height: 16),
+          // const Divider(height: 1, thickness: 1, color: Colors.white10),
+          // const SizedBox(height: 16),
           _buildDetailRow(context, 'Grace Period', gracePeriod, icon: Icons.warning_amber_rounded, iconColor: Colors.amber),
           const SizedBox(height: 12),
           _buildDetailRow(context, 'Overtime', overtime, icon: Icons.bolt, iconColor: const Color(0xFF5B60F6)),

@@ -17,6 +17,7 @@ import '../../../attendance/mobile/views/my_attendance_view.dart';
 import '../../../live_attendance/mobile/views/live_attendance_view.dart';
 import '../../../reports/mobile/views/reports_view.dart';
 import '../../../holidays/mobile/views/holidays_view.dart';
+import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
 
 class MobileLandscape extends StatelessWidget {
   const MobileLandscape({super.key});
@@ -77,8 +78,10 @@ class MobileLandscape extends StatelessWidget {
       case PageType.holidays:
           return const MobileHolidaysContent();
 
-      case PageType.policyEngine:
       case PageType.geoFencing:
+        return const MobileGeoFencingContent();
+
+      case PageType.policyEngine:
       case PageType.profile:
          return Center(child: Text('${page.title} (Landscape)'));
     }

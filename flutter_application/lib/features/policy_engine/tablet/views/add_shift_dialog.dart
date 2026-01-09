@@ -1,17 +1,91 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../models/shift_model.dart';
 
 class AddShiftDialog extends StatefulWidget {
-  const AddShiftDialog({super.key});
+  final Shift? existingShift;
+  final Function(Shift) onSubmit;
+  
+  const AddShiftDialog({super.key, this.existingShift, required this.onSubmit});
 
   @override
   State<AddShiftDialog> createState() => _AddShiftDialogState();
 }
 
 class _AddShiftDialogState extends State<AddShiftDialog> {
+  final _nameCtrl = TextEditingController();
+  final _graceCtrl = TextEditingController(text: "0");
+  final _otThresholdCtrl = TextEditingController(text: "8.0");
+  
+  TimeOfDay _startTime = const TimeOfDay(hour: 9, minute: 0);
+  TimeOfDay _endTime = const TimeOfDay(hour: 18, minute: 0);
   bool _isOvertimeEnabled = false;
   String _selectedShiftType = 'Fixed Time';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingShift != null) {
+      final s = widget.existingShift!;
+      _nameCtrl.text = s.name;
+      _graceCtrl.text = s.gracePeriodMins.toString();
+      _isOvertimeEnabled = s.isOvertimeEnabled;
+      _otThresholdCtrl.text = s.overtimeThresholdHours.toString();
+      _startTime = _parseTime(s.startTime);
+      _endTime = _parseTime(s.endTime);
+    }
+  }
+
+  TimeOfDay _parseTime(String t) {
+      try {
+        final parts = t.split(":");
+        return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+      } catch (e) {
+        return const TimeOfDay(hour: 9, minute: 0);
+      }
+  }
+   
+  String _fmtTime(TimeOfDay t) {
+     final h = t.hour.toString().padLeft(2, '0');
+     final m = t.minute.toString().padLeft(2, '0');
+     return "$h:$m";
+  }
+
+  Future<void> _pickTime(bool isStart) async {
+    final picked = await showTimePicker(
+      context: context, 
+      initialTime: isStart ? _startTime : _endTime
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _startTime = picked;
+        } else {
+          _endTime = picked;
+        }
+      });
+    }
+  }
+
+  void _submit() {
+    if (_nameCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Shift Name is required")));
+      return;
+    }
+    
+    final s = Shift(
+      id: widget.existingShift?.id,
+      name: _nameCtrl.text,
+      startTime: _fmtTime(_startTime), // "HH:MM"
+      endTime: _fmtTime(_endTime),
+      // Adding :00 if needed by backend, but model handles string.
+      gracePeriodMins: int.tryParse(_graceCtrl.text) ?? 0,
+      isOvertimeEnabled: _isOvertimeEnabled,
+      overtimeThresholdHours: double.tryParse(_otThresholdCtrl.text) ?? 8.0,
+    );
+    widget.onSubmit(s);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +110,7 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Create New Shift',
+                    widget.existingShift == null ? 'Create New Shift' : 'Edit Shift',
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -59,10 +133,10 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                     children: [
                       // Shift Name
                       _buildLabel(context, 'Shift Name'),
-                      _buildTextField(context, 'e.g. Morning Shift A'),
+                      _buildTextField(context, 'e.g. Morning Shift A', controller: _nameCtrl),
                       const SizedBox(height: 16),
 
-                      // Shift Type
+                      // Shift Type (Visual only for now as distinct from model)
                       _buildLabel(context, 'Shift Type'),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -97,7 +171,7 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _buildLabel(context, 'Start Time'),
-                                _buildTimePicker(context, '--:--'),
+                                _buildTimePicker(context, _fmtTime(_startTime), () => _pickTime(true)),
                               ],
                             ),
                           ),
@@ -107,7 +181,7 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _buildLabel(context, 'End Time'),
-                                _buildTimePicker(context, '--:--'),
+                                _buildTimePicker(context, _fmtTime(_endTime), () => _pickTime(false)),
                               ],
                             ),
                           ),
@@ -117,7 +191,7 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
 
                       // Grace Period
                       _buildLabel(context, 'Grace Period (Minutes)'),
-                      _buildTextField(context, '0', suffixText: 'mins'),
+                      _buildTextField(context, '0', suffixText: 'mins', controller: _graceCtrl, isNumeric: true),
                       const SizedBox(height: 4),
                       Text(
                         'Time allowed after start time before marking as "Late".',
@@ -158,7 +232,7 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                       if (_isOvertimeEnabled) ...[
                          const SizedBox(height: 16),
                          _buildLabel(context, 'Minimum Hours for OT'),
-                         _buildTextField(context, '8', suffixText: 'hours'),
+                         _buildTextField(context, '8', suffixText: 'hours', controller: _otThresholdCtrl, isNumeric: true),
                       ],
                     ],
                   ),
@@ -189,7 +263,7 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5B60F6),
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -227,11 +301,12 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
     );
   }
 
-  Widget _buildTextField(BuildContext context, String hint, {String? suffixText}) {
+  Widget _buildTextField(BuildContext context, String hint, {String? suffixText, TextEditingController? controller, bool isNumeric = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!;
 
     return TextField(
+      controller: controller,
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: GoogleFonts.poppins(color: Colors.grey, fontSize: 14),
@@ -250,16 +325,16 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
         filled: true,
       ),
       style: GoogleFonts.poppins(fontSize: 14),
-      keyboardType: TextInputType.text,
+      keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
     );
   }
 
-  Widget _buildTimePicker(BuildContext context, String hint) {
+  Widget _buildTimePicker(BuildContext context, String value, VoidCallback onTap) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final borderColor = isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!;
 
     return InkWell(
-      onTap: () {},
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
@@ -271,10 +346,10 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              hint,
-              style: GoogleFonts.poppins(color: Colors.grey, fontSize: 14),
+              value,
+              style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87, fontSize: 14),
             ),
-            Icon(Icons.access_time, size: 18, color: Colors.grey),
+            const Icon(Icons.access_time, size: 18, color: Colors.grey),
           ],
         ),
       ),

@@ -12,7 +12,7 @@ class ApiConfig {
   // Dropdown Data Routes
   static const String departments = '/admin/departments';
   static const String designations = '/admin/designations';
-  static const String shifts = '/admin/shifts';
+  static const String shifts = '/policies/shifts';
 
   // Attendance Routes
   static const String timeIn = '/attendance/timein';
@@ -21,5 +21,12 @@ class ApiConfig {
   static const String adminAttendance = '/attendance/records/admin';
   
   // Holiday Routes
+  // Holiday Routes
   static const String holidays = '/holiday';
+
+  // Geofencing Routes
+  static const String locations = '/locations'; 
+  static const String assignments = '/locations/assignments';
+  static const String adminUsers = '/admin/users'; // For fetching users with ?workLocation=true
+  static const String nominatimUrl = 'https://nominatim.openstreetmap.org/reverse';
 }

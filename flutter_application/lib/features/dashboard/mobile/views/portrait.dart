@@ -15,6 +15,8 @@ import '../../../reports/tablet/views/reports_view.dart';
 import '../../../holidays/mobile/views/holidays_view.dart';
 import '../../../holidays/tablet/views/holidays_view.dart';
 import '../../../profile/mobile/views/profile_view.dart';
+import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
+import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 
 class MobilePortrait extends StatelessWidget {
   const MobilePortrait({super.key});
@@ -94,33 +96,10 @@ class MobilePortrait extends StatelessWidget {
           return const MobileProfileContent();
 
       case PageType.policyEngine:
+         return const PolicyEngineView();
+
       case PageType.geoFencing:
-         return Center(
-           child: Column(
-             mainAxisAlignment: MainAxisAlignment.center,
-             children: [
-               Icon(Icons.screen_rotation, size: 48, color: Colors.grey[400]),
-               const SizedBox(height: 16),
-               Text(
-                 'Desktop/Tablet Only',
-                 style: GoogleFonts.poppins(
-                   fontSize: 18,
-                   fontWeight: FontWeight.w600,
-                   color: isDark ? Colors.white : Colors.black87,
-                 ),
-               ),
-               const SizedBox(height: 8),
-               Text(
-                 'This feature requires a larger screen.',
-                 style: GoogleFonts.poppins(
-                   fontSize: 14,
-                   color: Colors.grey[500],
-                 ),
-                 textAlign: TextAlign.center,
-               ),
-             ],
-           ),
-         );
+        return const MobileGeoFencingContent();
          
       default:
         return Center(child: Text('Page: ${page.title}'));

@@ -18,6 +18,7 @@ class AppSidebar extends StatelessWidget {
     // Glassmorphism Sidebar
     return GlassContainer(
       width: isMobile ? 240 : 280,
+      height: double.infinity,
       blur: 60, // Stronger blur for iOS frosted effect
       color: Theme.of(context).brightness == Brightness.dark 
           ? Colors.black.withOpacity(0.2) // Explicit iOS dark glass
@@ -26,8 +27,9 @@ class AppSidebar extends StatelessWidget {
       child: ValueListenableBuilder<PageType>(
         valueListenable: navigationNotifier,
         builder: (context, currentPage, _) {
-          return Column(
-            children: [
+          return SingleChildScrollView(
+            child: Column(
+              children: [
               // Sidebar Header (Matches CustomAppBar)
               Container(
                 height: 70,
@@ -78,6 +80,7 @@ class AppSidebar extends StatelessWidget {
                 currentPage == page,
               )),
             ],
+            ),
           );
         }
       ),

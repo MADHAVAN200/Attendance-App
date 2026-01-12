@@ -387,9 +387,10 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                           final emp = _filteredEmployees[index];
                           final isSelected = _selectedIds.contains(emp.userId);
                           
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.05) : Theme.of(context).cardColor,
+                                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                                    return Card(
+                                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                      color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.05) : Theme.of(context).cardColor,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -408,9 +409,18 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                                       onChanged: (_) => _toggleSelection(emp.userId),
                                       activeColor: Theme.of(context).primaryColor,
                                     )
-                                  : CircleAvatar(
-                                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                                      child: Text(emp.userName.isNotEmpty ? emp.userName[0].toUpperCase() : '?'),
+                                    : Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
+                                      ),
+                                      child: CircleAvatar(
+                                        backgroundColor: isDark ? Colors.white.withOpacity(0.2) : Theme.of(context).primaryColor.withOpacity(0.1),
+                                        child: Text(
+                                          emp.userName.isNotEmpty ? emp.userName[0].toUpperCase() : '?',
+                                          style: TextStyle(color: isDark ? Colors.white : null),
+                                        ),
+                                      ),
                                     ),
                               title: Text(emp.userName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
                               subtitle: Column(
@@ -466,9 +476,18 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircleAvatar(
-                radius: 40,
-                child: Text(employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?', style: const TextStyle(fontSize: 32)),
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Theme.of(context).brightness == Brightness.dark ? Border.all(color: Colors.blue, width: 2) : null,
+                ),
+                child: CircleAvatar(
+                  radius: 40,
+                  child: Text(
+                    employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?', 
+                    style: TextStyle(fontSize: 32, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : null),
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               Text(employee.userName, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),

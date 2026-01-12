@@ -20,7 +20,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        Provider<AuthService>.value(value: authService),
+        ChangeNotifierProvider<AuthService>.value(value: authService),
       ],
       child: const AttendanceApp(),
     ),
@@ -89,7 +89,6 @@ class AuthWrapper extends StatefulWidget {
 
 class _AuthWrapperState extends State<AuthWrapper> {
   bool _isLoading = true;
-  bool _isAuthenticated = false;
 
   @override
   void initState() {
@@ -100,11 +99,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _checkAuth() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     // Check auth status (Refresh -> Get User)
-    final user = await authService.checkAuthStatus();
+    await authService.checkAuthStatus();
     
     if (mounted) {
       setState(() {
-        _isAuthenticated = user != null;
         _isLoading = false;
       });
     }
@@ -120,7 +118,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
       );
     }
 
-    if (_isAuthenticated) {
+    // Watch for auth changes
+    final isAuthenticated = context.watch<AuthService>().isAuthenticated;
+
+    if (isAuthenticated) {
       return const OrientationGuard(child: DashboardScreen());
     }
 

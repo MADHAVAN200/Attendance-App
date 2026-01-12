@@ -56,8 +56,10 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
       },
       child: GlassContainer(
         padding: const EdgeInsets.all(20),
-        color: isSelected ? primaryColor.withOpacity(0.1) : null,
-        border: isSelected ? Border.all(color: primaryColor.withOpacity(0.5)) : null,
+        color: null,
+        border: isSelected 
+            ? Border.all(color: isDark ? Colors.blue.withOpacity(0.5) : primaryColor.withOpacity(0.5), width: isDark ? 1.5 : 1) 
+            : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

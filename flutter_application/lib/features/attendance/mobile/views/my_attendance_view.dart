@@ -279,12 +279,12 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: isActive ? color.withOpacity(0.2) : (isDark ? Colors.white10 : Colors.black12),
+                  color: isActive ? color.withOpacity(0.2) : color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   icon,
-                  color: isActive ? color : Colors.grey,
+                  color: isActive ? color : color.withOpacity(0.7),
                   size: 28,
                 ),
               ),
@@ -429,20 +429,42 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   // IN Info
-                  _buildTimeInfo(
-                    context, 
-                    time: _formatTime(record.timeIn), 
-                    location: record.timeInAddress ?? 'Unknown Location'
+                  InkWell(
+                    onTap: () => _showPunchDetails(
+                      context,
+                      type: 'TIME IN',
+                      time: _formatTime(record.timeIn),
+                      location: record.timeInAddress ?? 'Unknown Location',
+                      imageUrl: record.timeInImage,
+                      icon: Icons.login,
+                      accentColor: greenColor,
+                    ),
+                    child: _buildTimeInfo(
+                      context, 
+                      time: _formatTime(record.timeIn), 
+                      location: record.timeInAddress ?? 'Unknown Location'
+                    ),
                   ),
                   
                   const SizedBox(height: 24), // Spacing between In and Out
 
                   // OUT Info
                   record.timeOut != null 
-                    ? _buildTimeInfo(
-                        context, 
-                        time: _formatTime(record.timeOut), 
-                        location: record.timeOutAddress ?? 'Unknown Location' 
+                    ? InkWell(
+                        onTap: () => _showPunchDetails(
+                          context,
+                          type: 'TIME OUT',
+                          time: _formatTime(record.timeOut),
+                          location: record.timeOutAddress ?? 'Unknown Location',
+                          imageUrl: record.timeOutImage,
+                          icon: Icons.logout,
+                          accentColor: Colors.red,
+                        ),
+                        child: _buildTimeInfo(
+                          context, 
+                          time: _formatTime(record.timeOut), 
+                          location: record.timeOutAddress ?? 'Unknown Location' 
+                        ),
                       )
                     : Text(
                         'Currently Active',
@@ -568,6 +590,121 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
               )
             : Icon(Icons.person, size: 24, color: Colors.white.withOpacity(0.9)),
       ),
+    );
+  }
+
+  void _showPunchDetails(
+    BuildContext context, {
+    required String type,
+    required String time,
+    required String location,
+    required String? imageUrl,
+    required IconData icon,
+    required Color accentColor,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        child: GlassContainer(
+          width: 350,
+          padding: const EdgeInsets.all(24),
+          borderRadius: 24,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Row(
+                children: [
+                   Container(
+                     padding: const EdgeInsets.all(8),
+                     decoration: BoxDecoration(
+                       color: accentColor.withOpacity(0.1),
+                       borderRadius: BorderRadius.circular(12),
+                     ),
+                     child: Icon(icon, color: accentColor),
+                   ),
+                   const SizedBox(width: 16),
+                   Text(
+                     type,
+                     style: GoogleFonts.poppins(
+                       fontSize: 18,
+                       fontWeight: FontWeight.bold,
+                       color: Theme.of(context).textTheme.bodyLarge?.color,
+                     ),
+                   ),
+                   const Spacer(),
+                   IconButton(
+                     onPressed: () => Navigator.pop(context),
+                     icon: const Icon(Icons.close),
+                   ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              // Image
+              if (imageUrl != null && imageUrl.isNotEmpty)
+                Container(
+                  height: 250,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    image: DecorationImage(
+                      image: NetworkImage(imageUrl),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  height: 100,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).disabledColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(Icons.image_not_supported, size: 40, color: Theme.of(context).disabledColor),
+                ),
+                
+              const SizedBox(height: 24),
+              
+              // Time
+              _buildDetailRow(context, Icons.access_time, 'Time', time),
+              const SizedBox(height: 16),
+              // Location
+              _buildDetailRow(context, Icons.place_outlined, 'Location', location),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Theme.of(context).primaryColor),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+              Text(
+                value, 
+                style: GoogleFonts.poppins(
+                  fontSize: 15, 
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

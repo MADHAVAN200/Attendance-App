@@ -552,6 +552,7 @@ class _EmployeesViewState extends State<EmployeesView> {
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
     final subTextColor = Theme.of(context).textTheme.bodySmall?.color;
     final nameInitial = data.userName.isNotEmpty ? data.userName[0].toUpperCase() : '?';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return DataRow(
       onLongPress: () {
@@ -586,12 +587,21 @@ class _EmployeesViewState extends State<EmployeesView> {
             padding: const EdgeInsets.symmetric(vertical: 8),
             child: Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                  child: Text(
-                    nameInitial,
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor),
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
+                  ),
+                  child: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: isDark ? Colors.white.withOpacity(0.2) : Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: Text(
+                      nameInitial,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold, 
+                        color: isDark ? Colors.white : Theme.of(context).primaryColor,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -650,6 +660,7 @@ class _EmployeesViewState extends State<EmployeesView> {
   }
 
   void _showEmployeeDetails(BuildContext context, Employee employee) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Reusing the nice dialog from before, but populated with real data
     showDialog(
       context: context,
@@ -666,15 +677,21 @@ class _EmployeesViewState extends State<EmployeesView> {
             children: [
                Row(
                 children: [
-                   CircleAvatar(
-                    radius: 32,
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.15),
-                    child: Text(
-                      employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).primaryColor,
-                        fontSize: 24,
+                   Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
+                    ),
+                    child: CircleAvatar(
+                      radius: 32,
+                      backgroundColor: isDark ? Colors.white.withOpacity(0.2) : Theme.of(context).primaryColor.withOpacity(0.15),
+                      child: Text(
+                        employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : Theme.of(context).primaryColor,
+                          fontSize: 24,
+                        ),
                       ),
                     ),
                   ),

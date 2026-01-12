@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../features/dashboard/tablet/views/dashboard_view.dart';
 import '../../features/employees/tablet/views/employees_view.dart';
-import '../../features/my_attendance/tablet/views/my_attendance_view.dart';
+import '../../features/attendance/tablet/views/my_attendance_view.dart';
 import '../../features/live_attendance/tablet/views/live_attendance_view.dart';
 import '../../features/reports/tablet/views/reports_view.dart';
 import '../../features/holidays/tablet/views/holidays_view.dart';

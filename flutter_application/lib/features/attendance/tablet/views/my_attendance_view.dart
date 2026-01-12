@@ -273,12 +273,12 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: isActive ? color.withOpacity(0.2) : (isDark ? Colors.white10 : Colors.black12),
+                  color: isActive ? color.withOpacity(0.2) : color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   icon,
-                  color: isActive ? color : (isDark ? Colors.grey : Colors.grey),
+                  color: isActive ? color : color.withOpacity(0.7),
                   size: 28,
                 ),
               ),
@@ -509,115 +509,127 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accentColor.withOpacity(0.1)),
+    return InkWell(
+      onTap: () => _showPunchDetails(
+        context,
+        type: type,
+        time: time,
+        location: location,
+        imageUrl: imageUrl,
+        icon: icon,
+        accentColor: accentColor,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(color: accentColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                child: Icon(icon, size: 12, color: accentColor),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                type,
-                style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: accentColor, letterSpacing: 0.5),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-               // Avatar / Photo Placeholder
-               GestureDetector(
-                 onTap: imageUrl != null && imageUrl.isNotEmpty ? () {
-                   showDialog(
-                     context: context,
-                     builder: (ctx) => Dialog(
-                       backgroundColor: Colors.transparent,
-                       surfaceTintColor: Colors.transparent,
-                       child: Column(
-                         mainAxisSize: MainAxisSize.min,
-                         children: [
-                           Container(
-                             clipBehavior: Clip.antiAlias,
-                             decoration: BoxDecoration(
-                               borderRadius: BorderRadius.circular(16),
-                               color: Colors.black,
-                             ),
-                             child: CachedNetworkImage(
-                               imageUrl: imageUrl,
-                               fit: BoxFit.contain,
-                               placeholder: (context, url) => const SizedBox(height: 200, width: 200, child: Center(child: CircularProgressIndicator())),
-                               errorWidget: (context, url, error) => const SizedBox(height: 200, width: 200, child: Icon(Icons.error, color: Colors.white)),
-                             ),
-                           ),
-                           const SizedBox(height: 12),
-                           IconButton(
-                             onPressed: () => Navigator.pop(ctx),
-                             icon: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.close, color: Colors.black)),
-                           ),
-                         ],
-                       ),
-                     ),
-                   );
-                 } : null,
-                 child: Container(
-                   width: 40,
-                   height: 40,
-                   clipBehavior: Clip.antiAlias,
-                   decoration: BoxDecoration(
-                     color: Colors.black, // Dark background for photos
-                     borderRadius: BorderRadius.circular(8),
-                     border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
-                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
-                   ),
-                   child: imageUrl != null && imageUrl.isNotEmpty
-                       ? CachedNetworkImage(
-                           imageUrl: imageUrl,
-                           fit: BoxFit.contain, // best for no cropping
-                           placeholder: (context, url) => const Icon(Icons.person, size: 20, color: Colors.grey),
-                           errorWidget: (context, url, error) => const Icon(Icons.person_off, size: 20, color: Colors.grey),
-                         )
-                       : Icon(Icons.person, size: 24, color: Colors.white.withOpacity(0.8)),
-                 ),
-               ),
-               const SizedBox(width: 10),
-               Expanded(
-                 child: Column(
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     Text(
-                       time,
-                       style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Theme.of(context).textTheme.bodyLarge?.color),
-                     ),
-                     Row(
-                       children: [
-                         Icon(Icons.place, size: 10, color: Colors.grey),
-                         const SizedBox(width: 2),
-                         Expanded(
-                           child: Text(
-                             location,
-                             style: GoogleFonts.poppins(fontSize: 10, color: Theme.of(context).textTheme.bodySmall?.color),
-                             overflow: TextOverflow.ellipsis,
-                           ),
-                         ),
-                       ],
-                     ),
-                   ],
-                 ),
-               ),
-            ],
-          ),
-        ],
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: accentColor.withOpacity(0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(color: accentColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                  child: Icon(icon, size: 12, color: accentColor),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  type,
+                  style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: accentColor, letterSpacing: 0.5),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                // Avatar / Photo Placeholder
+                GestureDetector(
+                  onTap: imageUrl != null && imageUrl.isNotEmpty ? () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => Dialog(
+                        backgroundColor: Colors.transparent,
+                        surfaceTintColor: Colors.transparent,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              clipBehavior: Clip.antiAlias,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                color: Colors.black,
+                              ),
+                              child: CachedNetworkImage(
+                                imageUrl: imageUrl,
+                                fit: BoxFit.contain,
+                                placeholder: (context, url) => const SizedBox(height: 200, width: 200, child: Center(child: CircularProgressIndicator())),
+                                errorWidget: (context, url, error) => const SizedBox(height: 200, width: 200, child: Icon(Icons.error, color: Colors.white)),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            IconButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              icon: const CircleAvatar(backgroundColor: Colors.white, child: Icon(Icons.close, color: Colors.black)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  } : null,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: Colors.black, // Dark background for photos
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
+                    ),
+                    child: imageUrl != null && imageUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            fit: BoxFit.contain, // best for no cropping
+                            placeholder: (context, url) => const Icon(Icons.person, size: 20, color: Colors.grey),
+                            errorWidget: (context, url, error) => const Icon(Icons.person_off, size: 20, color: Colors.grey),
+                          )
+                        : Icon(Icons.person, size: 24, color: Colors.white.withOpacity(0.8)),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        time,
+                        style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Theme.of(context).textTheme.bodyLarge?.color),
+                      ),
+                      Row(
+                        children: [
+                          Icon(Icons.place, size: 10, color: Colors.grey),
+                          const SizedBox(width: 2),
+                          Expanded(
+                            child: Text(
+                              location,
+                              style: GoogleFonts.poppins(fontSize: 10, color: Theme.of(context).textTheme.bodySmall?.color),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -631,6 +643,119 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
          ),
        ),
      );
+  }
+  void _showPunchDetails(
+    BuildContext context, {
+    required String type,
+    required String time,
+    required String location,
+    required String? imageUrl,
+    required IconData icon,
+    required Color accentColor,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        child: GlassContainer(
+          width: 400,
+          padding: const EdgeInsets.all(24),
+          borderRadius: 24,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Row(
+                children: [
+                   Container(
+                     padding: const EdgeInsets.all(8),
+                     decoration: BoxDecoration(
+                       color: accentColor.withOpacity(0.1),
+                       borderRadius: BorderRadius.circular(12),
+                     ),
+                     child: Icon(icon, color: accentColor),
+                   ),
+                   const SizedBox(width: 16),
+                   Text(
+                     type,
+                     style: GoogleFonts.poppins(
+                       fontSize: 20,
+                       fontWeight: FontWeight.bold,
+                       color: Theme.of(context).textTheme.bodyLarge?.color,
+                     ),
+                   ),
+                   const Spacer(),
+                   IconButton(
+                     onPressed: () => Navigator.pop(context),
+                     icon: const Icon(Icons.close),
+                   ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              
+              // Image
+              if (imageUrl != null && imageUrl.isNotEmpty)
+                Container(
+                  height: 200,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
+                    image: DecorationImage(
+                      image: NetworkImage(imageUrl),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  height: 100,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).disabledColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(Icons.image_not_supported, size: 40, color: Theme.of(context).disabledColor),
+                ),
+                
+              const SizedBox(height: 24),
+              
+              // Time & Location
+              _buildDetailRow(context, Icons.access_time, 'Time', time),
+              const SizedBox(height: 16),
+              _buildDetailRow(context, Icons.place_outlined, 'Location', location),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Theme.of(context).primaryColor),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+              Text(
+                value, 
+                style: GoogleFonts.poppins(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

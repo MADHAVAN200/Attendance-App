@@ -428,29 +428,36 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
       child: GlassContainer(
         padding: EdgeInsets.zero,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columnSpacing: 24,
-              horizontalMargin: 24,
-              headingRowColor: MaterialStateProperty.all(Colors.transparent),
-              dataRowMaxHeight: 60,
-              columns: columns.map((c) => _buildColumnHeader(context, c.toString())).toList(),
-              rows: rows.map((row) {
-                 final cells = row as List;
-                 return DataRow(
-                   cells: cells.map((cell) => DataCell(
-                     Text(
-                       cell?.toString() ?? '-', 
-                       style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).textTheme.bodyLarge?.color)
-                     )
-                   )).toList()
-                 );
-              }).toList(),
-            ),
-          ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: DataTable(
+                    columnSpacing: 24,
+                    horizontalMargin: 24,
+                    headingRowColor: MaterialStateProperty.all(Colors.transparent),
+                    dataRowMaxHeight: 60,
+                    columns: columns.map((c) => _buildColumnHeader(context, c.toString())).toList(),
+                    rows: rows.map((row) {
+                         final cells = row as List;
+                         return DataRow(
+                           cells: cells.map((cell) => DataCell(
+                             Text(
+                               cell?.toString() ?? '-', 
+                               style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).textTheme.bodyLarge?.color)
+                             )
+                           )).toList()
+                         );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            );
+          }
         ),
       ),
     );

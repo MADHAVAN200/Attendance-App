@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
@@ -6,7 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/api_constants.dart';
 
-class AuthService {
+class AuthService extends ChangeNotifier {
   final Dio _dio = Dio();
   late PersistCookieJar _cookieJar;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
@@ -33,8 +34,8 @@ class AuthService {
           return handler.next(options);
         },
         onError: (DioException e, handler) async {
-          // Handle 403 Forbidden (likely expired access token)
-          if (e.response?.statusCode == 403 && _accessToken != null) {
+          // Handle 401 Unauthorized & 403 Forbidden (likely expired access token)
+          if ((e.response?.statusCode == 403 || e.response?.statusCode == 401) && _accessToken != null) {
             try {
               final newAccessToken = await refreshToken();
               if (newAccessToken != null) {
@@ -52,6 +53,9 @@ class AuthService {
                   queryParameters: opts.queryParameters,
                 );
                 return handler.resolve(clonedReq);
+              } else {
+                 // Refresh failed, force logout
+                 await logout();
               }
             } catch (refreshError) {
               await logout();
@@ -73,6 +77,7 @@ class AuthService {
 
       if (response.statusCode == 200) {
         _accessToken = response.data['accessToken'];
+        notifyListeners(); // Notify UI
         return response.data;
       } else {
         throw Exception(response.data['message'] ?? 'Login Failed');
@@ -93,6 +98,7 @@ class AuthService {
       if (response.statusCode == 200) {
         final newToken = response.data['accessToken'];
         _accessToken = newToken;
+        // Check if we want to notify listeners on silent refresh? Usually not strictly needed unless UI depends on token
         return newToken;
       }
     } catch (e) {
@@ -110,6 +116,7 @@ class AuthService {
       _accessToken = null;
       await _cookieJar.deleteAll();
       await _storage.deleteAll();
+      notifyListeners(); // Notify UI to redirect
     }
   }
   

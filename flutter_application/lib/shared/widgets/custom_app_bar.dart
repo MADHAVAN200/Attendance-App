@@ -6,6 +6,9 @@ import 'package:provider/provider.dart';
 import '../../features/auth/login_screen.dart';
 import '../services/auth_service.dart';
 import '../navigation/navigation_controller.dart';
+import '../../features/notifications/mobile/views/notifications_view.dart'; // Import Mobile View
+import '../services/notification_service.dart';
+import 'notification_list.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showDrawerButton;
@@ -72,9 +75,72 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             },
           ),
 
-          IconButton(
-            icon: const Icon(Icons.notifications_outlined),
-            onPressed: () {},
+
+
+          // Notification Icon with Badge
+          Consumer<NotificationService>(
+            builder: (context, notificationService, _) {
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined),
+                    tooltip: 'Notifications',
+                    onPressed: () {
+                      if (MediaQuery.of(context).size.width < 600) {
+                         // Mobile: Navigate to separate screen
+                         Navigator.push(
+                           context, 
+                           MaterialPageRoute(builder: (_) => const NotificationsView())
+                         );
+                      } else {
+                        // Tablet/Desktop: Show Popup
+                        showDialog(
+                          context: context,
+                          barrierColor: Colors.transparent, // Create a popover feel
+                          builder: (context) => Stack(
+                            children: [
+                              Positioned(
+                                top: 60,
+                                right: 80, // Adjust based on layout
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: const NotificationList(),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  if (notificationService.unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          '${notificationService.unreadCount}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
           if (MediaQuery.of(context).size.width > 600) ...[
             const SizedBox(width: 16),

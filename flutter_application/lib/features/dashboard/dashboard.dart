@@ -55,13 +55,7 @@ class DashboardLogic {
       'color': const Color(0xFF6366F1),
       'page': PageType.employees,
     },
-    {
-      'title': 'Generate Report',
-      'subtitle': 'Download monthly stats',
-      'icon': Icons.description_outlined,
-      'color': const Color(0xFF3B82F6),
-      'page': PageType.reports,
-    },
+
     {
       'title': 'Live Monitor',
       'subtitle': 'Real-time attendance',

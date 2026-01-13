@@ -115,12 +115,15 @@ class ActivityFeed extends StatelessWidget {
             child: OutlinedButton(
               onPressed: () {},
               style: OutlinedButton.styleFrom(
-                side: BorderSide(color: dividerColor),
+                side: BorderSide(color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withOpacity(0.2) : dividerColor),
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
               child: Text(
                 'View Full Feed',
-                style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).primaryColor),
+                style: GoogleFonts.poppins(
+                  fontSize: 12, 
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).primaryColor
+                ),
               ),
             ),
           ),

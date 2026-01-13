@@ -9,6 +9,11 @@ class ApiConstants {
   static const String logout = '/auth/logout';
   static const String me = '/auth/me';
 
+  // Notification Endpoints
+  static const String notifications = '/notifications';
+  static const String markRead = '/notifications/:id/read';
+  static const String readAll = '/notifications/read-all';
+
   // Keys
   static String get recaptchaSiteKey => dotenv.env['RECAPTCHA_SITE_KEY'] ?? '';
 }

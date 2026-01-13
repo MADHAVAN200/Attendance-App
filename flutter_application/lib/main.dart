@@ -8,6 +8,8 @@ import 'shared/providers/theme_simple.dart';
 import 'shared/widgets/orientation_guard.dart';
 import 'shared/services/auth_service.dart';
 
+import 'shared/services/notification_service.dart'; // Import NotificationService
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -17,10 +19,15 @@ void main() async {
   final authService = AuthService();
   await authService.init();
 
+  final notificationService = NotificationService(authService);
+  // Optional: Start fetching notifications immediately if auth is ready, 
+  // but usually better to wait for auth check in AuthWrapper.
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthService>.value(value: authService),
+        ChangeNotifierProvider<NotificationService>.value(value: notificationService),
       ],
       child: const AttendanceApp(),
     ),
@@ -100,6 +107,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
     final authService = Provider.of<AuthService>(context, listen: false);
     // Check auth status (Refresh -> Get User)
     await authService.checkAuthStatus();
+    
+    // If authenticated, fetch notifications
+    if (authService.isAuthenticated && mounted) {
+      Provider.of<NotificationService>(context, listen: false).fetchNotifications();
+    }
     
     if (mounted) {
       setState(() {

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 're_captcha_v2.dart';
+import 'word_captcha.dart'; // Import WordCaptcha
 import 'mobile/views/login_mobile_portrait.dart';
 import 'tablet/views/login_tablet_portrait.dart';
 import 'tablet/views/login_tablet_landscape.dart';
@@ -24,20 +24,33 @@ class LoginScreenState extends State<LoginScreen> {
 
   bool isLoading = false;
   bool isPasswordVisible = false;
-  String? captchaToken;
+  
+  // New Captcha State
+  String? captchaId;
+  String? captchaValue;
 
   void togglePasswordVisibility() {
     setState(() => isPasswordVisible = !isPasswordVisible);
   }
 
-  void setCaptchaToken(String token) {
-    setState(() => captchaToken = token);
+  void onCaptchaChanged(String? id, String? value) {
+    final bool wasValid = captchaValue != null && captchaValue!.isNotEmpty;
+    final bool isValid = value != null && value.isNotEmpty;
+    
+    // Always update the values
+    captchaId = id;
+    captchaValue = value;
+
+    // Only rebuild if the validity state changes (which affects the Login button)
+    if (wasValid != isValid) {
+      setState(() {});
+    }
   }
 
   Future<void> handleLogin() async {
     if (!formKey.currentState!.validate()) return;
 
-    if (captchaToken == null) {
+    if (captchaId == null || captchaValue == null || captchaValue!.isEmpty) {
       _showError('Please complete CAPTCHA verification');
       return;
     }
@@ -46,12 +59,11 @@ class LoginScreenState extends State<LoginScreen> {
 
     try {
       final auth = Provider.of<AuthService>(context, listen: false);
-      // Determine if input looks like an email for tracking, 
-      // but send as 'user_input' to backend regardless
       await auth.login(
         identifierController.text.trim(),
         passwordController.text,
-        captchaToken!,
+        captchaId!,
+        captchaValue!,
       );
 
       if (!mounted) return;
@@ -61,9 +73,12 @@ class LoginScreenState extends State<LoginScreen> {
       );
     } catch (e) {
       _showError(e.toString());
-      setState(() => captchaToken = null);
+      // Refresh captcha on error? Ideally yes, but WordCaptcha handles its own refresh.
+      // We might want to force refresh it, but for now user can tap refresh.
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -77,13 +92,10 @@ class LoginScreenState extends State<LoginScreen> {
   }
 
   Widget buildCaptcha() {
-    // Pass current theme brightness to customize ReCaptcha appearance if desired
-    return ReCaptchaV2(
-      siteKey: dotenv.env['RECAPTCHA_SITE_KEY'] ?? 'missing-key',
-      onVerified: setCaptchaToken,
+    return WordCaptcha(
+      onCaptchaChanged: onCaptchaChanged,
     );
   }
-
 
   @override
   Widget build(BuildContext context) {

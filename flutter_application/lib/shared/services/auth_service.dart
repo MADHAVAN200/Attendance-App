@@ -67,12 +67,13 @@ class AuthService extends ChangeNotifier {
     );
   }
 
-  Future<Map<String, dynamic>> login(String userInput, String password, String captchaToken) async {
+  Future<Map<String, dynamic>> login(String userInput, String password, String captchaId, String captchaValue) async {
     try {
       final response = await _dio.post(ApiConstants.login, data: {
         'user_input': userInput,
         'user_password': password,
-        'captchaToken': captchaToken,
+        'captchaId': captchaId,
+        'captchaText': captchaValue,
       });
 
       if (response.statusCode == 200) {
@@ -87,6 +88,15 @@ class AuthService extends ChangeNotifier {
          throw Exception(e.response!.data['message'] ?? 'Login Failed');
       }
       rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchCaptcha() async {
+    try {
+      final response = await _dio.get(ApiConstants.captchaGenerate);
+      return response.data;
+    } catch (e) {
+      throw Exception('Failed to load captcha');
     }
   }
 

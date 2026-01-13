@@ -239,8 +239,8 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
           ),
           child: TabBar(
             controller: _tabController,
-            isScrollable: isMobile,
-            tabAlignment: isMobile ? TabAlignment.start : TabAlignment.fill,
+            isScrollable: false, // Ensure tabs fill width
+            tabAlignment: TabAlignment.fill,
             indicator: BoxDecoration(
               color: primaryColor,
               borderRadius: BorderRadius.circular(10),
@@ -273,6 +273,17 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
       }
     );
   }
+
+  // ... (Keeping _buildAutomationRules as is, focusing on _buildTabs change above) ...
+  // Wait, I need to output _buildDetailRow as well.
+  // The tool asks for CONTIGUOUS block.
+  // _buildTabs is lines 223-275.
+  // _buildDetailRow is lines 887-914.
+  // These are far apart. I must use multi_replace or two replace calls.
+  // I will use multi_replace_file_content since search/replace is better for separate blocks.
+  // Wait, I'll just use two replace calls to be safe and simple.
+  // This first call targets `_buildTabs`.
+
 
   Widget _buildAutomationRules(BuildContext context) {
     return LayoutBuilder(
@@ -749,27 +760,30 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Active Shifts',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).textTheme.bodyLarge?.color,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Active Shifts',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).textTheme.bodyLarge?.color,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Manage work timings and grace periods',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: Colors.grey,
+                const SizedBox(height: 4),
+                Text(
+                  'Manage work timings and grace periods',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: Colors.grey,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          const SizedBox(width: 16),
           ElevatedButton.icon(
             onPressed: () {
                _openShiftDialog();
@@ -886,6 +900,7 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
 
   Widget _buildDetailRow(BuildContext context, String label, String value, {bool isBold = false, IconData? icon, Color? iconColor}) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         if (icon != null) ...[
           Icon(icon, size: 14, color: iconColor),
@@ -899,13 +914,17 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
             fontWeight: icon != null ? FontWeight.w500 : FontWeight.normal,
           ),
         ),
-        const Spacer(),
-        Text(
-          value,
-          style: GoogleFonts.poppins(
-            fontSize: 13,
-            fontWeight: isBold || icon != null ? FontWeight.w600 : FontWeight.w500,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
+        const SizedBox(width: 16), // Minimum gap
+        Flexible(
+          child: Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: isBold || icon != null ? FontWeight.w600 : FontWeight.w500,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+            ),
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
           ),
         ),
       ],

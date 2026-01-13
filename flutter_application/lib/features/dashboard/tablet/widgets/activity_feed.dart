@@ -1,17 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/models/dashboard_model.dart';
 
 class ActivityFeed extends StatelessWidget {
-  final List<Map<String, dynamic>> activities;
+  final List<ActivityLog> activities;
 
   const ActivityFeed({super.key, required this.activities});
 
   @override
   Widget build(BuildContext context) {
+    
+    if (activities.isEmpty) {
+      return const GlassContainer(
+        padding: EdgeInsets.all(24),
+        child: Center(child: Text("No live activity today")),
+      );
+    }
+
     final dividerColor = Theme.of(context).dividerColor.withOpacity(0.1);
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
     final subTextColor = Theme.of(context).textTheme.bodySmall?.color;
+
+    // Calculate max height based on approx item height (row + divider) * 5 items
+    // Row height ~ 60, Divider = 24. Total per item ~ 84. 5 items ~ 420.
+    // Or just use a fixed constraint.
+    const double maxFeedHeight = 400.0;
 
     return GlassContainer(
       padding: const EdgeInsets.all(24),
@@ -40,74 +54,83 @@ class ActivityFeed extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: activities.length,
-            separatorBuilder: (context, index) => Divider(
-              height: 24,
-              color: dividerColor,
+          
+          // Constrained Scrollable List
+          ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxHeight: maxFeedHeight, 
             ),
-            itemBuilder: (context, index) {
-              final activity = activities[index];
-              return Row(
-                children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: activity['color'].withOpacity(0.1),
-                    child: Text(
-                      activity['avatar'],
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: activity['color'],
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const BouncingScrollPhysics(),
+              itemCount: activities.length,
+              separatorBuilder: (context, index) => Divider(
+                height: 24,
+                color: dividerColor,
+              ),
+              itemBuilder: (context, index) {
+                final activity = activities[index];
+                final avatarChar = activity.user.isNotEmpty ? activity.user[0] : '?';
+                
+                final color = Colors.primaries[index % Colors.primaries.length];
+
+                return Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: color.withOpacity(0.1),
+                      child: Text(
+                        avatarChar,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          activity['name'],
-                          style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: textColor,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            activity.user,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
+                            ),
                           ),
-                        ),
-                        Text(
-                          '${activity['role']} • ${activity['action']}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: subTextColor,
+                          Text(
+                            '${activity.role} • ${activity.action}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: subTextColor,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: dividerColor),
-                    ),
-                    child: Text(
-                      activity['time'],
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: activity['status'] == 'late' 
-                            ? const Color(0xFFF59E0B) 
-                            : (activity['status'] == 'leave' ? const Color(0xFFEF4444) : const Color(0xFF10B981)),
+                        ],
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: dividerColor),
+                      ),
+                      child: Text(
+                        activity.time,
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          color: subTextColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -119,7 +142,7 @@ class ActivityFeed extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
               child: Text(
-                'View Full Feed',
+                'View All History', // Changed label slightly to indicate history
                 style: GoogleFonts.poppins(
                   fontSize: 12, 
                   color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).primaryColor

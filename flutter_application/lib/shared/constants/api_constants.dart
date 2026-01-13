@@ -14,6 +14,10 @@ class ApiConstants {
   static const String markRead = '/notifications/:id/read';
   static const String readAll = '/notifications/read-all';
 
+  // Dashboard
+  static const String dashboardStats = '/admin/dashboard-stats';
+  static const String captchaGenerate = '/auth/captcha/generate';
+
   // Keys
   static String get recaptchaSiteKey => dotenv.env['RECAPTCHA_SITE_KEY'] ?? '';
 }

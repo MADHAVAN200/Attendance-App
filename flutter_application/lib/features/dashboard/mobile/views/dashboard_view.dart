@@ -1,145 +1,213 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart'; // Import Provider
+import '../../../../shared/services/dashboard_provider.dart'; // Import Provider
+import '../../../../shared/models/dashboard_model.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../tablet/widgets/stat_card.dart';
 import '../../tablet/widgets/action_card.dart';
 import '../../tablet/widgets/activity_feed.dart';
 import '../../tablet/widgets/trends_chart.dart';
 import '../../tablet/widgets/anomalies_card.dart';
-import '../../dashboard.dart'; // Import for DashboardLogic
-import '../../../../shared/navigation/navigation_controller.dart'; // Import Navigation
-import '../../../policy_engine/tablet/views/policy_engine_view.dart'; // Import PolicyEngineView
+import '../../dashboard.dart'; // Keep for DashboardLogic.quickActions/anomalies if not dynamic yet
+import '../../../../shared/navigation/navigation_controller.dart'; 
+import '../../../policy_engine/tablet/views/policy_engine_view.dart'; 
 
-class MobileDashboardContent extends StatelessWidget {
+class MobileDashboardContent extends StatefulWidget {
   const MobileDashboardContent({super.key});
 
   @override
+  State<MobileDashboardContent> createState() => _MobileDashboardContentState();
+}
+
+class _MobileDashboardContentState extends State<MobileDashboardContent> {
+  
+  @override
+  void initState() {
+    super.initState();
+    // Fetch data when widget mounts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DashboardProvider>(context, listen: false).fetchDashboardData();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final subTextColor = Theme.of(context).textTheme.bodySmall?.color;
+    return Consumer<DashboardProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      // Add padding to avoid content being stuck behind the header if necessary, 
-      // but usually CustomAppBar is outside the scroll view in our new layout.
-      // However, we might want a bit of top spacing for aesthetics.
-      slivers: [
-        
-        // 1. KPI Section (Vertical Stack)
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              Text(
-                'Overview',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: subTextColor,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildMobileKPIStack(),
-              const SizedBox(height: 32),
-            ]),
-          ),
-        ),
+        final subTextColor = Theme.of(context).textTheme.bodySmall?.color;
 
-        // 2. Quick Actions
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Quick Actions',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: subTextColor,
-                    letterSpacing: 0.5,
+        return CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            
+            // 1. KPI Section (Vertical Stack)
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  Text(
+                    'Overview',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: subTextColor,
+                      letterSpacing: 0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Column(
-                  children: DashboardLogic.quickActions.map((action) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildQuickActionItem(
-                        context, 
-                        action['title'], 
-                        action['icon'], 
-                        action['color'],
-                        () {
-                          if (action['page'] != null) {
-                            if (action['initialTab'] != null) {
-                              PolicyEngineView.initialTabNotifier.value = action['initialTab'] as int;
-                            }
-                            navigateTo(action['page'] as PageType);
-                          }
-                        },
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  _buildMobileKPIStack(provider.stats, provider.trends),
+                  const SizedBox(height: 32),
+                ]),
+              ),
             ),
-          ),
-        ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 32)),
-
-        // 3. Analytics
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              Text(
-                'Analytics',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: subTextColor,
-                  letterSpacing: 0.5,
+            // 2. Quick Actions
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Quick Actions',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: subTextColor,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Column(
+                      children: DashboardLogic.quickActions.map((action) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildQuickActionItem(
+                            context, 
+                            action['title'], 
+                            action['icon'], 
+                            action['color'],
+                            () {
+                              if (action['page'] != null) {
+                                if (action['initialTab'] != null) {
+                                  PolicyEngineView.initialTabNotifier.value = action['initialTab'] as int;
+                                }
+                                navigateTo(action['page'] as PageType);
+                              }
+                            },
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              // Chart
-              const SizedBox(
-                height: 300,
-                child: TrendsChart(),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+
+            // 3. Analytics
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  Text(
+                    'Analytics',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: subTextColor,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Chart
+                   SizedBox(
+                    height: 300,
+                    child: TrendsChart(chartData: provider.chartData),
+                  ),
+                  const SizedBox(height: 24),
+                  // Activity Feed
+                  ActivityFeed(activities: provider.activities),
+                  const SizedBox(height: 24),
+                  // Anomalies Card
+                  AnomaliesCard(anomalies: DashboardLogic.anomalies), // Static for now as per plan
+                  const SizedBox(height: 40), 
+                ]),
               ),
-              const SizedBox(height: 24),
-              // Activity Feed
-              ActivityFeed(activities: DashboardLogic.recentActivity), // Usage of DashboardLogic
-              const SizedBox(height: 24),
-              // Anomalies Card
-              AnomaliesCard(anomalies: DashboardLogic.anomalies), // Usage of DashboardLogic
-              const SizedBox(height: 40), // Bottom padding
-            ]),
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildMobileKPIStack() {
+  Widget _buildMobileKPIStack(DashboardStats stats, DashboardTrends trends) {
+    // Map stats to List for easy rendering locally
+    final kpis = [
+      {
+        'title': 'Present Today',
+        'value': stats.presentToday.toString(),
+        'total': '/ ${stats.totalEmployees}',
+        'percentage': trends.present.startsWith('-') ? trends.present : '+${trends.present}',
+        'context': 'vs yesterday',
+        'isPositive': !trends.present.startsWith('-'),
+        'icon': Icons.check_circle_outline,
+        'color': const Color(0xFF10B981),
+      },
+      {
+        'title': 'Absent',
+        'value': stats.absentToday.toString(),
+        'total': 'Employees',
+        'percentage': trends.absent.startsWith('-') ? trends.absent : '+${trends.absent}',
+        'context': 'vs yesterday',
+        '// Logic': 'High absence is negative, low is positive. But trending up in absence is BAD (Negative sentiment)',
+        'isPositive': trends.absent.startsWith('-'), // Decreasing absence is positive
+        'icon': Icons.cancel_outlined,
+        'color': const Color(0xFFEF4444),
+      },
+      {
+        'title': 'Late Check-ins',
+        'value': stats.lateCheckins.toString(),
+        'total': 'Employees',
+        'percentage': trends.late,
+        'context': 'vs yesterday',
+        'isPositive': trends.late.startsWith('-'),
+        'icon': Icons.access_time,
+        'color': const Color(0xFFF59E0B),
+      },
+      {
+        'title': 'On Leave',
+        'value': '4', // Static for now or add to model
+        'total': 'Planned',
+        'percentage': '',
+        'context': 'Monthly',
+        'isPositive': true,
+        'icon': Icons.calendar_today,
+        'color': const Color(0xFF6366F1),
+      },
+    ];
+
     return Column(
-      children: DashboardLogic.kpiData.map((data) { // Usage of DashboardLogic
+      children: kpis.map((data) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: SizedBox(
-            height: 125, // Increased height to prevent overflow (was 110)
+            height: 125,
             child: StatCard(
-              title: data['title'],
-              value: data['value'],
-              total: data['total'],
-              percentage: data['percentage'],
-              contextText: data['context'],
-              isPositive: data['isPositive'],
-              icon: data['icon'],
-              baseColor: data['color'],
+              title: data['title'] as String,
+              value: data['value'] as String,
+              total: data['total'] as String,
+              percentage: data['percentage'] as String,
+              contextText: data['context'] as String,
+              isPositive: data['isPositive'] as bool,
+              icon: data['icon'] as IconData,
+              baseColor: data['color'] as Color,
             ),
           ),
         );
@@ -149,12 +217,12 @@ class MobileDashboardContent extends StatelessWidget {
 
   Widget _buildQuickActionItem(BuildContext context, String title, IconData icon, Color color, VoidCallback onTap) {
     return GlassContainer(
-      padding: EdgeInsets.zero, // Remove padding from container to let InkWell scale
+      padding: EdgeInsets.zero,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16), // Match GlassContainer radius if implied, usually we need to match styling
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(

@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../shared/services/dashboard_provider.dart';
+import '../../../../shared/models/dashboard_model.dart';
+import '../../../../shared/navigation/navigation_controller.dart'; 
 import '../../dashboard.dart';
 import '../widgets/action_card.dart';
 import '../widgets/activity_feed.dart';
@@ -6,54 +10,118 @@ import '../widgets/anomalies_card.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/trends_chart.dart';
 
-class DashboardView extends StatelessWidget {
+class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
 
   @override
+  State<DashboardView> createState() => _DashboardViewState();
+}
+
+class _DashboardViewState extends State<DashboardView> {
+  @override
+  void initState() {
+    super.initState();
+     WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DashboardProvider>(context, listen: false).fetchDashboardData();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Row 1: KPI Cards
-          _buildKPISection(),
-          const SizedBox(height: 32),
+    return Consumer<DashboardProvider>(
+      builder: (context, provider, child) {
+         if (provider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          // Row 2: Quick Actions
-          _buildQuickActions(),
-          const SizedBox(height: 32),
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Row 1: KPI Cards
+              _buildKPISection(provider.stats, provider.trends),
+              const SizedBox(height: 32),
 
-          // Row 3: Split View (Chart & Feed)
-          _buildSplitView(),
-          const SizedBox(height: 32),
+              // Row 2: Quick Actions
+              _buildQuickActions(),
+              const SizedBox(height: 32),
 
-          // Row 4: Anomalies (Full Width)
-          AnomaliesCard(
-            anomalies: DashboardLogic.anomalies,
+              // Row 3: Split View (Chart & Feed)
+              _buildSplitView(provider),
+              const SizedBox(height: 32),
+
+              // Row 4: Anomalies (Full Width)
+              AnomaliesCard(
+                anomalies: DashboardLogic.anomalies,
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      }
     );
   }
 
-  Widget _buildKPISection() {
+  Widget _buildKPISection(DashboardStats stats, DashboardTrends trends) {
+    final kpis = [
+      {
+        'title': 'Present Today',
+        'value': stats.presentToday.toString(),
+        'total': '/ ${stats.totalEmployees}',
+        'percentage': trends.present.startsWith('-') ? trends.present : '+${trends.present}',
+        'context': 'vs yesterday',
+        'isPositive': !trends.present.startsWith('-'),
+        'icon': Icons.check_circle_outline,
+        'color': const Color(0xFF10B981),
+      },
+      {
+        'title': 'Absent',
+        'value': stats.absentToday.toString(),
+        'total': 'Employees',
+        'percentage': trends.absent.startsWith('-') ? trends.absent : '+${trends.absent}',
+        'context': 'vs yesterday',
+        'isPositive': trends.absent.startsWith('-'), 
+        'icon': Icons.cancel_outlined,
+        'color': const Color(0xFFEF4444), // Red
+      },
+      {
+        'title': 'Late Check-ins',
+        'value': stats.lateCheckins.toString(),
+        'total': 'Employees',
+        'percentage': trends.late,
+        'context': 'vs yesterday',
+        'isPositive': trends.late.startsWith('-'),
+        'icon': Icons.access_time,
+        'color': const Color(0xFFF59E0B),
+      },
+      {
+        'title': 'On Leave',
+        'value': '4',
+        'total': 'Planned',
+        'percentage': '',
+        'context': 'Monthly',
+        'isPositive': true,
+        'icon': Icons.calendar_today,
+        'color': const Color(0xFF6366F1),
+      },
+    ];
+
     return Row(
-      children: DashboardLogic.kpiData.map((data) {
+      children: kpis.map((data) {
         return Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10), // Gutter
              child: SizedBox(
-              height: 140, // Fixed height to constrain Expanded child
-              child: StatCard(
-                title: data['title'],
-                value: data['value'],
-                total: data['total'],
-                percentage: data['percentage'],
-                contextText: data['context'],
-                isPositive: data['isPositive'],
-                icon: data['icon'],
-                baseColor: data['color'],
+               height: 140, // Fixed height to constrain Expanded child
+               child: StatCard(
+                title: data['title'] as String,
+                value: data['value'] as String,
+                total: data['total'] as String,
+                percentage: data['percentage'] as String,
+                contextText: data['context'] as String,
+                isPositive: data['isPositive'] as bool,
+                icon: data['icon'] as IconData,
+                baseColor: data['color'] as Color,
               ),
             ),
           ),
@@ -93,6 +161,11 @@ class DashboardView extends StatelessWidget {
               subtitle: data['subtitle'],
               icon: data['icon'],
               color: data['color'],
+               onTap: () {
+                  if (data['page'] != null) {
+                    navigateTo(data['page'] as PageType);
+                  }
+               },
             );
           },
         ),
@@ -100,16 +173,16 @@ class DashboardView extends StatelessWidget {
     );
   }
 
-  Widget _buildSplitView() {
+  Widget _buildSplitView(DashboardProvider provider) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Left Column: Chart (Flex 2 - 66%)
-         const Expanded(
+          Expanded(
           flex: 2,
           child: SizedBox(
             height: 400,
-            child: TrendsChart(),
+            child: TrendsChart(chartData: provider.chartData),
           ),
         ),
         const SizedBox(width: 24),
@@ -120,7 +193,7 @@ class DashboardView extends StatelessWidget {
           child: SizedBox(
             height: 400,
             child: ActivityFeed(
-              activities: DashboardLogic.recentActivity,
+              activities: provider.activities,
             ),
           ),
         ),

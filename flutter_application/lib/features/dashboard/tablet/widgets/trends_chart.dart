@@ -2,12 +2,23 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/models/dashboard_model.dart';
 
 class TrendsChart extends StatelessWidget {
-  const TrendsChart({super.key});
+  final List<ChartData> chartData;
+
+  const TrendsChart({super.key, required this.chartData});
 
   @override
   Widget build(BuildContext context) {
+    // If no data, show placeholder or empty state
+    if (chartData.isEmpty) {
+      return const GlassContainer(
+        padding: EdgeInsets.all(24),
+        child: Center(child: Text("No data available")),
+      );
+    }
+
     final dividerColor = Theme.of(context).dividerColor.withOpacity(0.1);
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
     final subTextColor = Theme.of(context).textTheme.bodySmall?.color;
@@ -18,8 +29,11 @@ class TrendsChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
+            runSpacing: 12,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,13 +56,17 @@ class TrendsChart extends StatelessWidget {
                   ),
                 ],
               ),
-              TextButton(
-                onPressed: () {},
-                child: Text(
-                  'View Details',
-                  style: GoogleFonts.poppins(fontSize: 12),
-                ),
-              ),
+              // Legend
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   _buildLegendItem(const Color(0xFF10B981), 'Present'),
+                   const SizedBox(width: 8),
+                   _buildLegendItem(const Color(0xFFEF4444), 'Absent'),
+                   const SizedBox(width: 8),
+                   _buildLegendItem(const Color(0xFFF59E0B), 'Late'),
+                ],
+              )
             ],
           ),
           const SizedBox(height: 24),
@@ -76,12 +94,11 @@ class TrendsChart extends StatelessWidget {
                       reservedSize: 30,
                       interval: 1,
                       getTitlesWidget: (value, meta) {
-                        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                        if (value.toInt() >= 0 && value.toInt() < days.length) {
+                        if (value.toInt() >= 0 && value.toInt() < chartData.length) {
                           return Padding(
                             padding: const EdgeInsets.only(top: 8.0),
                             child: Text(
-                              days[value.toInt()],
+                              chartData[value.toInt()].name,
                               style: GoogleFonts.poppins(fontSize: 10, color: subTextColor),
                             ),
                           );
@@ -93,7 +110,7 @@ class TrendsChart extends StatelessWidget {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      interval: 15,
+                      interval: 20,
                       reservedSize: 30,
                       getTitlesWidget: (value, meta) {
                         return Text(
@@ -106,44 +123,44 @@ class TrendsChart extends StatelessWidget {
                 ),
                 borderData: FlBorderData(show: false),
                 minX: 0,
-                maxX: 6,
+                maxX: (chartData.length - 1).toDouble(),
                 minY: 0,
-                maxY: 60,
+                maxY: 100, // Adjust max Y based on data if needed
                 lineBarsData: [
                   // Present Line
                   LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 50),
-                      FlSpot(1, 52),
-                      FlSpot(2, 51),
-                      FlSpot(3, 49),
-                      FlSpot(4, 54),
-                      FlSpot(5, 55),
-                      FlSpot(6, 54),
-                    ],
+                    spots: chartData.asMap().entries.map((e) {
+                      return FlSpot(e.key.toDouble(), e.value.present.toDouble());
+                    }).toList(),
                     isCurved: true,
-                    color: const Color(0xFF6366F1),
+                    color: const Color(0xFF10B981),
                     barWidth: 3,
                     isStrokeCapRound: true,
                     dotData: const FlDotData(show: true),
                     belowBarData: BarAreaData(show: false),
                   ),
+                   // Absent Line
+                  LineChartBarData(
+                    spots: chartData.asMap().entries.map((e) {
+                      return FlSpot(e.key.toDouble(), e.value.absent.toDouble());
+                    }).toList(),
+                    isCurved: true,
+                    color: const Color(0xFFEF4444), // Red
+                    barWidth: 3,
+                    isStrokeCapRound: true,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(show: false),
+                  ),
                   // Late Line
                   LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 5),
-                      FlSpot(1, 4),
-                      FlSpot(2, 6),
-                      FlSpot(3, 3),
-                      FlSpot(4, 4),
-                      FlSpot(5, 5),
-                      FlSpot(6, 4),
-                    ],
+                    spots: chartData.asMap().entries.map((e) {
+                      return FlSpot(e.key.toDouble(), e.value.late.toDouble());
+                    }).toList(),
                     isCurved: true,
                     color: const Color(0xFFF59E0B),
                     barWidth: 3,
                     isStrokeCapRound: true,
-                    dotData: const FlDotData(show: true),
+                    dotData: const FlDotData(show: false),
                     belowBarData: BarAreaData(show: false),
                   ),
                 ],
@@ -152,6 +169,19 @@ class TrendsChart extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 8, height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: GoogleFonts.poppins(fontSize: 10)),
+      ],
     );
   }
 }

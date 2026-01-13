@@ -85,7 +85,7 @@ class LoginTabletPortrait extends StatelessWidget {
                     // Login Button
                     ElevatedButton(
                       onPressed: (controller.isLoading ||
-                              controller.captchaToken == null)
+                              controller.captchaValue == null)
                           ? null
                           : controller.handleLogin,
                       style: ElevatedButton.styleFrom(

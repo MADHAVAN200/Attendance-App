@@ -386,22 +386,10 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                         itemBuilder: (context, index) {
                           final emp = _filteredEmployees[index];
                           final isSelected = _selectedIds.contains(emp.userId);
-                          
-                                    final isDark = Theme.of(context).brightness == Brightness.dark;
-                                    return Card(
-                                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.05) : Theme.of(context).cardColor,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: isSelected 
-                                  ? Theme.of(context).primaryColor 
-                                  : Colors.grey.withOpacity(0.2),
-                                width: isSelected ? 1.5 : 1,
-                              ),
-                            ),
-                            child: ListTile(
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+
+                          // Content for the card/glass container
+                          final childContent = ListTile(
                               contentPadding: const EdgeInsets.all(16),
                               leading: _isSelectionMode
                                   ? Checkbox(
@@ -409,30 +397,31 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                                       onChanged: (_) => _toggleSelection(emp.userId),
                                       activeColor: Theme.of(context).primaryColor,
                                     )
-                                    : Container(
+                                  : Container(
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
                                       ),
                                       child: CircleAvatar(
-                                        backgroundColor: isDark ? Colors.white.withOpacity(0.2) : Theme.of(context).primaryColor.withOpacity(0.1),
+                                        backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1),
                                         child: Text(
                                           emp.userName.isNotEmpty ? emp.userName[0].toUpperCase() : '?',
-                                          style: TextStyle(color: isDark ? Colors.white : null),
+                                          style: TextStyle(color: isDark ? Colors.white : Theme.of(context).primaryColor),
                                         ),
                                       ),
                                     ),
-                              title: Text(emp.userName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                              title: Text(emp.userName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: isDark ? Colors.white : null)),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(emp.designation ?? 'N/A', style: GoogleFonts.poppins(fontSize: 12)),
+                                  Text(emp.designation ?? 'N/A', style: GoogleFonts.poppins(fontSize: 12, color: isDark ? Colors.white70 : null)),
                                   Text(emp.phoneNo ?? 'N/A', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
                                 ],
                               ),
                               trailing: _isSelectionMode 
                                   ? null 
                                   : PopupMenuButton<String>(
+                                      icon: Icon(Icons.more_vert, color: isDark ? Colors.white70 : null),
                                       onSelected: (val) {
                                         if (val == 'edit') _navigateToAddEdit(employee: emp);
                                         if (val == 'delete') _deleteEmployee(emp.userId);
@@ -457,8 +446,32 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                                   });
                                 }
                               },
-                            ),
-                          );
+                            );
+
+                          if (isDark) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              child: GlassContainer(
+                                child: childContent,
+                              ),
+                            );
+                          } else {
+                            return Card(
+                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.05) : Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: isSelected 
+                                    ? Theme.of(context).primaryColor 
+                                    : Colors.grey.withOpacity(0.2),
+                                  width: isSelected ? 1.5 : 1,
+                                ),
+                              ),
+                              child: childContent,
+                            );
+                          }
                         },
                       ),
           ),
@@ -468,50 +481,75 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
   }
 
   void _showEmployeeDetails(BuildContext context, Employee employee) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Theme.of(context).brightness == Brightness.dark ? Border.all(color: Colors.blue, width: 2) : null,
-                ),
-                child: CircleAvatar(
-                  radius: 40,
-                  child: Text(
-                    employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?', 
-                    style: TextStyle(fontSize: 32, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : null),
-                  ),
-                ),
+        backgroundColor: Colors.transparent, // Important for GlassContainer
+        insetPadding: const EdgeInsets.all(16),
+        child: isDark 
+          ? GlassContainer(child: _buildDialogContent(context, employee, isDark)) 
+          : Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16)
               ),
-              const SizedBox(height: 16),
-              Text(employee.userName, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),
-              Text(employee.designation ?? 'N/A', style: GoogleFonts.poppins(color: Colors.grey)),
-              const Divider(height: 32),
-              _buildDetailRow('Email', employee.email),
-              _buildDetailRow('Phone', employee.phoneNo ?? 'N/A'),
-              _buildDetailRow('Dept', employee.department ?? 'N/A'),
-              _buildDetailRow('Shift', employee.shift ?? 'N/A'),
-            ],
-          ),
-        ),
+              child: _buildDialogContent(context, employee, isDark)
+            ),
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDialogContent(BuildContext context, Employee employee, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
+            ),
+            child: CircleAvatar(
+              radius: 40,
+              backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1),
+              child: Text(
+                employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?', 
+                style: TextStyle(fontSize: 32, color: isDark ? Colors.white : Theme.of(context).primaryColor),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(employee.userName, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : null)),
+          Text(employee.designation ?? 'N/A', style: GoogleFonts.poppins(color: Colors.grey)),
+          Divider(height: 32, color: isDark ? Colors.white24 : null),
+          _buildDetailRow('Email', employee.email, isDark),
+          _buildDetailRow('Phone', employee.phoneNo ?? 'N/A', isDark),
+          _buildDetailRow('Dept', employee.department ?? 'N/A', isDark),
+          _buildDetailRow('Shift', employee.shift ?? 'N/A', isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: const TextStyle(color: Colors.grey)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value, 
+              style: TextStyle(fontWeight: FontWeight.w500, color: isDark ? Colors.white : null),
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+            ),
+          ),
         ],
       ),
     );

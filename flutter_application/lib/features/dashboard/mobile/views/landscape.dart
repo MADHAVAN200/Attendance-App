@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../shared/services/dashboard_provider.dart';
+import '../../../../shared/models/dashboard_model.dart';
 import '../../../../shared/widgets/app_sidebar.dart';
 import '../../../../shared/widgets/custom_app_bar.dart';
 import '../../../../shared/navigation/navigation_controller.dart';
@@ -88,45 +91,110 @@ class MobileLandscape extends StatelessWidget {
   }
 }
 
-class MobileDashboardLandscapeContent extends StatelessWidget {
+class MobileDashboardLandscapeContent extends StatefulWidget {
   const MobileDashboardLandscapeContent({super.key});
 
   @override
+  State<MobileDashboardLandscapeContent> createState() => _MobileDashboardLandscapeContentState();
+}
+
+class _MobileDashboardLandscapeContentState extends State<MobileDashboardLandscapeContent> {
+  @override
+  void initState() {
+    super.initState();
+     WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<DashboardProvider>(context, listen: false).fetchDashboardData();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildKPISection(),
-          const SizedBox(height: 24),
+    return Consumer<DashboardProvider>(
+      builder: (context, provider, child) {
+         if (provider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          _buildQuickActions(),
-          const SizedBox(height: 24),
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildKPISection(provider.stats, provider.trends),
+              const SizedBox(height: 24),
 
-          _buildAnalyticsSection(),
-        ],
-      ),
+              _buildQuickActions(),
+              const SizedBox(height: 24),
+
+              _buildAnalyticsSection(provider),
+            ],
+          ),
+        );
+      }
     );
   }
 
-  Widget _buildKPISection() {
+  Widget _buildKPISection(DashboardStats stats, DashboardTrends trends) {
+    
+    final kpis = [
+      {
+        'title': 'Present Today',
+        'value': stats.presentToday.toString(),
+        'total': '/ ${stats.totalEmployees}',
+        'percentage': trends.present.startsWith('-') ? trends.present : '+${trends.present}',
+        'context': 'vs yesterday',
+        'isPositive': !trends.present.startsWith('-'),
+        'icon': Icons.check_circle_outline,
+        'color': const Color(0xFF10B981),
+      },
+      {
+        'title': 'Absent',
+        'value': stats.absentToday.toString(),
+        'total': 'Employees',
+        'percentage': trends.absent.startsWith('-') ? trends.absent : '+${trends.absent}',
+        'context': 'vs yesterday',
+        'isPositive': trends.absent.startsWith('-'), // Decreasing absence is positive
+        'icon': Icons.cancel_outlined,
+        'color': const Color(0xFFEF4444),
+      },
+      {
+        'title': 'Late Check-ins',
+        'value': stats.lateCheckins.toString(),
+        'total': 'Employees',
+        'percentage': trends.late,
+        'context': 'vs yesterday',
+        'isPositive': trends.late.startsWith('-'),
+        'icon': Icons.access_time,
+        'color': const Color(0xFFF59E0B),
+      },
+      {
+        'title': 'On Leave',
+        'value': '4', // Static for now
+        'total': 'Planned',
+        'percentage': '',
+        'context': 'Monthly',
+        'isPositive': true,
+        'icon': Icons.calendar_today,
+        'color': const Color(0xFF6366F1),
+      },
+    ];
+
     return Row(
-      children: DashboardLogic.kpiData.map((data) {
+      children: kpis.map((data) {
         return Expanded(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
             child: SizedBox(
                height: 100, 
                child: StatCard(
-                title: data['title'],
-                value: data['value'],
-                total: data['total'],
-                percentage: data['percentage'],
-                contextText: data['context'],
-                isPositive: data['isPositive'],
-                icon: data['icon'],
-                baseColor: data['color'],
+                title: data['title'] as String,
+                value: data['value'] as String,
+                total: data['total'] as String,
+                percentage: data['percentage'] as String,
+                contextText: data['context'] as String,
+                isPositive: data['isPositive'] as bool,
+                icon: data['icon'] as IconData,
+                baseColor: data['color'] as Color,
               ),
             ),
           ),
@@ -161,6 +229,11 @@ class MobileDashboardLandscapeContent extends StatelessWidget {
               subtitle: data['subtitle'],
               icon: data['icon'],
               color: data['color'],
+              onTap: () {
+                  if (data['page'] != null) {
+                    navigateTo(data['page'] as PageType);
+                  }
+               },
             );
           },
         ),
@@ -168,17 +241,15 @@ class MobileDashboardLandscapeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildAnalyticsSection() {
-    // TrendsChart might not be const, ActivityFeed might not be const depending on implementation.
-    // Removed const to be safe based on error logs.
+  Widget _buildAnalyticsSection(DashboardProvider provider) {
     return Column(
       children: [
-        const SizedBox(
+         SizedBox(
           height: 300,
-          child: TrendsChart(),
+          child: TrendsChart(chartData: provider.chartData),
         ),
         const SizedBox(height: 24),
-        ActivityFeed(activities: DashboardLogic.recentActivity),
+        ActivityFeed(activities: provider.activities),
         const SizedBox(height: 24),
         AnomaliesCard(anomalies: DashboardLogic.anomalies),
       ],

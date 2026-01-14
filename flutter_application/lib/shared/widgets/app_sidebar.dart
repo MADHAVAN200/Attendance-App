@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../navigation/navigation_controller.dart';
 import 'glass_container.dart';
+import 'package:provider/provider.dart'; // Import Provider
+import '../services/auth_service.dart'; // Import AuthService
 
 class AppSidebar extends StatelessWidget {
   final VoidCallback? onLinkTap;
@@ -72,8 +74,22 @@ class AppSidebar extends StatelessWidget {
               
               // Menu Items
               ...PageType.values.where((p) {
-                if (isMobile) return true; // Show all (including profile) on mobile
-                return p != PageType.profile; // Hide profile on tablet/desktop (sidebar) as it's likely in AppBar or explicit
+                // 1. Role-based Filtering
+                final user = context.read<AuthService>().user;
+                if (user != null && user.isEmployee) {
+                   // Employee Allowed Pages
+                   final allowed = [
+                     PageType.dashboard,
+                     PageType.myAttendance,
+                     PageType.holidays,
+                     PageType.profile,
+                   ];
+                   if (!allowed.contains(p)) return false;
+                }
+
+                // 2. Mobile Logic
+                if (isMobile) return true; // Show all (filtered) on mobile
+                return p != PageType.profile; // Hide profile on tablet/desktop (sidebar)
               }).map((page) => _buildMenuItem(
                 context, 
                 page,

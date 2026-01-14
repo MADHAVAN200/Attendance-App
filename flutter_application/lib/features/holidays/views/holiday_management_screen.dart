@@ -6,6 +6,9 @@ import 'package:csv/csv.dart';
 import 'dart:convert';
 import 'dart:io'; 
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/widgets/custom_dialog.dart';
+import '../../../../shared/services/auth_service.dart';
+import 'package:provider/provider.dart';
 import '../services/holiday_service.dart';
 import '../models/holiday_model.dart';
 // Note: Assuming API Config or Service handles Errors properly roughly.
@@ -161,6 +164,8 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
     // [Search Bar (Expanded)]  [Import CSV]  [+ Add Holiday]
     // On Mobile: Search bar on one row, buttons on next? Or compressed.
     
+    final isEmployee = Provider.of<AuthService>(context, listen: false).user?.isEmployee ?? false;
+
     final isMobile = MediaQuery.of(context).size.width < 600;
 
     if (isMobile) {
@@ -169,13 +174,14 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
         children: [
            _buildSearchField(context, isDark),
            const SizedBox(height: 12),
-           Row(
-             children: [
-               Expanded(child: _buildImportButton(context, isDark)),
-               const SizedBox(width: 12),
-               Expanded(child: _buildAddButton(context)),
-             ],
-           )
+           if (!isEmployee)
+             Row(
+               children: [
+                 Expanded(child: _buildImportButton(context, isDark)),
+                 const SizedBox(width: 12),
+                 Expanded(child: _buildAddButton(context)),
+               ],
+             )
         ],
       );
     }
@@ -183,10 +189,12 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
     return Row(
       children: [
         Expanded(child: _buildSearchField(context, isDark)),
-        const SizedBox(width: 16),
-        _buildImportButton(context, isDark),
-        const SizedBox(width: 12),
-        _buildAddButton(context),
+        if (!isEmployee) ...[
+          const SizedBox(width: 16),
+          _buildImportButton(context, isDark),
+          const SizedBox(width: 12),
+          _buildAddButton(context),
+        ],
       ],
     );
   }
@@ -272,7 +280,8 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
                    Expanded(flex: 3, child: _tableHeader("HOLIDAY NAME")),
                    Expanded(flex: 2, child: _tableHeader("DATE")),
                    Expanded(flex: 2, child: _tableHeader("TYPE")),
-                   SizedBox(width: 80, child: _tableHeader("ACTIONS", alignRight: true)),
+                   if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee)
+                     SizedBox(width: 80, child: _tableHeader("ACTIONS", alignRight: true)),
                 ],
               ),
             ),
@@ -312,6 +321,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
   }
 
   Widget _buildDesktopRow(Holiday holiday, bool isDark) {
+    final isEmployee = Provider.of<AuthService>(context, listen: false).user?.isEmployee ?? false;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
@@ -320,7 +330,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
           Expanded(
             flex: 3,
             child: InkWell( // Make name clickable for edit
-              onTap: () => _showEditDialog(holiday),
+              onTap: isEmployee ? null : () => _showEditDialog(holiday),
               child: Text(
                 holiday.name,
                 style: GoogleFonts.poppins(
@@ -360,27 +370,29 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
           ),
 
           // 4. Actions
-          SizedBox(
-            width: 80,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
-                onPressed: () => _showDeleteConfirm(holiday.id),
-                tooltip: "Delete",
+          if (!isEmployee)
+            SizedBox(
+              width: 80,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                  onPressed: () => _showDeleteConfirm(holiday.id),
+                  tooltip: "Delete",
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
   }
 
   Widget _buildMobileCard(Holiday holiday, bool isDark) {
+    final isEmployee = Provider.of<AuthService>(context, listen: false).user?.isEmployee ?? false;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: InkWell(
-        onTap: () => _showEditDialog(holiday),
+        onTap: isEmployee ? null : () => _showEditDialog(holiday),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -410,12 +422,13 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
                   style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[400]),
                 ),
                 const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
-                  onPressed: () => _showDeleteConfirm(holiday.id),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
+                if (!isEmployee)
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                    onPressed: () => _showDeleteConfirm(holiday.id),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
               ],
             ),
           ],
@@ -470,76 +483,23 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
   }
 
   void _showDeleteConfirm(int id) {
-    showDialog(
+    CustomDialog.show(
       context: context,
-      builder: (ctx) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          child: isDark 
-            ? GlassContainer(
-                padding: const EdgeInsets.all(24),
-                color: const Color(0xFF0F172A).withOpacity(0.5),
-                child: _buildDeleteContent(ctx, id, isDark),
-              )
-            : Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: _buildDeleteContent(ctx, id, isDark),
-              ),
-        );
-      }
+      title: "Delete Holiday?",
+      message: "Are you sure you want to delete this holiday?",
+      positiveButtonText: "Delete",
+      isDestructive: true,
+      onPositivePressed: () {
+        Navigator.pop(context);
+        _deleteHoliday(id);
+      },
+      negativeButtonText: "Cancel",
+      onNegativePressed: () => Navigator.pop(context),
+      icon: Icons.delete_outline,
+      iconColor: Colors.red,
     );
   }
 
-  Widget _buildDeleteContent(BuildContext ctx, int id, bool isDark) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Delete Holiday?",
-          style: GoogleFonts.poppins(
-            fontSize: 20, 
-            fontWeight: FontWeight.w600, 
-            color: isDark ? Colors.white : Colors.black87
-          ),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          "Are you sure you want to delete this holiday?",
-          style: GoogleFonts.poppins(
-            fontSize: 14, 
-            color: isDark ? Colors.grey[400] : Colors.grey[700]
-          ),
-        ),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx), 
-              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey))
-            ),
-            const SizedBox(width: 8),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                _deleteHoliday(id);
-              }, 
-              child: Text(
-                "Delete", 
-                style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.w600)
-              )
-            ),
-          ],
-        )
-      ],
-    );
-  }
 
   Future<void> _importCSV() async {
     try {

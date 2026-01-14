@@ -7,13 +7,18 @@ import 'package:path_provider/path_provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/api_constants.dart';
 
+import '../models/user_model.dart';
+
 class AuthService extends ChangeNotifier {
   final Dio _dio = Dio();
   late PersistCookieJar _cookieJar;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   
   String? _accessToken;
+  User? _currentUser;
+
   bool get isAuthenticated => _accessToken != null;
+  User? get user => _currentUser;
 
   // Initialize AuthService
   Future<void> init() async {
@@ -78,6 +83,10 @@ class AuthService extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         _accessToken = response.data['accessToken'];
+        
+        // Fetch user details immediately after login
+        await getMe();
+        
         notifyListeners(); // Notify UI
         return response.data;
       } else {
@@ -124,6 +133,7 @@ class AuthService extends ChangeNotifier {
       // Ignore errors during logout
     } finally {
       _accessToken = null;
+      _currentUser = null;
       await _cookieJar.deleteAll();
       await _storage.deleteAll();
       notifyListeners(); // Notify UI to redirect
@@ -137,7 +147,7 @@ class AuthService extends ChangeNotifier {
       if (newToken != null) {
         // If refresh successful, fetch user details
         final user = await getMe();
-        return user;
+        return user != null ? {'user': user} : null;
       }
     } catch (e) {
       print("Check auth status failed: $e");
@@ -145,9 +155,18 @@ class AuthService extends ChangeNotifier {
     return null;
   }
 
-  Future<dynamic> getMe() async {
-    final response = await _dio.get(ApiConstants.me);
-    return response.data;
+  Future<User?> getMe() async {
+    try {
+      final response = await _dio.get(ApiConstants.me);
+      if (response.statusCode == 200) {
+        _currentUser = User.fromJson(response.data);
+        notifyListeners();
+        return _currentUser;
+      }
+    } catch (e) {
+      print("GetMe failed: $e");
+    }
+    return null;
   }
   
   // Expose Dio client for other services to reuse auth headers/interceptors

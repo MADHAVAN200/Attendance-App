@@ -1,0 +1,213 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class CustomDialog extends StatelessWidget {
+  final String title;
+  final String message;
+  final VoidCallback onPositivePressed;
+  final String positiveButtonText;
+  final VoidCallback? onNegativePressed;
+  final String? negativeButtonText;
+  final IconData? icon;
+  final Color? iconColor;
+  final bool isDestructive;
+
+  const CustomDialog({
+    super.key,
+    required this.title,
+    required this.message,
+    required this.onPositivePressed,
+    this.positiveButtonText = 'Confirm',
+    this.onNegativePressed,
+    this.negativeButtonText,
+    this.icon,
+    this.iconColor,
+    this.isDestructive = false,
+  });
+
+  static Future<bool?> show({
+    required BuildContext context,
+    required String title,
+    required String message,
+    required VoidCallback onPositivePressed,
+    String positiveButtonText = 'Confirm',
+    VoidCallback? onNegativePressed,
+    String? negativeButtonText,
+    IconData? icon,
+    Color? iconColor,
+    bool isDestructive = false,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.6), // Darker overlay for focus
+      builder: (context) => CustomDialog(
+        title: title,
+        message: message,
+        onPositivePressed: onPositivePressed,
+        positiveButtonText: positiveButtonText,
+        onNegativePressed: onNegativePressed,
+        negativeButtonText: negativeButtonText,
+        icon: icon,
+        iconColor: iconColor,
+        isDestructive: isDestructive,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: isDark ? _buildGlassDialog(context) : _buildCardDialog(context),
+    );
+  }
+
+  Widget _buildGlassDialog(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.1),
+            ),
+             boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: _buildContent(context, isDark: true),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardDialog(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: _buildContent(context, isDark: false),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, {required bool isDark}) {
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final subTextColor = isDark ? Colors.white70 : const Color(0xFF64748B);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: (iconColor ?? Theme.of(context).primaryColor).withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 32,
+              color: iconColor ?? Theme.of(context).primaryColor,
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        Text(
+          title,
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          message,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            height: 1.5,
+            color: subTextColor,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
+        Row(
+          children: [
+            if (negativeButtonText != null) ...[
+              Expanded(
+                child: TextButton(
+                  onPressed: () {
+                    if (onNegativePressed != null) {
+                      onNegativePressed!();
+                    } else {
+                      Navigator.pop(context, false);
+                    }
+                  },
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    negativeButtonText!,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w500,
+                      color: subTextColor,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+            ],
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () {
+                  onPositivePressed();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDestructive ? const Color(0xFFEF4444) : Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  positiveButtonText,
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}

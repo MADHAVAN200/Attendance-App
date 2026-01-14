@@ -5,6 +5,7 @@ import '../../../../shared/navigation/navigation_controller.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../../auth/login_screen.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/widgets/custom_dialog.dart';
 import '../../../../main.dart';
 
 class MobileProfileContent extends StatelessWidget {
@@ -179,18 +180,29 @@ class MobileProfileContent extends StatelessWidget {
   Widget _buildLogoutCard(BuildContext context) {
     return GestureDetector(
       onTap: () async {
-        final authService = Provider.of<AuthService>(context, listen: false);
-        await authService.logout();
-        
-        if (context.mounted) {
-           // Reset internal navigation state
-           navigationNotifier.value = PageType.dashboard;
-
-          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-            (route) => false,
-          );
-        }
+        CustomDialog.show(
+          context: context,
+          title: "Log Out",
+          message: "Are you sure you want to log out?",
+          positiveButtonText: "Log Out",
+          isDestructive: true,
+          onPositivePressed: () async {
+            final authService = Provider.of<AuthService>(context, listen: false);
+            await authService.logout();
+            
+            if (context.mounted) {
+               // Reset internal navigation state
+               navigationNotifier.value = PageType.dashboard;
+    
+              Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            }
+          },
+          negativeButtonText: "Cancel",
+          onNegativePressed: () {},
+        );
       },
       child: GlassContainer(
         width: double.infinity,

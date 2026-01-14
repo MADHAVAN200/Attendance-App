@@ -9,6 +9,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/glass_date_picker.dart';
+import '../../../../shared/widgets/custom_dialog.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../models/attendance_record.dart';
 import '../../services/attendance_service.dart';
@@ -107,22 +108,18 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
       status = await Permission.camera.request();
       if (status.isPermanentlyDenied) {
         if (mounted) {
-           showDialog(
-             context: context, 
-             builder: (ctx) => AlertDialog(
-               title: const Text("Permission Required"),
-               content: const Text("Camera access is needed to mark attendance. Please enable it in settings."),
-               actions: [
-                 TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
-                 TextButton(
-                   onPressed: () { 
-                     Navigator.pop(ctx); 
-                     openAppSettings(); 
-                   }, 
-                   child: const Text("Open Settings")
-                 ),
-               ]
-             )
+           CustomDialog.show(
+             context: context,
+             title: "Permission Required",
+             message: "Camera access is needed to mark attendance. Please enable it in settings.",
+             positiveButtonText: "Open Settings",
+             onPositivePressed: () {
+               Navigator.pop(context); // Close dialog
+               openAppSettings();
+             },
+             negativeButtonText: "Cancel",
+             onNegativePressed: () => Navigator.pop(context),
+             icon: Icons.camera_alt_outlined,
            );
         }
         return;
@@ -359,7 +356,13 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.calendar_today, size: 14, color: Theme.of(context).primaryColor),
+                Icon(
+                  Icons.calendar_today, 
+                  size: 14, 
+                  color: Theme.of(context).brightness == Brightness.dark 
+                      ? Colors.white 
+                      : Theme.of(context).primaryColor
+                ),
                 const SizedBox(width: 8),
                 Text(
                   DateFormat('EEE, dd MMM').format(_selectedDate),

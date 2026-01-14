@@ -144,93 +144,113 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           if (MediaQuery.of(context).size.width > 600) ...[
             const SizedBox(width: 16),
-            // Admin User Profile
-            Theme(
-              data: Theme.of(context).copyWith(
-                splashColor: Colors.transparent,
-                highlightColor: Colors.transparent,
-              ),
-              child: PopupMenuButton<String>(
-                offset: const Offset(0, 60),
-                color: Colors.transparent,
-                elevation: 0,
-                surfaceTintColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                padding: EdgeInsets.zero,
-                enableFeedback: true,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                tooltip: 'Profile Options',
-                itemBuilder: (context) => [
-                  PopupMenuItem<String>(
-                    enabled: false, 
+            // User Profile
+            Builder(
+              builder: (context) {
+                final user = Provider.of<AuthService>(context).user;
+                final name = user?.name ?? 'Guest';
+                final role = user?.role.toUpperCase() ?? '';
+                final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    splashColor: Colors.transparent,
+                    highlightColor: Colors.transparent,
+                  ),
+                  child: PopupMenuButton<String>(
+                    offset: const Offset(0, 60),
+                    color: Colors.transparent,
+                    elevation: 0,
+                    surfaceTintColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
                     padding: EdgeInsets.zero,
-                    child: GlassContainer(
-                      width: 220,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildDropdownItem(context, icon: Icons.person_outline, text: 'View Profile', onTap: () {
-                             navigationNotifier.value = PageType.profile;
-                             Navigator.pop(context);
-                          }),
-                          Divider(height: 1, thickness: 1, color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey[200]),
-                          _buildDropdownItem(context, icon: Icons.logout, text: 'Logout', onTap: () async {
-                            Navigator.pop(context); // Close dropdown
-                            
-                            // Perform logout
-                            final auth = Provider.of<AuthService>(context, listen: false);
-                            await auth.logout();
-                            
-                            if (context.mounted) {
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                                (route) => false,
-                              );
-                              
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Logged out successfully')),
-                              );
-                            }
-                          }, isDestructive: true),
-                        ],
-                      ),
-                    ),
-                  )
-                ],
-                child: Row(
-                  children: [
-                     Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                         Text(
-                          'Admin User',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                    enableFeedback: true,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    tooltip: 'Profile Options',
+                    itemBuilder: (context) => [
+                      PopupMenuItem<String>(
+                        enabled: false, 
+                        padding: EdgeInsets.zero,
+                        child: GlassContainer(
+                          width: 220,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildDropdownItem(context, icon: Icons.person_outline, text: 'View Profile', onTap: () {
+                                 navigationNotifier.value = PageType.profile;
+                                 Navigator.pop(context);
+                              }),
+                              Divider(height: 1, thickness: 1, color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey[200]),
+                              _buildDropdownItem(context, icon: Icons.logout, text: 'Logout', onTap: () async {
+                                Navigator.pop(context); // Close dropdown
+                                
+                                // Perform logout
+                                final auth = Provider.of<AuthService>(context, listen: false);
+                                await auth.logout();
+                                
+                                if (context.mounted) {
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                    (route) => false,
+                                  );
+                                  
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Logged out successfully')),
+                                  );
+                                }
+                              }, isDestructive: true),
+                            ],
                           ),
                         ),
-                        Text(
-                          'Administrator',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: Colors.grey,
-                          ),
+                      )
+                    ],
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min, // Ensure Row shrinks to fit content
+                      children: [
+                         Column(
+                          mainAxisSize: MainAxisSize.min, // Ensure Column shrinks to fit text
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                             Text(
+                              name,
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).textTheme.bodyLarge?.color,
+                              ),
+                            ),
+                            if (user?.username.isNotEmpty == true)
+                              Text(
+                                '@${user!.username}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            Text(
+                              role,
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                color: Colors.grey,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 12),
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: const Color(0xFF5B60F6).withOpacity(0.2),
+                          child: Text(initials, style: GoogleFonts.poppins(color: const Color(0xFF5B60F6), fontWeight: FontWeight.bold, fontSize: 13)),
                         ),
                       ],
                     ),
-                    const SizedBox(width: 12),
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor: const Color(0xFF5B60F6).withOpacity(0.2),
-                      child: Text('AU', style: GoogleFonts.poppins(color: const Color(0xFF5B60F6), fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              }
             ),
           ],
         ],

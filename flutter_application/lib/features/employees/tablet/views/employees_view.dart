@@ -399,37 +399,39 @@ class _EmployeesViewState extends State<EmployeesView> {
         // ... Dropdown omitted - assuming it's not present or I can omit
         const Spacer(),
 
-        // 3. Action Buttons
-        _buildActionButton(
-          context, 
-          label: 'Template', 
-          icon: Icons.download,
-          isPrimary: false,
-          isCompact: true, 
-          onTap: _downloadSampleTemplate,
-        ),
-        const SizedBox(width: 12),
-        _buildActionButton(
-          context, 
-          label: 'Bulk Upload', 
-          icon: Icons.upload_file_outlined,
-          isPrimary: false,
-          isCompact: false, 
-          onTap: _handleBulkUpload,
-        ),
-        const SizedBox(width: 12),
-        _buildActionButton(
-          context, 
-          label: 'Add Employee', 
-          icon: Icons.add,
-          isPrimary: true,
-          onTap: () {
-            setState(() {
-              _editingEmployee = null;
-              _isAddingOrEditing = true;
-            });
-          },
-        ),
+        if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee) ...[
+          // 3. Action Buttons
+          _buildActionButton(
+            context, 
+            label: 'Template', 
+            icon: Icons.download,
+            isPrimary: false,
+            isCompact: true, 
+            onTap: _downloadSampleTemplate,
+          ),
+          const SizedBox(width: 12),
+          _buildActionButton(
+            context, 
+            label: 'Bulk Upload', 
+            icon: Icons.upload_file_outlined,
+            isPrimary: false,
+            isCompact: false, 
+            onTap: _handleBulkUpload,
+          ),
+          const SizedBox(width: 12),
+          _buildActionButton(
+            context, 
+            label: 'Add Employee', 
+            icon: Icons.add,
+            isPrimary: true,
+            onTap: () {
+              setState(() {
+                _editingEmployee = null;
+                _isAddingOrEditing = true;
+              });
+            },
+          ),
+        ],
       ],
     );
   }
@@ -525,7 +527,8 @@ class _EmployeesViewState extends State<EmployeesView> {
               _buildDataColumn(context, 'ROLE & DEPT'),
               _buildDataColumn(context, 'PHONE'),
               _buildDataColumn(context, 'SHIFT'),
-              const DataColumn(label: Expanded(child: Text('ACTIONS', textAlign: TextAlign.right))), 
+              if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee)
+                 const DataColumn(label: Expanded(child: Text('ACTIONS', textAlign: TextAlign.right))), 
             ],
             rows: _filteredEmployees.map((e) => _buildDataRow(context, e)).toList(),
           ),
@@ -556,7 +559,7 @@ class _EmployeesViewState extends State<EmployeesView> {
 
     return DataRow(
       onLongPress: () {
-        if (!_isSelectionMode) {
+        if (!_isSelectionMode && !Provider.of<AuthService>(context, listen: false).user!.isEmployee) {
           setState(() {
             _isSelectionMode = true;
             _toggleSelection(data.userId);
@@ -634,7 +637,8 @@ class _EmployeesViewState extends State<EmployeesView> {
         // Shift
         DataCell(Text(data.shift ?? 'N/A', style: GoogleFonts.poppins(fontSize: 13, color: subTextColor))),
         // Actions
-        DataCell(Align(alignment: Alignment.centerRight, child: _buildActionsMenu(context, data))),
+        if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee)
+          DataCell(Align(alignment: Alignment.centerRight, child: _buildActionsMenu(context, data))),
       ],
     );
   }

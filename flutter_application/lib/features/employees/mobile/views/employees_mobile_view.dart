@@ -300,11 +300,13 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navigateToAddEdit(),
-        backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      floatingActionButton: Provider.of<AuthService>(context, listen: false).user!.isEmployee 
+          ? null 
+          : FloatingActionButton(
+              onPressed: () => _navigateToAddEdit(),
+              backgroundColor: Theme.of(context).primaryColor,
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
       body: Column(
         children: [
           // Search & Filters Header OR Selection Header
@@ -360,17 +362,19 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      IconButton(
-                        onPressed: _downloadSampleTemplate, 
-                        icon: const Icon(Icons.download),
-                        tooltip: 'Download Template',
-                      ),
-                      IconButton(
-                        onPressed: _handleBulkUpload, 
-                        icon: const Icon(Icons.upload_file),
-                        tooltip: 'Bulk Upload',
-                      ),
+                      if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee) ...[
+                        const SizedBox(width: 12),
+                        IconButton(
+                          onPressed: _downloadSampleTemplate, 
+                          icon: const Icon(Icons.download),
+                          tooltip: 'Download Template',
+                        ),
+                        IconButton(
+                          onPressed: _handleBulkUpload, 
+                          icon: const Icon(Icons.upload_file),
+                          tooltip: 'Bulk Upload',
+                        ),
+                      ],
                     ],
                   ),
           ),
@@ -418,7 +422,7 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                                   Text(emp.phoneNo ?? 'N/A', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
                                 ],
                               ),
-                              trailing: _isSelectionMode 
+                              trailing: (_isSelectionMode || Provider.of<AuthService>(context, listen: false).user!.isEmployee) 
                                   ? null 
                                   : PopupMenuButton<String>(
                                       icon: Icon(Icons.more_vert, color: isDark ? Colors.white70 : null),
@@ -439,7 +443,7 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                                 }
                               },
                               onLongPress: () {
-                                if (!_isSelectionMode) {
+                                if (!_isSelectionMode && !Provider.of<AuthService>(context, listen: false).user!.isEmployee) {
                                   setState(() {
                                     _isSelectionMode = true;
                                     _toggleSelection(emp.userId);

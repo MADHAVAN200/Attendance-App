@@ -20,6 +20,7 @@ import '../../../reports/tablet/views/reports_view.dart';
 import '../../../holidays/tablet/views/holidays_view.dart';
 import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 import '../../../profile/tablet/views/profile_view.dart';
+import '../../../leave/views/apply_leave_view.dart';
 
 class TabletPortrait extends StatelessWidget {
   const TabletPortrait({super.key});
@@ -113,6 +114,8 @@ class TabletPortrait extends StatelessWidget {
                            );
                         case PageType.profile:
                            return const ProfileView();
+                        case PageType.applyLeave:
+                           return const ApplyLeaveView();
                         default:
                           return Center(child: Text('Page: ${currentPage.title}'));
                       }

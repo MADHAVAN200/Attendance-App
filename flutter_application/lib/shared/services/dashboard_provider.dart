@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
-import '../services/admin_service.dart';
+import '../../features/dashboard/services/dashboard_service.dart';
 import '../models/dashboard_model.dart';
 import 'auth_service.dart';
 
 class DashboardProvider extends ChangeNotifier {
-  final AdminService _adminService;
-  
-  DashboardProvider(AuthService authService) : _adminService = AdminService(authService);
+  final AuthService _authService;
+  late final DashboardService _dashboardService;
 
-  bool _isLoading = true;
+  DashboardStats _stats = DashboardStats.initial();
+  DashboardTrends _trends = DashboardTrends.initial();
+  List<Map<String, dynamic>> _activities = [];
+  List<double> _chartData = List.filled(7, 0.0);
+
+  bool _isLoading = false;
+  String? _error;
+
+  DashboardProvider(this._authService) {
+    _dashboardService = DashboardService(_authService);
+  }
+
   bool get isLoading => _isLoading;
+  String? get error => _error;
 
   String _activeRange = 'weekly';
   String get activeRange => _activeRange;
@@ -54,7 +65,7 @@ class DashboardProvider extends ChangeNotifier {
       _isLoading = true;
       // notifyListeners(); // Don't notify here to avoid flicker if just switching view modes quickly
 
-      final result = await _adminService.getDashboardStats(
+      final result = await _dashboardService.getDashboardStats(
         range: range,
         month: month,
         year: year,

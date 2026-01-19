@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart'; // Import Provider
 import '../../../../shared/services/dashboard_provider.dart'; // Import Provider
+import '../../../profile/mobile/views/profile_view.dart';
+import '../../../leave/views/apply_leave_view.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/models/dashboard_model.dart';
 import '../../../../shared/widgets/glass_container.dart';
@@ -25,6 +27,24 @@ class MobileDashboardContent extends StatelessWidget {
     if (user == null) {
       return const Center(child: CircularProgressIndicator());
     }
+
+    // This widget currently only decides between employee and admin dashboards.
+    // The instruction seems to imply a switch based on PageType, which is not
+    // directly handled here. Assuming the intent is to add a case for
+    // ApplyLeaveView if a PageType-based routing mechanism were present here.
+    // For now, we'll keep the existing logic.
+    // If a PageType state were passed to this widget, a switch could be used:
+    // switch (currentPageType) {
+    //   case PageType.profile:
+    //     return const ProfileView();
+    //   case PageType.applyLeave:
+    //     return const ApplyLeaveView();
+    //   default:
+    //     if (user.isEmployee) {
+    //       return const MobileEmployeeDashboardContent();
+    //     }
+    //     return const MobileAdminDashboardContent();
+    // }
 
     if (user.isEmployee) {
       return const MobileEmployeeDashboardContent();

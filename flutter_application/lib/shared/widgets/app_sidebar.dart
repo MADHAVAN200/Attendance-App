@@ -81,6 +81,7 @@ class AppSidebar extends StatelessWidget {
                    final allowed = [
                      PageType.dashboard,
                      PageType.myAttendance,
+                     PageType.applyLeave,
                      PageType.holidays,
                      PageType.profile,
                    ];

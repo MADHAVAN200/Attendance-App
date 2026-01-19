@@ -12,6 +12,7 @@ import '../../features/profile/tablet/views/profile_view.dart';
 import '../navigation/navigation_controller.dart';
 import '../widgets/app_sidebar.dart';
 import '../widgets/custom_app_bar.dart';
+import '../../features/leave/views/apply_leave_view.dart';
 
 class MainLayout extends StatelessWidget {
   const MainLayout({super.key});
@@ -77,6 +78,8 @@ class MainLayout extends StatelessWidget {
         return const GeoFencingView();
       case PageType.profile:
         return const ProfileView();
+      case PageType.applyLeave:
+        return const ApplyLeaveView();
     }
   }
 }

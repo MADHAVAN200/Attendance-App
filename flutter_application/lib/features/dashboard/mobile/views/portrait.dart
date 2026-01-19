@@ -17,6 +17,7 @@ import '../../../holidays/tablet/views/holidays_view.dart';
 import '../../../profile/mobile/views/profile_view.dart';
 import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
 import '../../../policy_engine/tablet/views/policy_engine_view.dart';
+import '../../../leave/views/apply_leave_view.dart';
 
 class MobilePortrait extends StatelessWidget {
   const MobilePortrait({super.key});
@@ -97,6 +98,9 @@ class MobilePortrait extends StatelessWidget {
 
       case PageType.policyEngine:
          return const PolicyEngineView();
+
+      case PageType.applyLeave:
+         return const ApplyLeaveView();
 
       case PageType.geoFencing:
         return const MobileGeoFencingContent();

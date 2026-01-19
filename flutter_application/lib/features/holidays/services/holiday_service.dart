@@ -12,7 +12,7 @@ class HolidayService {
     try {
       final response = await _dio.get(ApiConfig.holidays);
       if (response.statusCode == 200 && response.data['ok']) {
-        final List<dynamic> data = response.data['holidays'];
+        final List<dynamic> data = response.data['holidays'] ?? response.data['data'];
         return data.map((json) => Holiday.fromJson(json)).toList();
       }
       return [];

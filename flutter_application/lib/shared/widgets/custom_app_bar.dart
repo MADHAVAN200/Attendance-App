@@ -188,6 +188,9 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                                 // Perform logout
                                 final auth = Provider.of<AuthService>(context, listen: false);
                                 await auth.logout();
+
+                                // Reset Navigation to Dashboard for next login
+                                navigationNotifier.value = PageType.dashboard;
                                 
                                 if (context.mounted) {
                                   Navigator.pushAndRemoveUntil(

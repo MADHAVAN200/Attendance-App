@@ -49,39 +49,44 @@ class _EmployeeDashboardViewState extends State<EmployeeDashboardView> {
 
                   // 2. Stats Section
                   if (isPortrait)
-                    // Tablet Portrait: 2x2 Grid
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 24,
-                      mainAxisSpacing: 24,
-                      childAspectRatio: 2.0, 
+                    // Tablet Portrait: Single Row (4 items)
+                    Row(
                       children: [
-                        EmployeeStatCard(
-                          label: 'Present Days',
-                          value: stats.presentToday.toString(),
-                          icon: Icons.check_circle_outline,
-                          iconColor: const Color(0xFF10B981),
+                        Expanded(
+                          child: EmployeeStatCard(
+                            label: 'Present',
+                            value: stats.presentToday.toString(),
+                            icon: Icons.check_circle_outline,
+                            iconColor: const Color(0xFF10B981),
+                          ),
                         ),
-                        EmployeeStatCard(
-                          label: 'Absent Days',
-                          value: stats.absentToday.toString(),
-                          icon: Icons.cancel_outlined,
-                          iconColor: const Color(0xFFEF4444),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: EmployeeStatCard(
+                            label: 'Absent',
+                            value: stats.absentToday.toString(),
+                            icon: Icons.cancel_outlined,
+                            iconColor: const Color(0xFFEF4444),
+                          ),
                         ),
-                        EmployeeStatCard(
-                          label: 'Late Arrivals',
-                          value: stats.lateCheckins.toString(),
-                          icon: Icons.access_time,
-                          iconColor: const Color(0xFFF59E0B),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: EmployeeStatCard(
+                            label: 'Late',
+                            value: stats.lateCheckins.toString(),
+                            icon: Icons.access_time,
+                            iconColor: const Color(0xFFF59E0B),
+                          ),
                         ),
-                        const EmployeeStatCard(
-                          label: 'Leave Balance',
-                          value: '8',
-                          badgeText: 'Yearly',
-                          icon: Icons.coffee,
-                          iconColor: Color(0xFF3B82F6),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: EmployeeStatCard(
+                            label: 'Leave',
+                            value: '8',
+                            badgeText: 'Year',
+                            icon: Icons.coffee,
+                            iconColor: Color(0xFF3B82F6),
+                          ),
                         ),
                       ],
                     )

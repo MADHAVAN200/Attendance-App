@@ -32,5 +32,9 @@ class ApiConfig {
   static const String reportsPreview = '/admin/reports/preview';
   static const String reportsDownload = '/admin/reports/download';
 
+  // Leave Routes
+  static const String leaves = '/leaves'; // For GET /leaves and POST /leaves
+  static const String myLeaves = '/leaves/my'; 
+  
   static const String nominatimUrl = 'https://nominatim.openstreetmap.org/reverse';
 }

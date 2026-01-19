@@ -46,6 +46,15 @@ class DashboardStats {
       lateCheckins: json['lateCheckins'] ?? 0,
     );
   }
+
+  factory DashboardStats.initial() {
+    return DashboardStats(
+      presentToday: 0,
+      totalEmployees: 0,
+      absentToday: 0,
+      lateCheckins: 0,
+    );
+  }
 }
 
 class DashboardTrends {
@@ -64,6 +73,14 @@ class DashboardTrends {
       present: json['present'] ?? '0%',
       absent: json['absent'] ?? '0%',
       late: json['late'] ?? '0%',
+    );
+  }
+
+  factory DashboardTrends.initial() {
+    return DashboardTrends(
+      present: '0%',
+      absent: '0%',
+      late: '0%',
     );
   }
 }

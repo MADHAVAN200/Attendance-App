@@ -10,6 +10,7 @@ enum PageType {
   policyEngine,
   geoFencing,
   profile,
+  applyLeave,
 }
 
 // Map PageType to Title
@@ -27,6 +28,8 @@ extension PageTypeExtension on PageType {
         return 'Geo-Fencing';
       case PageType.profile:
         return 'My Profile';
+      case PageType.applyLeave:
+        return 'Apply Leave';
     }
   }
 
@@ -43,6 +46,8 @@ extension PageTypeExtension on PageType {
         return Icons.location_on_outlined;
       case PageType.profile:
         return Icons.person_outline;
+      case PageType.applyLeave:
+        return Icons.event_available_outlined;
     }
   }
 }

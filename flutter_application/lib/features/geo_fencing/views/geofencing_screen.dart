@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import '../../../../shared/widgets/glass_container.dart';
-import '../models/location_model.dart';
-import '../services/location_service.dart';
+import '../../../../shared/models/location_model.dart';
+import '../../../../services/location_service.dart';
 
 class GeofencingScreen extends StatefulWidget {
-  final LocationService locationService;
-  const GeofencingScreen({Key? key, required this.locationService}) : super(key: key);
+  const GeofencingScreen({Key? key}) : super(key: key);
 
   @override
   _GeofencingScreenState createState() => _GeofencingScreenState();
 }
 
 class _GeofencingScreenState extends State<GeofencingScreen> {
+  // Service
+  late LocationService _locationService;
+
   // Locations State
   List<WorkLocation> _locations = [];
   WorkLocation? _selectedLocation;
@@ -24,6 +26,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
   @override
   void initState() {
     super.initState();
+    _locationService = LocationService();
     _fetchLocations();
     _fetchUsers();
   }
@@ -32,7 +35,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
 
   Future<void> _fetchLocations() async {
     try {
-      final data = await widget.locationService.getLocations();
+      final data = await _locationService.getLocations();
       if (mounted) {
         setState(() {
           _locations = data;
@@ -55,7 +58,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
 
   Future<void> _fetchUsers() async {
     try {
-      final users = await widget.locationService.getUsersWithLocations();
+      final users = List<Map<String, dynamic>>.from(await _locationService.getUsersWithLocations());
       print("Fetched ${users.length} users");
       // Debug first user structure
       if (users.isNotEmpty) {
@@ -89,7 +92,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
      // To make slider smooth, we might need local state for slider value if we wanted "live" sliding.
      // But `onChangeEnd` is safe.
 
-     widget.locationService.updateLocation(_selectedLocation!.id, {"radius": newRadius.toInt()}).then((_) {
+     _locationService.updateLocation(_selectedLocation!.id, {"radius": newRadius.toInt()}).then((_) {
          _fetchLocations(); 
      });
   }
@@ -99,7 +102,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
     final newStatus = !_selectedLocation!.isActive;
     
     try {
-      await widget.locationService.updateLocation(_selectedLocation!.id, {"is_active": newStatus ? 1 : 0});
+      await _locationService.updateLocation(_selectedLocation!.id, {"is_active": newStatus ? 1 : 0});
       _fetchLocations();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Update failed: $e")));
@@ -112,7 +115,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
       if (_selectedLocation == null) return;
       
       try {
-        await widget.locationService.assignUser(_selectedLocation!.id, userId, !isAssigned);
+        await _locationService.assignUser(_selectedLocation!.id, userId, !isAssigned);
         _fetchUsers(); // Refresh list to confirm green check
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Assignment failed: $e")));
@@ -125,7 +128,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
       builder: (ctx) => _LocationFormDialog(
         onSubmit: (data) async {
           try {
-            await widget.locationService.createLocation(data);
+            await _locationService.createLocation(data);
             Navigator.pop(ctx);
             _fetchLocations();
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Location Created")));

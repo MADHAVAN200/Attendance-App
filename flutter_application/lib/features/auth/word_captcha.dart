@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../shared/services/auth_service.dart';
+import '../../services/auth_service.dart';
 
 class WordCaptcha extends StatefulWidget {
   final Function(String? id, String? value) onCaptchaChanged;

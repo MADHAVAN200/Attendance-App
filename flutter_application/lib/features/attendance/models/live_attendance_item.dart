@@ -1,5 +1,5 @@
-import '../../../../features/employees/models/employee_model.dart';
-import 'attendance_record.dart';
+import '../../../../shared/models/employee_model.dart';
+import '../../../../shared/models/attendance_model.dart';
 
 class LiveAttendanceItem {
   final Employee user;

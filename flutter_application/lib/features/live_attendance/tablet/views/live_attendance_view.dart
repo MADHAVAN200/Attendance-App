@@ -4,12 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/glass_date_picker.dart';
-import '../../../../shared/services/auth_service.dart';
+import '../../../../services/auth_service.dart';
 import '../../../dashboard/tablet/widgets/stat_card.dart';
-import '../../../employees/services/employee_service.dart';
-import '../../../employees/models/employee_model.dart';
-import '../../../attendance/services/attendance_service.dart';
-import '../../../attendance/models/attendance_record.dart';
+import '../../../../shared/models/employee_model.dart';
+import '../../../../shared/models/attendance_model.dart';
+import '../../../../services/employee_service.dart';
+import '../../../../services/attendance_service.dart';
 import '../../../attendance/models/live_attendance_item.dart';
 import 'correction_requests_view.dart';
 
@@ -45,9 +45,8 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     
-    final authService = Provider.of<AuthService>(context, listen: false);
-    _employeeService = EmployeeService(authService);
-    _attendanceService = AttendanceService(authService.dio);
+    _employeeService = EmployeeService();
+    _attendanceService = AttendanceService();
     
     _fetchDashboardData();
   }
@@ -65,11 +64,9 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
 
     setState(() => _isLoading = true);
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-
       final results = await Future.wait([
-        _employeeService.getEmployees(dio), 
-        _attendanceService.getAdminAttendanceRecords(dateStr)
+        _employeeService.getEmployees(), 
+        _attendanceService.getAdminAttendanceRecords(dateFrom: dateStr, dateTo: dateStr)
       ]);
 
       final users = results[0] as List<Employee>;
@@ -127,24 +124,37 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Tabs
-        _buildTabs(context),
-        
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
+    
+    // Theme
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
             children: [
-              // Tab 1: Live Dashboard
-              _buildLiveDashboard(context),
+              // Tabs
+              _buildTabs(context),
               
-              // Tab 2: Correction Requests
-              const CorrectionRequestsView(),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    // Tab 1: Live Dashboard
+                    _buildLiveDashboard(context),
+                    
+                    // Tab 2: Correction Requests
+                    const CorrectionRequestsView(),
+                  ],
+                ),
+              ),
             ],
-          ),
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
 

@@ -22,8 +22,8 @@ extension PageTypeExtension on PageType {
       case PageType.myAttendance: return 'My Attendance';
       case PageType.liveAttendance: return 'Live Attendance';
       case PageType.reports: return 'Reports & Exports';
-      case PageType.holidays: return 'Holiday Management';
-      case PageType.policyEngine: return 'Policy Engine';
+      case PageType.holidays: return 'Holidays';
+      case PageType.policyEngine: return 'Shift Management';
       case PageType.geoFencing:
         return 'Geo-Fencing';
       case PageType.profile:

@@ -8,14 +8,6 @@ class MyAttendanceView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          // Top Buttons (Time In / Time Out)
-          Row(
-            children: [
-              Expanded(
                 child: _buildTimeAction(
                   context, 
                   label: 'Time In', 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../shared/services/auth_service.dart';
-import '../../services/holiday_service.dart';
+import '../../../../services/policy_service.dart';
 import '../../views/holiday_management_screen.dart';
 
 class MobileHolidaysContent extends StatelessWidget {
@@ -9,9 +8,15 @@ class MobileHolidaysContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final holidayService = HolidayService(authService.dio);
+    // Initialize PolicyService (no params needed as it uses singleton ApiClient)
+    final policyService = PolicyService();
     
-    return HolidayManagementScreen(holidayService: holidayService);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: HolidayManagementScreen(policyService: policyService),
+    );
   }
 }

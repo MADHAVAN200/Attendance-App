@@ -4,7 +4,7 @@ import 'package:provider/provider.dart'; // Import Provider
 import '../../../../shared/services/dashboard_provider.dart'; // Import Provider
 import '../../../profile/mobile/views/profile_view.dart';
 import '../../../leave/views/apply_leave_view.dart';
-import '../../../../shared/services/auth_service.dart';
+import '../../../../services/auth_service.dart';
 import '../../../../shared/models/dashboard_model.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../tablet/widgets/stat_card.dart';

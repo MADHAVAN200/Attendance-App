@@ -57,7 +57,6 @@ class AttendanceRecord {
 
   static String? _parseDate(dynamic val) {
     if (val == null) return null;
-    // If it's already ISO (common case), DateTime.parse works
     try {
       // Try standard parse first
       return DateTime.parse(val.toString()).toIso8601String();
@@ -65,23 +64,10 @@ class AttendanceRecord {
       // Handle JS Date string: "Thu Jan 08 2026 11:48:36 GMT+0000 (Coordinated Universal Time)"
       try {
         final str = val.toString();
-        // Extract the part we can parse: "Jan 08 2026 11:48:36" (Skip Day Name)
-        // RegEx to grab "Mon Jan 08 2026 11:48:36" part or similar?
-        // Let's simplified approach: Split by space.
-        // Parts: Thu, Jan, 08, 2026, 11:48:36, GMT+0000, ...
-        // We can construct a parseable string manually or use DateFormat.
-        // NOTE: DateFormat requires specific locale sometimes.
-        
-        // Simpler: Just return the string as is? 
-        // NO, the UI uses DateTime.parse(record.timeIn!). 
-        // So we MUST return a valid ISO string here or null.
-        
-        // Let's try to parse "Jan 08 2026 11:48:36"
         // Thu Jan 08 2026 11:48:36 ...
         // 0   1   2  3    4
         final parts = str.split(' ');
         if (parts.length >= 5) {
-           // parts[1] = Jan, parts[2] = 08, parts[3] = 2026, parts[4] = 11:48:36
            final monthStr = parts[1];
            final day = parts[2];
            final year = parts[3];
@@ -93,10 +79,9 @@ class AttendanceRecord {
            };
            final month = months[monthStr] ?? '01';
            
-           // ISO: YYYY-MM-DDTHH:mm:ss
            return "$year-$month-${day.padLeft(2, '0')}T$time";
         }
-        return null; // Fail safe
+        return null;
       } catch (e) {
         return null;
       }

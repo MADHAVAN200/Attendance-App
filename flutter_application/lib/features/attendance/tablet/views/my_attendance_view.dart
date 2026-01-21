@@ -10,9 +10,9 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/glass_date_picker.dart';
 import '../../../../shared/widgets/custom_dialog.dart';
-import '../../../../shared/services/auth_service.dart';
-import '../../models/attendance_record.dart';
-import '../../services/attendance_service.dart';
+import '../../../../services/auth_service.dart';
+import '../../../../shared/models/attendance_model.dart';
+import '../../../../services/attendance_service.dart';
 
 class MyAttendanceView extends StatefulWidget {
   const MyAttendanceView({super.key});
@@ -32,8 +32,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
   @override
   void initState() {
     super.initState();
-    final dio = Provider.of<AuthService>(context, listen: false).dio;
-    _attendanceService = AttendanceService(dio);
+    _attendanceService = AttendanceService();
     _fetchRecords();
   }
 

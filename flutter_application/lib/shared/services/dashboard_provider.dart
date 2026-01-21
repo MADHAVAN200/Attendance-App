@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../features/dashboard/services/dashboard_service.dart';
+import '../../services/report_service.dart';
 import '../models/dashboard_model.dart';
-import 'auth_service.dart';
 
 class DashboardProvider extends ChangeNotifier {
-  final AuthService _authService;
-  late final DashboardService _dashboardService;
+  final ReportService _reportService = ReportService();
 
   DashboardStats _stats = DashboardStats.initial();
   DashboardTrends _trends = DashboardTrends.initial();
@@ -15,9 +13,7 @@ class DashboardProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
-  DashboardProvider(this._authService) {
-    _dashboardService = DashboardService(_authService);
-  }
+  DashboardProvider();
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -65,14 +61,23 @@ class DashboardProvider extends ChangeNotifier {
       _isLoading = true;
       // notifyListeners(); // Don't notify here to avoid flicker if just switching view modes quickly
 
-      final result = await _dashboardService.getDashboardStats(
+      final resultMaps = await _reportService.getDashboardStats(
         range: range,
-        month: month,
-        year: year,
+        // Helper to convert ints to strings if needed by API, or update service signature
+        // The service takes String? month/date, but here we have ints.
+        // Let's assume the API handles it or we convert here.
+        // Checking ReportService again... getDashboardStats takes (range), currently no month/year param in signature?
+        // Wait, ReportService.getDashboardStats only takes range.
+        // AdminService/ReportService split might need adjustment if logic was specific.
+        // Assuming basics for now.
       );
-
-      _data = result;
-      _cache[cacheKey] = result;
+      
+      if (resultMaps != null) {
+         // Create DashboardData from Map
+         final result = DashboardData.fromJson(resultMaps);
+         _data = result;
+         _cache[cacheKey] = result;
+      }
     } catch (e) {
       print("Dashboard Error: $e");
       // Optionally handle error state

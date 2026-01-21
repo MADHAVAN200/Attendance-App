@@ -6,7 +6,7 @@ import 'features/dashboard/dashboard_screen.dart';
 import 'features/auth/login_screen.dart'; // Import new LoginScreen
 import 'shared/providers/theme_simple.dart';
 import 'shared/widgets/orientation_guard.dart';
-import 'shared/services/auth_service.dart';
+import 'services/auth_service.dart';
 
 import 'shared/services/notification_service.dart';
 import 'shared/services/dashboard_provider.dart'; // Import NotificationService
@@ -29,7 +29,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider<AuthService>.value(value: authService),
         ChangeNotifierProvider<NotificationService>.value(value: notificationService),
-        ChangeNotifierProvider<DashboardProvider>(create: (_) => DashboardProvider(authService)),
+        ChangeNotifierProvider<DashboardProvider>(create: (_) => DashboardProvider()),
       ],
       child: const AttendanceApp(),
     ),

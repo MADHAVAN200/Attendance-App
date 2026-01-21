@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import '../../../../shared/widgets/glass_container.dart';
-import '../../models/employee_model.dart';
-import '../../services/employee_service.dart';
-import '../../../../shared/services/auth_service.dart';
+import '../../../../shared/models/employee_model.dart';
+import '../../../../shared/models/shift_model.dart'; 
+import '../../../../services/employee_service.dart';
 
 class AddEmployeeView extends StatefulWidget {
   final VoidCallback onCancel;
@@ -47,8 +46,7 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
   @override
   void initState() {
     super.initState();
-    final authService = Provider.of<AuthService>(context, listen: false);
-    _employeeService = EmployeeService(authService);
+    _employeeService = EmployeeService();
     _loadDropdownData();
     if (widget.employeeToEdit != null) {
       _populateFormData();
@@ -69,10 +67,9 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
   Future<void> _loadDropdownData() async {
     setState(() => _isLoading = true);
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-      final depts = await _employeeService.getDepartments(dio);
-      final desgs = await _employeeService.getDesignations(dio);
-      final shifts = await _employeeService.getShifts(dio);
+      final depts = await _employeeService.getDepartments();
+      final desgs = await _employeeService.getDesignations();
+      final shifts = await _employeeService.getShifts();
       
       setState(() {
         _departments = depts;
@@ -91,8 +88,6 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
     
     setState(() => _isLoading = true);
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-      
       final Map<String, dynamic> data = {
         'user_name': _nameController.text,
         'email': _emailController.text,
@@ -111,13 +106,13 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
           return;
         }
         data['user_password'] = _passwordController.text;
-        await _employeeService.createEmployee(dio, data);
+        await _employeeService.createEmployee(data);
       } else {
         // Update Mode
         if (_passwordController.text.isNotEmpty) {
            data['user_password'] = _passwordController.text;
         }
-        await _employeeService.updateEmployee(dio, widget.employeeToEdit!.userId, data);
+        await _employeeService.updateEmployee(widget.employeeToEdit!.userId, data);
       }
 
       if (mounted) {
@@ -225,7 +220,7 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
                           context, 
                           'Department', 
                           _selectedDeptId, 
-                          _departments.map((e) => DropdownMenuItem(value: e.id, child: Text(e.name))).toList(),
+                          _departments.map<DropdownMenuItem<int>>((e) => DropdownMenuItem<int>(value: e.id, child: Text(e.name))).toList(),
                           (val) => setState(() => _selectedDeptId = val),
                         )),
                         const SizedBox(width: 24),
@@ -233,7 +228,7 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
                           context, 
                           'Designation / Role', 
                           _selectedDesgId, 
-                          _designations.map((e) => DropdownMenuItem(value: e.id, child: Text(e.name))).toList(),
+                          _designations.map<DropdownMenuItem<int>>((e) => DropdownMenuItem<int>(value: e.id, child: Text(e.name))).toList(),
                           (val) => setState(() => _selectedDesgId = val),
                         )),
                       ],
@@ -245,7 +240,7 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
                           context, 
                           'Shift Time', 
                           _selectedShiftId, 
-                          _shifts.map((e) => DropdownMenuItem(value: e.id, child: Text(e.name))).toList(),
+                          _shifts.map<DropdownMenuItem<int>>((e) => DropdownMenuItem<int>(value: e.id, child: Text(e.name))).toList(),
                           (val) => setState(() => _selectedShiftId = val),
                         )),
                         const SizedBox(width: 24),
@@ -254,8 +249,8 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
                           'User Type', 
                           _selectedUserType, 
                           const [
-                            DropdownMenuItem(value: 'employee', child: Text('Employee')),
-                            DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                            DropdownMenuItem<String>(value: 'employee', child: Text('Employee')),
+                            DropdownMenuItem<String>(value: 'admin', child: Text('Admin')),
                           ],
                           (val) => setState(() => _selectedUserType = val!),
                         )),

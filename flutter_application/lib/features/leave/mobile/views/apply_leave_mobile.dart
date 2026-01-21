@@ -15,74 +15,77 @@ class ApplyLeaveMobile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (controller.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
 
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          // 1. Stats Grid (Always visible at top)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-            child: _buildStatsGrid(context),
-          ),
-          const SizedBox(height: 24),
-
-          // 2. Pill Tabs
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(4),
-            margin: const EdgeInsets.only(bottom: 24), // Removed horizontal margin
-            decoration: BoxDecoration(
-              color: const Color(0xFF0F172A), // Dark track
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: DefaultTabController(
+        length: 2,
+        child: Column(
+          children: [
+            // Stats (optional placement, fitting above tabs)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: _buildStatsGrid(context),
             ),
-            child: TabBar(
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                color: const Color(0xFF6366F1).withOpacity(0.2), // Pill color
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.5)),
+
+            // Tabs
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.05)),
               ),
-              labelColor: const Color(0xFF6366F1),
-              unselectedLabelColor: Colors.grey,
-              labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
-              dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(child: Text("Apply Leave", style: TextStyle(height: 1.0))),
-                Tab(child: Text("View Leaves", style: TextStyle(height: 1.0))),
-              ],
+              child: TabBar(
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  color: const Color(0xFF6366F1).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.5)),
+                ),
+                labelColor: const Color(0xFF6366F1),
+                unselectedLabelColor: Colors.grey,
+                labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+                dividerColor: Colors.transparent,
+                tabs: const [
+                  Tab(child: Text("Apply Leave", style: TextStyle(height: 1.0))),
+                  Tab(child: Text("View Leaves", style: TextStyle(height: 1.0))),
+                ],
+              ),
             ),
-          ),
+            const SizedBox(height: 24),
 
-          // 3. Tab Content
-          Expanded(
-            child: TabBarView(
-              children: [
-                // Tab 1: Apply Leave Form + Calendar
-                SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                  child: Column(
-                    children: [
-                      // Removed _buildStatsGrid from here
-                      _buildForm(context),
-                      const SizedBox(height: 24),
-                      _buildCalendarSection(context),
-                    ],
+            // Tab Content
+            Expanded(
+              child: TabBarView(
+                children: [
+                  // Tab 1: Form
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    child: Column(
+                      children: [
+                        _buildForm(context),
+                        const SizedBox(height: 24),
+                        _buildCalendarSection(context),
+                      ],
+                    ),
                   ),
-                ),
-                
-                // Tab 2: View Leaves (History)
-                SingleChildScrollView(
-                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                   child: _buildFullHistoryList(context),
-                ),
-              ],
+                  
+                  // Tab 2: History
+                  SingleChildScrollView(
+                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                     child: _buildFullHistoryList(context),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

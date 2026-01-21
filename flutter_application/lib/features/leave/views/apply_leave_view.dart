@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
-import '../../../shared/services/auth_service.dart';
-import '../../holidays/services/holiday_service.dart';
-import '../../holidays/models/holiday_model.dart';
-import '../models/leave_model.dart';
-import '../services/leave_service.dart';
+import '../../../services/auth_service.dart';
+import '../../../../shared/models/holiday_model.dart';
+import '../../../../shared/models/leave_model.dart';
+import '../../../../services/policy_service.dart';
+import '../../../../services/leave_service.dart';
 import '../mobile/views/apply_leave_mobile.dart';
 import '../tablet/views/apply_leave_tablet.dart';
 
@@ -20,7 +20,7 @@ class ApplyLeaveView extends StatefulWidget {
 class ApplyLeaveViewState extends State<ApplyLeaveView> {
   // Services
   late LeaveService _leaveService;
-  late HolidayService _holidayService;
+  late PolicyService _policyService;
 
   // Data
   List<Leave> leaves = [];
@@ -48,11 +48,9 @@ class ApplyLeaveViewState extends State<ApplyLeaveView> {
   @override
   void initState() {
     super.initState();
-    final authService = Provider.of<AuthService>(context, listen: false);
-    _leaveService = LeaveService(authService);
-    // Assuming HolidayService is available via Provider or constructed similarly (usually centralized)
-    // For now, constructing it manually using same Dio instance
-    _holidayService = HolidayService(authService.dio); 
+    // Initialize Services
+    _leaveService = LeaveService();
+    _policyService = PolicyService();
     
     _loadInitialData();
   }
@@ -68,8 +66,8 @@ class ApplyLeaveViewState extends State<ApplyLeaveView> {
     setState(() => isLoading = true);
     try {
       final results = await Future.wait([
-        _leaveService.getMyLeaves(),
-        _holidayService.getHolidays(),
+        _leaveService.getMyLeaveHistory(),
+        _policyService.getHolidays(),
       ]);
 
       if (mounted) {
@@ -112,16 +110,13 @@ class ApplyLeaveViewState extends State<ApplyLeaveView> {
   }
 
   void onDateTap(DateTime date) {
-    // Normalizing time to midnight for comparison
     final clickedDate = DateTime(date.year, date.month, date.day);
 
     setState(() {
       if (startDate == null || (startDate != null && endDate != null)) {
-        // Start selection
         startDate = clickedDate;
         endDate = null;
       } else {
-        // End selection
         if (clickedDate.isBefore(startDate!)) {
           startDate = clickedDate;
           endDate = null;
@@ -150,14 +145,13 @@ class ApplyLeaveViewState extends State<ApplyLeaveView> {
 
     setState(() => isSubmitting = true);
     try {
-      final leaveData = {
-        'leave_type': subjectController.text, // Mapping subject to type as per requirement
-        'start_date': startDate!.toIso8601String().split('T')[0],
-        'end_date': endDate!.toIso8601String().split('T')[0],
-        'reason': reasonController.text,
-      };
-
-      await _leaveService.applyForLeave(leaveData, document: selectedDocument);
+      await _leaveService.submitLeaveRequest(
+        leaveType: subjectController.text,
+        startDate: startDate!.toIso8601String().split('T')[0],
+        endDate: endDate!.toIso8601String().split('T')[0],
+        reason: reasonController.text,
+        document: selectedDocument
+      );
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Leave request submitted')));
@@ -182,7 +176,7 @@ class ApplyLeaveViewState extends State<ApplyLeaveView> {
 
   Future<void> withdrawLeave(int id) async {
     try {
-      await _leaveService.withdrawLeave(id);
+      await _leaveService.withdrawRequest(id);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Leave withdrawn')));
         _loadInitialData();

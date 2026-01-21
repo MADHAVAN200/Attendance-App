@@ -6,9 +6,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/glass_container.dart';
-import '../../models/employee_model.dart';
-import '../../services/employee_service.dart';
-import '../../../../shared/services/auth_service.dart';
+import '../../../../shared/models/employee_model.dart';
+import '../../../../services/employee_service.dart';
+import '../../../../services/auth_service.dart';
 import 'add_employee_view.dart';
 import '../../widgets/bulk_upload_report_dialog.dart';
 import '../../widgets/glass_confirmation_dialog.dart';
@@ -34,16 +34,14 @@ class _EmployeesViewState extends State<EmployeesView> {
   @override
   void initState() {
     super.initState();
-    final authService = Provider.of<AuthService>(context, listen: false);
-    _employeeService = EmployeeService(authService);
+    _employeeService = EmployeeService();
     _fetchEmployees();
   }
 
   Future<void> _fetchEmployees() async {
     setState(() => _isLoading = true);
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-      final employees = await _employeeService.getEmployees(dio);
+      final employees = await _employeeService.getEmployees();
       setState(() {
         _employees = employees;
         _filterEmployees();
@@ -129,8 +127,7 @@ class _EmployeesViewState extends State<EmployeesView> {
     );
 
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-      await _employeeService.bulkDeleteEmployees(dio, _selectedIds.toList());
+      await _employeeService.bulkDeleteEmployees(_selectedIds.toList());
       
       if (!mounted) return;
       
@@ -164,8 +161,7 @@ class _EmployeesViewState extends State<EmployeesView> {
     if (confirm != true) return;
 
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-      await _employeeService.deleteEmployee(dio, id);
+      await _employeeService.deleteEmployee(id);
       _fetchEmployees(); // Refresh list
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Employee deleted')));
     } catch (e) {
@@ -221,7 +217,6 @@ class _EmployeesViewState extends State<EmployeesView> {
         }
 
         if (!mounted) return;
-        final dio = Provider.of<AuthService>(context, listen: false).dio;
         
         // Show loading indicator
         if (!mounted) return;
@@ -235,7 +230,7 @@ class _EmployeesViewState extends State<EmployeesView> {
         );
         
         try {
-          final response = await _employeeService.bulkUploadUsers(dio, file);
+          final response = await _employeeService.bulkUploadUsers(file);
           
           if (!mounted) return;
           // Close loading safely

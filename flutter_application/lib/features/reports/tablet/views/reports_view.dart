@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../../../../shared/widgets/glass_container.dart';
-import '../../../../shared/services/auth_service.dart';
-import '../../services/report_service.dart';
+import '../../../../services/auth_service.dart';
+import '../../../../services/report_service.dart';
 
 class ReportsView extends StatefulWidget {
   const ReportsView({super.key});
@@ -42,8 +42,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
     _tabController = TabController(length: 2, vsync: this);
     
     // Initialize Service using Provider's Dio
-    final authService = Provider.of<AuthService>(context, listen: false);
-    _reportService = ReportService(authService.dio);
+    _reportService = ReportService();
     
     _fetchPreview();
   }
@@ -129,31 +128,39 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Top Configuration Card
-        _buildConfigurationCard(context),
-        const SizedBox(height: 24),
+    if (_isLoadingPreview && _previewData == null) {
+       // Only full page load if we have no data at all
+       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
 
-        // Tabs
-        _buildTabs(context),
-        const SizedBox(height: 24),
-
-        // Tab Content
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            physics: const NeverScrollableScrollPhysics(), // Prevent horizontal swipe conflicts
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
             children: [
-              _buildDataPreview(context),
-              _buildExportHistory(context),
+              _buildConfigurationCard(context),
+              const SizedBox(height: 24),
+              _buildTabs(context),
+              const SizedBox(height: 24),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildDataPreview(context),
+                    _buildExportHistory(context),
+                  ],
+                ),
+              ),
             ],
-          ),
-        ),
-      ],
+          );
+        },
+      ),
     );
   }
-
   Widget _buildConfigurationCard(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -409,7 +416,6 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
       ),
     );
   }
-
   Widget _buildDataPreview(BuildContext context) {
     if (_isLoadingPreview) {
       return const Center(child: CircularProgressIndicator());

@@ -1,9 +1,4 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:provider/provider.dart';
-import '../../../../shared/services/auth_service.dart';
-import '../../services/location_service.dart';
 import '../../views/geofencing_screen.dart';
 
 class GeoFencingView extends StatelessWidget {
@@ -11,12 +6,12 @@ class GeoFencingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final service = LocationService(authService.dio);
-    
-    return Provider<LocationService>.value(
-      value: service,
-      child: GeofencingScreen(locationService: service),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: const GeofencingScreen(),
     );
   }
 }

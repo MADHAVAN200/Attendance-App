@@ -6,9 +6,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/widgets/glass_container.dart';
-import '../../models/employee_model.dart';
-import '../../services/employee_service.dart';
-import '../../../../shared/services/auth_service.dart';
+import '../../../../shared/models/employee_model.dart';
+import '../../../../services/employee_service.dart';
+import '../../../../services/auth_service.dart';
 import '../../tablet/views/add_employee_view.dart';
 import '../../widgets/bulk_upload_report_dialog.dart';
 import '../../widgets/glass_confirmation_dialog.dart';
@@ -30,16 +30,14 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
   @override
   void initState() {
     super.initState();
-    final authService = Provider.of<AuthService>(context, listen: false);
-    _employeeService = EmployeeService(authService);
+    _employeeService = EmployeeService();
     _fetchEmployees();
   }
 
   Future<void> _fetchEmployees() async {
     setState(() => _isLoading = true);
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-      final employees = await _employeeService.getEmployees(dio);
+      final employees = await _employeeService.getEmployees();
       if (!mounted) return;
       setState(() {
         _employees = employees;
@@ -124,8 +122,7 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
     );
 
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-      await _employeeService.bulkDeleteEmployees(dio, _selectedIds.toList());
+      await _employeeService.bulkDeleteEmployees(_selectedIds.toList());
       
       if (!mounted) return;
       if (Navigator.canPop(context)) Navigator.pop(context); // Close loading
@@ -154,8 +151,7 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
     if (confirm != true) return;
 
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-      await _employeeService.deleteEmployee(dio, id);
+      await _employeeService.deleteEmployee(id);
       _fetchEmployees();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Employee deleted')));
@@ -219,7 +215,6 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
         }
 
         if (!mounted) return;
-        final dio = Provider.of<AuthService>(context, listen: false).dio;
         
         if (!mounted) return;
         showDialog(
@@ -232,7 +227,7 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
         );
         
         try {
-          final response = await _employeeService.bulkUploadUsers(dio, file);
+          final response = await _employeeService.bulkUploadUsers(file);
           
           if (!mounted) return;
           // Close loading
@@ -299,7 +294,13 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
+
     return Scaffold(
+      backgroundColor: backgroundColor,
       floatingActionButton: Provider.of<AuthService>(context, listen: false).user!.isEmployee 
           ? null 
           : FloatingActionButton(
@@ -307,178 +308,188 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
               backgroundColor: Theme.of(context).primaryColor,
               child: const Icon(Icons.add, color: Colors.white),
             ),
-      body: Column(
-        children: [
+      body: CustomScrollView(
+        slivers: [
           // Search & Filters Header OR Selection Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: _isSelectionMode 
-                ? Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: _exitSelectionMode,
-                      ),
-                      const SizedBox(width: 8),
-                      Text('${_selectedIds.length} Selected', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: _toggleSelectAll,
-                        child: Text(
-                          _selectedIds.length == _filteredEmployees.length ? 'Unselect All' : 'Select All',
-                          style: TextStyle(color: Theme.of(context).primaryColor),
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              child: _isSelectionMode 
+                  ? Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: _exitSelectionMode,
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
-                        onPressed: _bulkDelete,
-                      ),
-                    ],
-                  )
-                : Row(
-                    children: [
-                      Expanded(
-                        child: GlassContainer(
-                          height: 50,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                           child: Row(
-                            children: [
-                              const Icon(Icons.search, size: 20, color: Colors.grey),
-                               const SizedBox(width: 8),
-                              Expanded(
-                                child: TextField(
-                                  onChanged: (val) {
-                                    _searchQuery = val;
-                                    _filterEmployees();
-                                  },
-                                  decoration: const InputDecoration(
-                                    hintText: 'Search...',
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                  ),
-                                ),
-                              ),
-                            ],
+                        const SizedBox(width: 8),
+                        Text('${_selectedIds.length} Selected', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: _toggleSelectAll,
+                          child: Text(
+                            _selectedIds.length == _filteredEmployees.length ? 'Unselect All' : 'Select All',
+                            style: TextStyle(color: Theme.of(context).primaryColor),
                           ),
                         ),
-                      ),
-                      if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee) ...[
-                        const SizedBox(width: 12),
                         IconButton(
-                          onPressed: _downloadSampleTemplate, 
-                          icon: const Icon(Icons.download),
-                          tooltip: 'Download Template',
-                        ),
-                        IconButton(
-                          onPressed: _handleBulkUpload, 
-                          icon: const Icon(Icons.upload_file),
-                          tooltip: 'Bulk Upload',
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: _bulkDelete,
                         ),
                       ],
-                    ],
-                  ),
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: GlassContainer(
+                            height: 50,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                             child: Row(
+                              children: [
+                                const Icon(Icons.search, size: 20, color: Colors.grey),
+                                 const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    onChanged: (val) {
+                                      _searchQuery = val;
+                                      _filterEmployees();
+                                    },
+                                    decoration: const InputDecoration(
+                                      hintText: 'Search...',
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee) ...[
+                          const SizedBox(width: 12),
+                          IconButton(
+                            onPressed: _downloadSampleTemplate, 
+                            icon: const Icon(Icons.download),
+                            tooltip: 'Download Template',
+                          ),
+                          IconButton(
+                            onPressed: _handleBulkUpload, 
+                            icon: const Icon(Icons.upload_file),
+                            tooltip: 'Bulk Upload',
+                          ),
+                        ],
+                      ],
+                    ),
+            ),
           ),
           
-          Expanded(
-            child: _isLoading 
-                ? const Center(child: CircularProgressIndicator())
-                : _filteredEmployees.isEmpty 
-                    ? const Center(child: Text('No employees found'))
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 80),
-                        itemCount: _filteredEmployees.length,
-                        itemBuilder: (context, index) {
-                          final emp = _filteredEmployees[index];
-                          final isSelected = _selectedIds.contains(emp.userId);
-                          final isDark = Theme.of(context).brightness == Brightness.dark;
+          if (_isLoading) 
+             const SliverFillRemaining(
+               hasScrollBody: false,
+               child: Center(child: CircularProgressIndicator()),
+             )
+          else if (_filteredEmployees.isEmpty) 
+             const SliverFillRemaining(
+               hasScrollBody: false,
+               child: Center(child: Text('No employees found')),
+             )
+          else 
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final emp = _filteredEmployees[index];
+                  final isSelected = _selectedIds.contains(emp.userId);
+                  final isDark = Theme.of(context).brightness == Brightness.dark;
 
-                          // Content for the card/glass container
-                          final childContent = ListTile(
-                              contentPadding: const EdgeInsets.all(16),
-                              leading: _isSelectionMode
-                                  ? Checkbox(
-                                      value: isSelected,
-                                      onChanged: (_) => _toggleSelection(emp.userId),
-                                      activeColor: Theme.of(context).primaryColor,
-                                    )
-                                  : Container(
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
-                                      ),
-                                      child: CircleAvatar(
-                                        backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1),
-                                        child: Text(
-                                          emp.userName.isNotEmpty ? emp.userName[0].toUpperCase() : '?',
-                                          style: TextStyle(color: isDark ? Colors.white : Theme.of(context).primaryColor),
-                                        ),
-                                      ),
-                                    ),
-                              title: Text(emp.userName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: isDark ? Colors.white : null)),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(emp.designation ?? 'N/A', style: GoogleFonts.poppins(fontSize: 12, color: isDark ? Colors.white70 : null)),
-                                  Text(emp.phoneNo ?? 'N/A', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                                ],
+                  // Content for the card/glass container
+                  final childContent = ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      leading: _isSelectionMode
+                          ? Checkbox(
+                              value: isSelected,
+                              onChanged: (_) => _toggleSelection(emp.userId),
+                              activeColor: Theme.of(context).primaryColor,
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
                               ),
-                              trailing: (_isSelectionMode || Provider.of<AuthService>(context, listen: false).user!.isEmployee) 
-                                  ? null 
-                                  : PopupMenuButton<String>(
-                                      icon: Icon(Icons.more_vert, color: isDark ? Colors.white70 : null),
-                                      onSelected: (val) {
-                                        if (val == 'edit') _navigateToAddEdit(employee: emp);
-                                        if (val == 'delete') _deleteEmployee(emp.userId);
-                                      },
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                        const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
-                                      ],
-                                    ),
-                              onTap: () {
-                                if (_isSelectionMode) {
-                                  _toggleSelection(emp.userId);
-                                } else {
-                                  _showEmployeeDetails(context, emp);
-                                }
-                              },
-                              onLongPress: () {
-                                if (!_isSelectionMode && !Provider.of<AuthService>(context, listen: false).user!.isEmployee) {
-                                  setState(() {
-                                    _isSelectionMode = true;
-                                    _toggleSelection(emp.userId);
-                                  });
-                                }
-                              },
-                            );
-
-                          if (isDark) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              child: GlassContainer(
-                                child: childContent,
-                              ),
-                            );
-                          } else {
-                            return Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.05) : Colors.white,
-                              elevation: 2,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(
-                                  color: isSelected 
-                                    ? Theme.of(context).primaryColor 
-                                    : Colors.grey.withOpacity(0.2),
-                                  width: isSelected ? 1.5 : 1,
+                              child: CircleAvatar(
+                                backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1),
+                                child: Text(
+                                  emp.userName.isNotEmpty ? emp.userName[0].toUpperCase() : '?',
+                                  style: TextStyle(color: isDark ? Colors.white : Theme.of(context).primaryColor),
                                 ),
                               ),
-                              child: childContent,
-                            );
-                          }
-                        },
+                            ),
+                      title: Text(emp.userName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: isDark ? Colors.white : null)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(emp.designation ?? 'N/A', style: GoogleFonts.poppins(fontSize: 12, color: isDark ? Colors.white70 : null)),
+                          Text(emp.phoneNo ?? 'N/A', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                        ],
                       ),
-          ),
+                      trailing: (_isSelectionMode || Provider.of<AuthService>(context, listen: false).user!.isEmployee) 
+                          ? null 
+                          : PopupMenuButton<String>(
+                              icon: Icon(Icons.more_vert, color: isDark ? Colors.white70 : null),
+                              onSelected: (val) {
+                                if (val == 'edit') _navigateToAddEdit(employee: emp);
+                                if (val == 'delete') _deleteEmployee(emp.userId);
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                                const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
+                              ],
+                            ),
+                      onTap: () {
+                        if (_isSelectionMode) {
+                          _toggleSelection(emp.userId);
+                        } else {
+                          _showEmployeeDetails(context, emp);
+                        }
+                      },
+                      onLongPress: () {
+                        if (!_isSelectionMode && !Provider.of<AuthService>(context, listen: false).user!.isEmployee) {
+                          setState(() {
+                            _isSelectionMode = true;
+                            _toggleSelection(emp.userId);
+                          });
+                        }
+                      },
+                    );
+
+                  if (isDark) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: GlassContainer(
+                        child: childContent,
+                      ),
+                    );
+                  } else {
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.05) : Colors.white,
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: isSelected 
+                            ? Theme.of(context).primaryColor 
+                            : Colors.grey.withOpacity(0.2),
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: childContent,
+                    );
+                  }
+                },
+                childCount: _filteredEmployees.length,
+              ),
+            ),
+          // Add bottom padding for FAB
+          const SliverPadding(padding: EdgeInsets.only(bottom: 80)),
         ],
       ),
     );
@@ -506,35 +517,47 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
   }
 
   Widget _buildDialogContent(BuildContext context, Employee employee, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
-            ),
-            child: CircleAvatar(
-              radius: 40,
-              backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1),
-              child: Text(
-                employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?', 
-                style: TextStyle(fontSize: 32, color: isDark ? Colors.white : Theme.of(context).primaryColor),
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
+                ),
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1),
+                  child: Text(
+                    employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?', 
+                    style: TextStyle(fontSize: 32, color: isDark ? Colors.white : Theme.of(context).primaryColor),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+              Text(employee.userName, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : null)),
+              Text(employee.designation ?? 'N/A', style: GoogleFonts.poppins(color: Colors.grey)),
+              Divider(height: 32, color: isDark ? Colors.white24 : null),
+              _buildDetailRow('Email', employee.email, isDark),
+              _buildDetailRow('Phone', employee.phoneNo ?? 'N/A', isDark),
+              _buildDetailRow('Dept', employee.department ?? 'N/A', isDark),
+              _buildDetailRow('Shift', employee.shift ?? 'N/A', isDark),
+            ],
           ),
-          const SizedBox(height: 16),
-          Text(employee.userName, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : null)),
-          Text(employee.designation ?? 'N/A', style: GoogleFonts.poppins(color: Colors.grey)),
-          Divider(height: 32, color: isDark ? Colors.white24 : null),
-          _buildDetailRow('Email', employee.email, isDark),
-          _buildDetailRow('Phone', employee.phoneNo ?? 'N/A', isDark),
-          _buildDetailRow('Dept', employee.department ?? 'N/A', isDark),
-          _buildDetailRow('Shift', employee.shift ?? 'N/A', isDark),
-        ],
-      ),
+        ),
+        Positioned(
+          right: 0,
+          top: 0,
+          child: IconButton(
+            icon: Icon(Icons.close, color: isDark ? Colors.white60 : Colors.grey),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+      ],
     );
   }
 

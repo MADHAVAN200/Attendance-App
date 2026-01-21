@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../navigation/navigation_controller.dart';
 import 'glass_container.dart';
 import 'package:provider/provider.dart'; // Import Provider
-import '../services/auth_service.dart'; // Import AuthService
+import '../../services/auth_service.dart'; // Import AuthService
 
 class AppSidebar extends StatelessWidget {
   final VoidCallback? onLinkTap;
@@ -24,7 +24,7 @@ class AppSidebar extends StatelessWidget {
       blur: 60, // Stronger blur for iOS frosted effect
       color: Theme.of(context).brightness == Brightness.dark 
           ? Colors.black.withOpacity(0.2) // Explicit iOS dark glass
-          : const Color(0xFFFFFFFF), // Solid White for Light Mode
+          : Colors.white, // Solid White for Light Mode
       borderRadius: 0, 
       child: ValueListenableBuilder<PageType>(
         valueListenable: navigationNotifier,
@@ -70,7 +70,7 @@ class AppSidebar extends StatelessWidget {
                 ),
               ),
               
-              const SizedBox(height: 32), // Matches typical page content padding
+              const SizedBox(height: 16), // Matches typical page content padding
               
               // Menu Items
               ...PageType.values.where((p) {
@@ -108,7 +108,7 @@ class AppSidebar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2), // Reduced vertical margin
       decoration: BoxDecoration(
         color: isActive 
             ? (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05)) // Neutral grey for light mode active
@@ -116,10 +116,14 @@ class AppSidebar extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: ListTile(
+        dense: true, // Reduces internal vertical padding
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0), // Explicit padding control
+        visualDensity: const VisualDensity(horizontal: 0, vertical: -2), // Further reduce height
         horizontalTitleGap: 8,
         minLeadingWidth: 20,
         leading: Icon(
           page.icon,
+          size: 20, // Verify icon size
           color: isActive 
               ? (isDark ? Colors.white : Colors.black) // Black for light mode active
               : (isDark ? Colors.grey : Colors.black54),

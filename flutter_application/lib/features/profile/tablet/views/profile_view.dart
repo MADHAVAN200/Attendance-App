@@ -2,54 +2,67 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../../shared/navigation/navigation_controller.dart';
-import '../../../../shared/services/auth_service.dart';
+import '../../../../services/auth_service.dart';
 import '../../../auth/login_screen.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../main.dart';
 
-class ProfileView extends StatelessWidget {
+class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
 
   @override
+  State<ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<ProfileView> {
+  bool _isLoading = false; // Added for the new snippet
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          // Hero Profile Card
-          _buildHeroCard(context),
-          const SizedBox(height: 24),
+    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    
+    // Theme
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
 
-          // Details Row
-          LayoutBuilder(
-            builder: (context, constraints) {
-               // Threshold for Tablet Portrait (e.g., < 900 or even < 600 depending on content)
-               // Using 900 to match previous logic for consistency
-               final isPortrait = constraints.maxWidth < 900;
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          children: [
+            // Hero Profile Card
+            _buildHeroCard(context),
+            const SizedBox(height: 24),
+            // Details Row
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isPortrait = constraints.maxWidth < 900;
 
-               if (isPortrait) {
-                 return Column(
-                   children: [
-                     _buildContactInfoCard(context),
-                     const SizedBox(height: 24),
-                     _buildEmploymentDetailsCard(context),
-                   ],
-                 );
-               }
+                if (isPortrait) {
+                  return Column(
+                    children: [
+                      _buildContactInfoCard(context),
+                      const SizedBox(height: 24),
+                      _buildEmploymentDetailsCard(context),
+                    ],
+                  );
+                }
 
-               return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: _buildContactInfoCard(context)),
-                  const SizedBox(width: 24),
-                  Expanded(child: _buildEmploymentDetailsCard(context)),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          _buildLogoutCard(context),
-        ],
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _buildContactInfoCard(context)),
+                    const SizedBox(width: 24),
+                    Expanded(child: _buildEmploymentDetailsCard(context)),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 24),
+            _buildLogoutCard(context),
+          ],
+        ),
       ),
     );
   }

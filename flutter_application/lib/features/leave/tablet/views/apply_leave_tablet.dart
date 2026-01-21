@@ -10,80 +10,98 @@ class ApplyLeaveTablet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (controller.isLoading) return const Center(child: CircularProgressIndicator());
+    if (controller.isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          // 1. Stats Row (Always visible at top)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-            child: _buildStatsRow(context),
-          ),
-          const SizedBox(height: 32),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
 
-          // 2. Pill Tabs (Full Width)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            margin: const EdgeInsets.only(bottom: 32),
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F172A),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.05)),
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: DefaultTabController(
+        length: 2,
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // 1. Stats Row (Always visible at top)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                child: _buildStatsRow(context),
               ),
-              child: TabBar(
-                indicatorSize: TabBarIndicatorSize.tab,
-                indicator: BoxDecoration(
-                  color: const Color(0xFF6366F1).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.5)),
-                ),
-                labelColor: const Color(0xFF6366F1),
-                unselectedLabelColor: Colors.grey,
-                labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
-                dividerColor: Colors.transparent,
-                tabs: const [
-                   Tab(child: Text("Apply Leave", style: TextStyle(height: 1.0))),
-                   Tab(child: Text("View Leaves", style: TextStyle(height: 1.0))),
-                ],
-              ),
-            ),
-          ),
-          
-          Expanded(
-            child: TabBarView(
-              children: [
-                // Tab 1: Apply Leave (Form + Calendar)
-                SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    children: [
-                      // Removed _buildStatsRow from here
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(flex: 2, child: _buildForm(context)),
-                          const SizedBox(width: 32),
-                          Expanded(flex: 1, child: _buildCalendarSection(context)),
-                        ],
-                      ),
+              const SizedBox(height: 32),
+
+              // 2. Pill Tabs (Full Width)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                margin: const EdgeInsets.only(bottom: 32),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withOpacity(0.05)),
+                  ),
+                  child: TabBar(
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicator: BoxDecoration(
+                      color: const Color(0xFF6366F1).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF6366F1).withOpacity(0.5)),
+                    ),
+                    labelColor: const Color(0xFF6366F1),
+                    unselectedLabelColor: Colors.grey,
+                    labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
+                    dividerColor: Colors.transparent,
+                    tabs: const [
+                       Tab(child: Text("Apply Leave", style: TextStyle(height: 1.0))),
+                       Tab(child: Text("View Leaves", style: TextStyle(height: 1.0))),
                     ],
                   ),
                 ),
-                
-                // Tab 2: View Leaves (Full History)
-                SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
-                  child: _buildFullHistoryList(context),
+              ),
+              
+              // 3. Content
+              SizedBox(
+                height: 800, // Fixed height for TabBarView to work inside ScrollView or use Expanded if parent allows
+                // A better approach for Tablet scrollable is separating the scrollview.
+                // But to match previous structure, we'll wrap the inner views.
+                // However, TabBarView needs bounded height. 
+                // Let's use a Container with constraints or just let the children scroll independently 
+                // and put the Stats/Tabs outside.
+                // Since I wrapped everything in SingleChildScrollView, TabBarView will crash.
+                // Correction: The original code intended the whole page to scroll or parts of it?
+                // The broken code had SingleScrollViews INSIDE the TabBarView.
+                // So the outer structure should NOT be a SingleChildScrollView if using TabBarView with Expanded.
+                child: TabBarView(
+                  children: [
+                    // Tab 1: Apply Leave (Form + Calendar)
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 2, child: _buildForm(context)),
+                              const SizedBox(width: 32),
+                              Expanded(flex: 1, child: _buildCalendarSection(context)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Tab 2: View Leaves (Full History)
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
+                      child: _buildFullHistoryList(context),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

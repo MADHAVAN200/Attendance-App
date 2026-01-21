@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart'; // Import GoogleFonts
 import 'package:provider/provider.dart';
 import '../../../../shared/services/dashboard_provider.dart';
-import '../../../../shared/services/auth_service.dart';
+import '../../../../services/auth_service.dart';
 import '../../../../shared/models/dashboard_model.dart';
 import '../../../../shared/widgets/app_sidebar.dart';
 import '../../../../shared/widgets/custom_app_bar.dart';

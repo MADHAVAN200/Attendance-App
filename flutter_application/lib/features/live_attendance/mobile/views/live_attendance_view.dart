@@ -4,12 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/glass_date_picker.dart';
-import '../../../../shared/services/auth_service.dart';
+import '../../../../services/auth_service.dart';
 import '../../../dashboard/tablet/widgets/stat_card.dart';
-import '../../../employees/services/employee_service.dart';
-import '../../../employees/models/employee_model.dart';
-import '../../../attendance/services/attendance_service.dart';
-import '../../../attendance/models/attendance_record.dart';
+import '../../../../shared/models/employee_model.dart';
+import '../../../../shared/models/attendance_model.dart';
+import '../../../../services/employee_service.dart';
+import '../../../../services/attendance_service.dart';
 import '../../../attendance/models/live_attendance_item.dart';
 import 'correction_requests_view.dart'; // Mobile version
 
@@ -45,9 +45,8 @@ class _MobileLiveAttendanceContentState extends State<MobileLiveAttendanceConten
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     
-    final authService = Provider.of<AuthService>(context, listen: false);
-    _employeeService = EmployeeService(authService);
-    _attendanceService = AttendanceService(authService.dio);
+    _employeeService = EmployeeService();
+    _attendanceService = AttendanceService();
     
     _fetchDashboardData();
   }
@@ -65,11 +64,9 @@ class _MobileLiveAttendanceContentState extends State<MobileLiveAttendanceConten
 
     setState(() => _isLoading = true);
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-
       final results = await Future.wait([
-        _employeeService.getEmployees(dio),
-        _attendanceService.getAdminAttendanceRecords(dateStr)
+        _employeeService.getEmployees(),
+        _attendanceService.getAdminAttendanceRecords(dateFrom: dateStr, dateTo: dateStr)
       ]);
 
       final users = results[0] as List<Employee>;

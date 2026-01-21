@@ -10,9 +10,9 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/glass_date_picker.dart';
 import '../../../../shared/widgets/custom_dialog.dart';
-import '../../../../shared/services/auth_service.dart';
-import '../../models/attendance_record.dart';
-import '../../services/attendance_service.dart';
+import '../../../../services/auth_service.dart';
+import '../../../../shared/models/attendance_model.dart';
+import '../../../../services/attendance_service.dart';
 
 class MobileMyAttendanceContent extends StatefulWidget {
   const MobileMyAttendanceContent({super.key});
@@ -32,8 +32,7 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
   @override
   void initState() {
     super.initState();
-    final dio = Provider.of<AuthService>(context, listen: false).dio;
-    _attendanceService = AttendanceService(dio);
+    _attendanceService = AttendanceService();
     _fetchRecords();
   }
 
@@ -204,21 +203,6 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
         
         const SizedBox(height: 32),
 
-        // 2. Date Selector
-        _buildDateSelector(context),
-
-        const SizedBox(height: 16),
-
-        // 3. Attendance History List
-        if (_isLoading)
-           const Center(child: CircularProgressIndicator())
-        else if (_records.isEmpty)
-           Center(child: Text("No records for this date", style: GoogleFonts.poppins(color: Colors.grey)))
-        else
-           ..._records.map((record) => Padding(
-             padding: const EdgeInsets.only(bottom: 12),
-             child: _buildSessionCard(context, record),
-           )),
       ],
     );
   }

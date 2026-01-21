@@ -4,7 +4,7 @@ import '../providers/theme_simple.dart';
 import 'glass_container.dart';
 import 'package:provider/provider.dart';
 import '../../features/auth/login_screen.dart';
-import '../services/auth_service.dart';
+import '../../services/auth_service.dart';
 import '../navigation/navigation_controller.dart';
 import '../../features/notifications/mobile/views/notifications_view.dart'; // Import Mobile View
 import '../services/notification_service.dart';
@@ -27,6 +27,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return Container(
       // Height removed to allow content + padding to determine
       decoration: BoxDecoration(
+        color: isDark ? Colors.transparent : Colors.white,
         border: Border(
           bottom: BorderSide(
             color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!,

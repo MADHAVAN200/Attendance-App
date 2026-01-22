@@ -7,15 +7,15 @@ import 'dart:convert';
 import 'dart:io'; 
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/custom_dialog.dart';
-import '../../../../services/auth_service.dart';
+import '../../../../shared/services/auth_service.dart';
 import 'package:provider/provider.dart';
-import '../../../../services/policy_service.dart';
-import '../../../../shared/models/holiday_model.dart';
+import '../services/holiday_service.dart';
+import '../models/holiday_model.dart';
 // Note: Assuming API Config or Service handles Errors properly roughly.
 
 class HolidayManagementScreen extends StatefulWidget {
-  final PolicyService policyService;
-  const HolidayManagementScreen({super.key, required this.policyService});
+  final HolidayService holidayService;
+  const HolidayManagementScreen({super.key, required this.holidayService});
 
   @override
   _HolidayManagementScreenState createState() => _HolidayManagementScreenState();
@@ -54,7 +54,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
   Future<void> _fetchHolidays() async {
     setState(() => _isLoading = true);
     try {
-      final data = await widget.policyService.getHolidays();
+      final data = await widget.holidayService.getHolidays();
       setState(() {
         // Ensure data is not null
         _holidays = data;
@@ -73,7 +73,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
 
   Future<void> _deleteHoliday(int id) async {
     try {
-      await widget.policyService.deleteHolidays([id]);
+      await widget.holidayService.deleteHolidays([id]);
       _fetchHolidays();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Deleted successfully")));
@@ -91,7 +91,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
       builder: (ctx) => _HolidayFormDialog(
         onSubmit: (data) async {
           try {
-            await widget.policyService.createHoliday(data);
+            await widget.holidayService.addHoliday(data);
             Navigator.pop(ctx);
             _fetchHolidays();
             if (mounted) {
@@ -112,7 +112,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
         initialData: holiday,
         onSubmit: (data) async {
           try {
-            await widget.policyService.updateHoliday(holiday.id, data);
+            await widget.holidayService.updateHoliday(holiday.id, data);
             Navigator.pop(ctx);
             _fetchHolidays();
             if (mounted) {
@@ -544,7 +544,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
 
         if (batch.isNotEmpty) {
           setState(() => _isLoading = true);
-          await widget.policyService.createHolidaysBulk(batch);
+          await widget.holidayService.addBulkHolidays(batch);
           _fetchHolidays();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Imported ${batch.length} holidays")));

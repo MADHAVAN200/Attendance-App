@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../../../../shared/widgets/glass_container.dart';
-import '../../../../services/auth_service.dart';
-import '../../../../services/report_service.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../../services/report_service.dart';
 
 class MobileReportsContent extends StatefulWidget {
   const MobileReportsContent({super.key});
@@ -42,7 +42,8 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
     _tabController = TabController(length: 2, vsync: this);
     
     // Initialize Service
-    _reportService = ReportService();
+    final authService = Provider.of<AuthService>(context, listen: false);
+    _reportService = ReportService(authService.dio);
     
     _fetchPreview();
   }
@@ -122,39 +123,28 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoadingPreview && _previewData == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+      physics: const BouncingScrollPhysics(),
+      children: [
+        // Top Configuration Card (Stacked for Mobile)
+        _buildConfigurationCard(context),
+        const SizedBox(height: 24),
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // Top Configuration Card
-            _buildConfigurationCard(context),
-            const SizedBox(height: 16),
+        // Tabs
+        _buildTabs(context),
+        const SizedBox(height: 16),
 
-            // Tabs
-            _buildTabs(context),
-            const SizedBox(height: 16),
-
-            // Tab Content
-            AnimatedBuilder(
-              animation: _tabController,
-              builder: (context, child) {
-                return _tabController.index == 0 
-                    ? _buildDataPreview(context)
-                    : _buildExportHistory(context);
-              },
-            ),
-          ],
+        // Tab Content
+        AnimatedBuilder(
+          animation: _tabController,
+          builder: (context, child) {
+            return _tabController.index == 0 
+                ? _buildDataPreview(context)
+                : _buildExportHistory(context);
+          },
         ),
-      ),
+      ],
     );
   }
 

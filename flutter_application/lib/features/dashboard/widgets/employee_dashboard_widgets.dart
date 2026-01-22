@@ -105,15 +105,15 @@ class EmployeeStatCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      padding: const EdgeInsets.all(12), // Reduced from 20
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(12), // Reduced radius
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -125,28 +125,28 @@ class EmployeeStatCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(6), // Reduced
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: iconColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: iconColor, size: 16), // Reduced size
+                child: Icon(icon, color: iconColor, size: 20),
               ),
               Text(
                 badgeText,
                 style: GoogleFonts.poppins(
-                  fontSize: 9, // Reduced font
+                  fontSize: 10,
                   fontWeight: FontWeight.w500,
                   color: Colors.grey,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             value,
             style: GoogleFonts.poppins(
-              fontSize: 20, // Reduced from 24
+              fontSize: 24,
               fontWeight: FontWeight.bold,
               color: isDark ? Colors.white : const Color(0xFF1E293B),
             ),
@@ -154,7 +154,7 @@ class EmployeeStatCard extends StatelessWidget {
           Text(
             label,
             style: GoogleFonts.poppins(
-              fontSize: 10, // Reduced from 12
+              fontSize: 12,
               color: Colors.grey,
             ),
           ),

@@ -110,9 +110,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
       children: kpis.map((data) {
         return Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4), // Reduced gutter to 4
+            padding: const EdgeInsets.symmetric(horizontal: 10), // Gutter
              child: SizedBox(
-               height: 100, // Reduced height to 100
+               height: 140, // Fixed height to constrain Expanded child
                child: StatCard(
                 title: data['title'] as String,
                 value: data['value'] as String,

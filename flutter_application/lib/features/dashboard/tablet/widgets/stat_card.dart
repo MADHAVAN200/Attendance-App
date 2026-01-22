@@ -31,7 +31,7 @@ class StatCard extends StatelessWidget {
     final subTextColor = Theme.of(context).textTheme.bodySmall?.color;
 
     return GlassContainer(
-      padding: const EdgeInsets.all(12), // Reduced padding to 12
+      padding: const EdgeInsets.all(16), // Reduced padding from 20 to 16
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -43,7 +43,7 @@ class StatCard extends StatelessWidget {
                 child: Text(
                   title,
                   style: GoogleFonts.poppins(
-                    fontSize: 10, // Reduced to 10
+                    fontSize: 12, // Reduced from 13
                     fontWeight: FontWeight.w500,
                     color: subTextColor,
                   ),
@@ -51,24 +51,24 @@ class StatCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 8),
               Container(
-                width: 24, // Reduced to 24
-                height: 24,
+                width: 28, // Reduced from 32
+                height: 28,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: baseColor.withOpacity(0.5)),
                   color: baseColor.withOpacity(0.1),
                 ),
-                child: Icon(icon, color: baseColor, size: 12), // Reduced to 12
+                child: Icon(icon, color: baseColor, size: 14), // Reduced from 16
               ),
             ],
           ),
           
           // Value
-          Expanded( 
-             child: Column( 
+          Expanded( // Use expanded to fill available space without fixed constraint issues
+             child: Column( // Wrapper to center nicely if needed, or just align
                crossAxisAlignment: CrossAxisAlignment.start,
                mainAxisAlignment: MainAxisAlignment.center,
                children: [
@@ -79,7 +79,7 @@ class StatCard extends StatelessWidget {
                      Text(
                        value,
                        style: GoogleFonts.poppins(
-                         fontSize: 20, // Reduced to 20
+                         fontSize: 24, // Reduced from 28
                          fontWeight: FontWeight.bold,
                          color: textColor,
                        ),

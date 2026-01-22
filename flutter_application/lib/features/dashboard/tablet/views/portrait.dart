@@ -17,10 +17,9 @@ import '../../../employees/tablet/views/employees_view.dart';
 import '../../../attendance/tablet/views/my_attendance_view.dart';
 import '../../../live_attendance/tablet/views/live_attendance_view.dart';
 import '../../../reports/tablet/views/reports_view.dart';
-import '../../../holidays/tablet/views/holidays_view.dart';
+import '../../../leave/tablet/views/leave_view.dart'; // UPDATED
 import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 import '../../../profile/tablet/views/profile_view.dart';
-import '../../../leave/views/apply_leave_view.dart';
 
 class TabletPortrait extends StatelessWidget {
   const TabletPortrait({super.key});
@@ -81,8 +80,8 @@ class TabletPortrait extends StatelessWidget {
                            return const LiveAttendanceView();
                         case PageType.reports:
                            return const ReportsView();
-                        case PageType.holidays:
-                           return const HolidaysView();
+                        case PageType.leavesAndHolidays:
+                           return LeaveView(); // UPDATED (removed const)
                         case PageType.policyEngine:
                            return const PolicyEngineView();
                         case PageType.geoFencing:
@@ -114,8 +113,6 @@ class TabletPortrait extends StatelessWidget {
                            );
                         case PageType.profile:
                            return const ProfileView();
-                        case PageType.applyLeave:
-                           return const ApplyLeaveView();
                         default:
                           return Center(child: Text('Page: ${currentPage.title}'));
                       }

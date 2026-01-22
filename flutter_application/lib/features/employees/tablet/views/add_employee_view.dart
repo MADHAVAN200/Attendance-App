@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../../shared/widgets/glass_container.dart';
-import '../../../../shared/models/employee_model.dart';
-import '../../../../shared/models/shift_model.dart'; 
-import '../../../../services/employee_service.dart';
+import '../../models/employee_model.dart';
+import '../../services/employee_service.dart';
+import '../../../../shared/services/auth_service.dart';
 
 class AddEmployeeView extends StatefulWidget {
   final VoidCallback onCancel;
@@ -46,7 +47,8 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
   @override
   void initState() {
     super.initState();
-    _employeeService = EmployeeService();
+    final authService = Provider.of<AuthService>(context, listen: false);
+    _employeeService = EmployeeService(authService);
     _loadDropdownData();
     if (widget.employeeToEdit != null) {
       _populateFormData();
@@ -88,6 +90,8 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
     
     setState(() => _isLoading = true);
     try {
+      final dio = Provider.of<AuthService>(context, listen: false).dio;
+      
       final Map<String, dynamic> data = {
         'user_name': _nameController.text,
         'email': _emailController.text,
@@ -220,7 +224,7 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
                           context, 
                           'Department', 
                           _selectedDeptId, 
-                          _departments.map<DropdownMenuItem<int>>((e) => DropdownMenuItem<int>(value: e.id, child: Text(e.name))).toList(),
+                          _departments.map((e) => DropdownMenuItem(value: e.id, child: Text(e.name))).toList(),
                           (val) => setState(() => _selectedDeptId = val),
                         )),
                         const SizedBox(width: 24),
@@ -228,7 +232,7 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
                           context, 
                           'Designation / Role', 
                           _selectedDesgId, 
-                          _designations.map<DropdownMenuItem<int>>((e) => DropdownMenuItem<int>(value: e.id, child: Text(e.name))).toList(),
+                          _designations.map((e) => DropdownMenuItem(value: e.id, child: Text(e.name))).toList(),
                           (val) => setState(() => _selectedDesgId = val),
                         )),
                       ],
@@ -240,7 +244,7 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
                           context, 
                           'Shift Time', 
                           _selectedShiftId, 
-                          _shifts.map<DropdownMenuItem<int>>((e) => DropdownMenuItem<int>(value: e.id, child: Text(e.name))).toList(),
+                          _shifts.map((e) => DropdownMenuItem(value: e.id, child: Text(e.name))).toList(),
                           (val) => setState(() => _selectedShiftId = val),
                         )),
                         const SizedBox(width: 24),
@@ -249,8 +253,8 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
                           'User Type', 
                           _selectedUserType, 
                           const [
-                            DropdownMenuItem<String>(value: 'employee', child: Text('Employee')),
-                            DropdownMenuItem<String>(value: 'admin', child: Text('Admin')),
+                            DropdownMenuItem(value: 'employee', child: Text('Employee')),
+                            DropdownMenuItem(value: 'admin', child: Text('Admin')),
                           ],
                           (val) => setState(() => _selectedUserType = val!),
                         )),

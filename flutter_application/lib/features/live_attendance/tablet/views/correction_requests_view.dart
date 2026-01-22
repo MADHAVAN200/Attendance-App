@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../../../attendance/services/attendance_service.dart';
+import 'package:provider/provider.dart';
 
 class CorrectionRequestsView extends StatefulWidget {
   const CorrectionRequestsView({super.key});
@@ -12,6 +15,39 @@ class CorrectionRequestsView extends StatefulWidget {
 
 class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
   int _selectedIndex = 0;
+  List<dynamic> _requests = [];
+  bool _isLoading = false;
+  late AttendanceService _service;
+
+  @override
+  void initState() {
+    super.initState();
+    final auth = Provider.of<AuthService>(context, listen: false);
+    _service = AttendanceService(auth.dio);
+    _fetchRequests();
+  }
+
+  Future<void> _fetchRequests() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _service.getCorrectionRequests();
+      setState(() => _requests = data);
+    } catch (e) {
+      debugPrint("Error fetching requests: $e");
+    } finally {
+      if(mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _updateStatus(int id, String status) async {
+    try {
+      await _service.updateCorrectionRequestStatus(id, status, "Processed by Admin");
+      _fetchRequests(); // Refresh
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Request $status")));
+    } catch (e) {
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,14 +57,18 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
         // Left Column: Requests List (35%)
         Expanded(
           flex: 35,
-          child: ListView.separated(
-            padding: const EdgeInsets.all(32),
-            itemCount: 5,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              return _buildRequestCard(context, index);
-            },
-          ),
+          child: _isLoading 
+            ? const Center(child: CircularProgressIndicator())
+            : _requests.isEmpty 
+               ? Center(child: Text("No Pending Requests", style: GoogleFonts.poppins(color: Colors.grey)))
+               : ListView.separated(
+                  padding: const EdgeInsets.all(32),
+                  itemCount: _requests.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    return _buildRequestCard(context, index);
+                  },
+                ),
         ),
 
         // Right Column: Request Details (65%)
@@ -36,7 +76,18 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
           flex: 65,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(0, 32, 32, 32),
-            child: _buildDetailView(context),
+            child: _requests.isEmpty 
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.assignment_turned_in_outlined, size: 48, color: Colors.grey.withOpacity(0.5)),
+                        const SizedBox(height: 16),
+                        Text("Select a request to view details", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 16)),
+                      ],
+                    ),
+                  )
+                : _buildDetailView(context),
           ),
         ),
       ],
@@ -44,9 +95,18 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
   }
 
   Widget _buildRequestCard(BuildContext context, int index) {
+    if (index >= _requests.length) return const SizedBox();
+    
+    final request = _requests[index];
     final isSelected = index == _selectedIndex;
     final primaryColor = Theme.of(context).primaryColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final user = request['user'] ?? {};
+    final userName = user['name'] ?? 'Unknown';
+    // final dept = user['department'] ?? 'General';
+    final type = request['correction_type'] ?? 'Request';
+    final date = request['request_date'] ?? '';
 
     return InkWell(
       onTap: () {
@@ -69,7 +129,7 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
               CircleAvatar(
                 radius: 20,
                 backgroundColor: Colors.purple.withOpacity(0.1),
-                child: Text('S', style: GoogleFonts.poppins(color: Colors.purple, fontWeight: FontWeight.bold)),
+                child: Text(userName.isNotEmpty ? userName[0] : '?', style: GoogleFonts.poppins(color: Colors.purple, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -79,7 +139,7 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
                     Row(
                       children: [
                         Text(
-                          'Sarah Wilson',
+                          userName,
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.w600,
                             color: Theme.of(context).textTheme.bodyLarge?.color,
@@ -89,7 +149,7 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Product Design', // "Tag" / Department
+                      'Employee',
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         color: Theme.of(context).textTheme.bodySmall?.color,
@@ -115,7 +175,7 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
                       ),
                     ),
                     Text(
-                      'Missed Punch',
+                      type,
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -135,7 +195,7 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
                       ),
                     ),
                     Text(
-                      'Oct 24, 2023',
+                      date,
                       style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -155,6 +215,15 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
   Widget _buildDetailView(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
+    if (_requests.isEmpty || _selectedIndex >= _requests.length) return const SizedBox();
+    
+    final request = _requests[_selectedIndex];
+    final user = request['user'] ?? {};
+    final userName = user['name'] ?? 'Unknown';
+    final requestId = request['id'];
+    final reason = request['reason'] ?? 'No reason provided';
+    final status = request['status'] ?? 'pending';
+
     return GlassContainer(
       padding: const EdgeInsets.all(20), // Further reduced padding
       child: Column(
@@ -166,17 +235,18 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Request Details',
+                'Request Details #$requestId',
                 style: GoogleFonts.poppins(
                   fontSize: 16, // Smaller title
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
               ),
+              if (status == 'pending')
               Row(
                 children: [
                   OutlinedButton(
-                    onPressed: () {},
+                    onPressed: () => _updateStatus(requestId, 'rejected'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.red),
@@ -189,7 +259,7 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () => _updateStatus(requestId, 'approved'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF5B60F6),
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -203,7 +273,12 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
                     ),
                   ),
                 ],
-              ),
+              ) else
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(color: Colors.grey.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                  child: Text(status.toUpperCase(), style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
             ],
           ),
           const SizedBox(height: 16),
@@ -211,56 +286,13 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
           // Metadata Grid (Compact)
           Row(
             children: [
-              Expanded(child: _buildDetailItem(context, 'Employee', 'Sarah Wilson')),
-              Expanded(child: _buildDetailItem(context, 'Dept', 'Product Design')),
-              Expanded(child: _buildDetailItem(context, 'Manager', 'Alex Morgan')),
+              Expanded(child: _buildDetailItem(context, 'Employee', userName)),
+              Expanded(child: _buildDetailItem(context, 'Type', request['correction_type'] ?? '-')),
+              Expanded(child: _buildDetailItem(context, 'Date', request['request_date'] ?? '-')),
             ],
           ),
           const SizedBox(height: 16),
           Divider(height: 1, thickness: 0.5),
-          const SizedBox(height: 16),
-
-          // Time Comparison (Compact)
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                     color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
-                     borderRadius: BorderRadius.circular(8),
-                     border: Border.all(color: Colors.red.withOpacity(0.2)),
-                  ),
-                  child: Column(
-                    children: [
-                      Text('System', style: GoogleFonts.poppins(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11)),
-                      Text('09:45 AM', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
-                    ],
-                  ),
-                ),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Icon(Icons.arrow_forward, color: Colors.grey, size: 16),
-              ),
-              Expanded(
-                child: Container(
-                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                     color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
-                     borderRadius: BorderRadius.circular(8),
-                     border: Border.all(color: Colors.green.withOpacity(0.2)),
-                  ),
-                  child: Column(
-                    children: [
-                      Text('Requested', style: GoogleFonts.poppins(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 11)),
-                      Text('09:00 AM', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 16),
 
           // Justification
@@ -274,39 +306,12 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
                 borderRadius: BorderRadius.circular(8),
              ),
              child: Text(
-               'I forgot to punch in when I arrived at the office. I was in a meeting with the design team immediately upon arrival.',
+               reason,
                style: GoogleFonts.poppins(color: Theme.of(context).textTheme.bodyMedium?.color, height: 1.3, fontSize: 12),
              ),
           ),
 
           const SizedBox(height: 24), // Reduced spacing
-          
-          // Timeline (Simplified)
-          Text('Audit Trail', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 13)),
-          const SizedBox(height: 12),
-           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-               Column(
-                 children: [
-                   const Icon(Icons.circle, size: 10, color: Colors.blue),
-                   Container(width: 2, height: 24, color: Colors.blue.withOpacity(0.2)),
-                   const Icon(Icons.circle, size: 10, color: Colors.grey),
-                 ],
-               ),
-               const SizedBox(width: 12),
-               Column(
-                 crossAxisAlignment: CrossAxisAlignment.start,
-                 children: [
-                   Text('Request Created', style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Theme.of(context).textTheme.bodyLarge?.color, fontSize: 13)),
-                   Text('Oct 24, 10:30 AM by Sarah Wilson', style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
-                   const SizedBox(height: 16),
-                   Text('Pending Approval', style: GoogleFonts.poppins(fontWeight: FontWeight.w500, color: Colors.orange, fontSize: 13)),
-                   Text('Awaiting review by Alex Morgan', style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
-                 ],
-               ),
-            ],
-           ),
         ],
       ),
     );

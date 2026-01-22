@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:intl/intl.dart';
 import '../../../../shared/widgets/glass_container.dart';
-import '../../../../services/auth_service.dart';
-import '../../../../services/report_service.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../../services/report_service.dart';
 
 class ReportsView extends StatefulWidget {
   const ReportsView({super.key});
@@ -25,6 +26,9 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
   Map<String, dynamic>? _previewData;
   bool _isLoadingPreview = false;
   bool _isDownloading = false;
+  
+  // Local History State
+  final List<Map<String, String>> _downloadHistory = [];
 
   final Map<String, String> _reportTypes = {
     'matrix_daily': 'Daily Matrix',
@@ -42,7 +46,8 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
     _tabController = TabController(length: 2, vsync: this);
     
     // Initialize Service using Provider's Dio
-    _reportService = ReportService();
+    final authService = Provider.of<AuthService>(context, listen: false);
+    _reportService = ReportService(authService.dio);
     
     _fetchPreview();
   }
@@ -97,13 +102,23 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
       );
       
       if (path != null && mounted) {
+        // Add to history
+        final fileName = path.split('/').last;
+        final timestamp = DateFormat('MMM dd, hh:mm a').format(DateTime.now());
+        
+        setState(() {
+          _downloadHistory.insert(0, {
+            'name': fileName,
+            'date': timestamp,
+            'path': path
+          });
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
            SnackBar(content: Text("Report Saved: $path"), action: SnackBarAction(label: "Open", onPressed: () {
              OpenFilex.open(path);
            }))
         );
-        // Auto open if desired?
-        // OpenFilex.open(path);
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Download Failed: $e")));
@@ -128,39 +143,31 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoadingPreview && _previewData == null) {
-       // Only full page load if we have no data at all
-       return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
+    return Column(
+      children: [
+        // Top Configuration Card
+        _buildConfigurationCard(context),
+        const SizedBox(height: 24),
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return Column(
+        // Tabs
+        _buildTabs(context),
+        const SizedBox(height: 24),
+
+        // Tab Content
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            physics: const NeverScrollableScrollPhysics(), // Prevent horizontal swipe conflicts
             children: [
-              _buildConfigurationCard(context),
-              const SizedBox(height: 24),
-              _buildTabs(context),
-              const SizedBox(height: 24),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildDataPreview(context),
-                    _buildExportHistory(context),
-                  ],
-                ),
-              ),
+              _buildDataPreview(context),
+              _buildExportHistory(context),
             ],
-          );
-        },
-      ),
+          ),
+        ),
+      ],
     );
   }
+
   Widget _buildConfigurationCard(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -416,6 +423,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
       ),
     );
   }
+
   Widget _buildDataPreview(BuildContext context) {
     if (_isLoadingPreview) {
       return const Center(child: CircularProgressIndicator());
@@ -484,16 +492,23 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
   }
 
   Widget _buildExportHistory(BuildContext context) {
-    // Static Placeholder for now, as backend doesn't provide history endpoint
-    final history = [
-      {'name': 'Attendance_Log_Oct2023.xlsx', 'date': 'Oct 25, 10:30 AM'},
-      {'name': 'Monthly_Matrix_Sep2023.pdf', 'date': 'Sep 30, 06:00 PM'},
-    ];
+    if (_downloadHistory.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.history_toggle_off, size: 48, color: Colors.grey.withOpacity(0.5)),
+            const SizedBox(height: 16),
+            Text("No reports downloaded yet", style: GoogleFonts.poppins(color: Colors.grey)),
+          ],
+        ),
+      );
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
-        children: history.map((e) => Padding(
+        children: _downloadHistory.map((e) => Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: GlassContainer(
             padding: const EdgeInsets.all(16),
@@ -517,7 +532,13 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                     ],
                   ),
                 ),
-                IconButton(icon: const Icon(Icons.download, size: 20, color: Colors.grey), onPressed: (){}),
+                IconButton(
+                  icon: const Icon(Icons.open_in_new, size: 20, color: Colors.grey), 
+                  onPressed: () {
+                    if (e['path'] != null) OpenFilex.open(e['path']!);
+                  },
+                  tooltip: 'Open File',
+                ),
               ],
             ),
           ),

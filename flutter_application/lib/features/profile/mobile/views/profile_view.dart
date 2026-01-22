@@ -2,51 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../../shared/navigation/navigation_controller.dart';
-import '../../../../services/auth_service.dart';
+import '../../../../shared/services/auth_service.dart';
 import '../../../auth/login_screen.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/custom_dialog.dart';
 import '../../../../main.dart';
 
-class MobileProfileContent extends StatefulWidget {
+class MobileProfileContent extends StatelessWidget {
   const MobileProfileContent({super.key});
 
   @override
-  State<MobileProfileContent> createState() => _MobileProfileContentState();
-}
-
-class _MobileProfileContentState extends State<MobileProfileContent> {
-  bool _isLoading = false;
-
-  @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          // Hero Profile Card
+          _buildHeroCard(context),
+          const SizedBox(height: 16),
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
+          // Contact Info Card
+          _buildContactInfoCard(context),
+          const SizedBox(height: 16),
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // Hero Profile Card
-            _buildHeroCard(context),
-            const SizedBox(height: 16),
+          // Employment Details Card
+          _buildEmploymentDetailsCard(context),
+          const SizedBox(height: 16),
 
-            // Contact Info Card
-            _buildContactInfoCard(context),
-            const SizedBox(height: 16),
-
-            // Employment Details Card
-            _buildEmploymentDetailsCard(context),
-            const SizedBox(height: 16),
-
-            // Logout Card
-            _buildLogoutCard(context),
-          ],
-        ),
+          // Logout Card
+          _buildLogoutCard(context),
+        ],
       ),
     );
   }

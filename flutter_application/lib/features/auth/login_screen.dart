@@ -7,7 +7,7 @@ import 'word_captcha.dart'; // Import WordCaptcha
 import 'mobile/views/login_mobile_portrait.dart';
 import 'tablet/views/login_tablet_portrait.dart';
 import 'tablet/views/login_tablet_landscape.dart';
-import '../../services/auth_service.dart';
+import '../../shared/services/auth_service.dart';
 import '../../main.dart';
 
 class LoginScreen extends StatefulWidget {

@@ -5,12 +5,12 @@ enum PageType {
   employees,
   myAttendance,
   liveAttendance,
+  leavesAndHolidays,    // RENAMED from leaves, MERGED with holidays
   reports,
-  holidays,
   policyEngine,
   geoFencing,
+  feedback,  // ADDED
   profile,
-  applyLeave,
 }
 
 // Map PageType to Title
@@ -21,15 +21,12 @@ extension PageTypeExtension on PageType {
       case PageType.employees: return 'Employees';
       case PageType.myAttendance: return 'My Attendance';
       case PageType.liveAttendance: return 'Live Attendance';
+      case PageType.leavesAndHolidays: return 'Holidays & Leave'; // UPDATED
       case PageType.reports: return 'Reports & Exports';
-      case PageType.holidays: return 'Holidays';
-      case PageType.policyEngine: return 'Shift Management';
-      case PageType.geoFencing:
-        return 'Geo-Fencing';
-      case PageType.profile:
-        return 'My Profile';
-      case PageType.applyLeave:
-        return 'Apply Leave';
+      case PageType.policyEngine: return 'Policy Engine';
+      case PageType.geoFencing: return 'Geo-Fencing';
+      case PageType.feedback: return 'Feedback & Support'; // ADDED
+      case PageType.profile: return 'My Profile';
     }
   }
 
@@ -39,15 +36,12 @@ extension PageTypeExtension on PageType {
       case PageType.employees: return Icons.people_outline;
       case PageType.myAttendance: return Icons.calendar_today_outlined;
       case PageType.liveAttendance: return Icons.access_time;
+      case PageType.leavesAndHolidays: return Icons.date_range_outlined; // UPDATED
       case PageType.reports: return Icons.show_chart;
-      case PageType.holidays: return Icons.event_note_outlined;
       case PageType.policyEngine: return Icons.settings_suggest_outlined;
-      case PageType.geoFencing:
-        return Icons.location_on_outlined;
-      case PageType.profile:
-        return Icons.person_outline;
-      case PageType.applyLeave:
-        return Icons.event_available_outlined;
+      case PageType.geoFencing: return Icons.location_on_outlined;
+      case PageType.feedback: return Icons.feedback_outlined; // ADDED
+      case PageType.profile: return Icons.person_outline;
     }
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../shared/widgets/glass_container.dart';
-import '../../../../shared/models/shift_model.dart';
+import '../../models/shift_model.dart';
 
 class AddShiftDialog extends StatefulWidget {
   final Shift? existingShift;
@@ -22,18 +22,6 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
   TimeOfDay _endTime = const TimeOfDay(hour: 18, minute: 0);
   bool _isOvertimeEnabled = false;
   String _selectedShiftType = 'Fixed Time';
-  
-  // New Fields
-  List<String> _selectedDays = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-  bool _alternateSatEnabled = false;
-  List<int> _alternateSatOff = []; // [2, 4]
-  
-  bool _entrySelfie = true;
-  bool _entryGeofence = true;
-  bool _exitSelfie = false;
-  bool _exitGeofence = false;
-
-  final List<String> _weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   @override
   void initState() {
@@ -46,15 +34,6 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
       _otThresholdCtrl.text = s.overtimeThresholdHours.toString();
       _startTime = _parseTime(s.startTime);
       _endTime = _parseTime(s.endTime);
-      
-      _selectedDays = List.from(s.workingDays);
-      _alternateSatEnabled = s.alternateSaturdays.enabled;
-      _alternateSatOff = List.from(s.alternateSaturdays.off);
-      
-      _entrySelfie = s.policyRules.entryRequirements.selfie;
-      _entryGeofence = s.policyRules.entryRequirements.geofence;
-      _exitSelfie = s.policyRules.exitRequirements.selfie;
-      _exitGeofence = s.policyRules.exitRequirements.geofence;
     }
   }
 
@@ -95,31 +74,15 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
       return;
     }
     
-    // Construct Policy Rules
-    final shiftTiming = ShiftTiming(startTime: _fmtTime(_startTime), endTime: _fmtTime(_endTime));
-    final grace = GracePeriod(minutes: int.tryParse(_graceCtrl.text) ?? 0);
-    final ot = Overtime(enabled: _isOvertimeEnabled, threshold: double.tryParse(_otThresholdCtrl.text) ?? 8.0);
-    final entry = EntryRequirements(selfie: _entrySelfie, geofence: _entryGeofence);
-    final exit = ExitRequirements(selfie: _exitSelfie, geofence: _exitGeofence);
-    final policyRules = PolicyRules(
-      shiftTiming: shiftTiming, 
-      gracePeriod: grace, 
-      overtime: ot, 
-      entryRequirements: entry, 
-      exitRequirements: exit
-    );
-    
     final s = Shift(
       id: widget.existingShift?.id,
       name: _nameCtrl.text,
-      startTime: _fmtTime(_startTime),
+      startTime: _fmtTime(_startTime), // "HH:MM"
       endTime: _fmtTime(_endTime),
-      gracePeriodMins: grace.minutes,
+      // Adding :00 if needed by backend, but model handles string.
+      gracePeriodMins: int.tryParse(_graceCtrl.text) ?? 0,
       isOvertimeEnabled: _isOvertimeEnabled,
-      overtimeThresholdHours: ot.threshold,
-      workingDays: _selectedDays,
-      alternateSaturdays: AlternateSaturdays(enabled: _alternateSatEnabled, off: _alternateSatOff),
-      policyRules: policyRules,
+      overtimeThresholdHours: double.tryParse(_otThresholdCtrl.text) ?? 8.0,
     );
     widget.onSubmit(s);
   }
@@ -135,7 +98,7 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 600),
+        constraints: const BoxConstraints(maxWidth: 500),
         child: GlassContainer(
           padding: const EdgeInsets.all(24),
           child: Column(
@@ -172,8 +135,8 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                       _buildLabel(context, 'Shift Name'),
                       _buildTextField(context, 'e.g. Morning Shift A', controller: _nameCtrl),
                       const SizedBox(height: 16),
-                      
-                      // Shift Type Dropdown
+
+                      // Shift Type (Visual only for now as distinct from model)
                       _buildLabel(context, 'Shift Type'),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -198,159 +161,42 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
 
                       // Time Pickers
                       Row(
                         children: [
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start, 
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel(context, 'Start Time'), 
-                                _buildTimePicker(context, _fmtTime(_startTime), () => _pickTime(true))
-                              ]
+                                _buildLabel(context, 'Start Time'),
+                                _buildTimePicker(context, _fmtTime(_startTime), () => _pickTime(true)),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start, 
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel(context, 'End Time'), 
-                                _buildTimePicker(context, _fmtTime(_endTime), () => _pickTime(false))
-                              ]
+                                _buildLabel(context, 'End Time'),
+                                _buildTimePicker(context, _fmtTime(_endTime), () => _pickTime(false)),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 24),
-
-                      // Working Days
-                      _buildLabel(context, 'Working Days'),
-                      Wrap(
-                        spacing: 8,
-                        children: _weekDays.map((day) {
-                          final isSelected = _selectedDays.contains(day);
-                          return FilterChip(
-                            label: Text(day),
-                            selected: isSelected,
-                            onSelected: (v) {
-                                setState(() {
-                                  if (v) {
-                                    _selectedDays.add(day);
-                                  } else {
-                                    _selectedDays.remove(day);
-                                  }
-                                });
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Alternate Saturdays
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                           Text("Alternate Saturdays Off", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                           Switch(value: _alternateSatEnabled, onChanged: (v) => setState(() => _alternateSatEnabled = v)),
-                        ],
-                      ),
-                      if (_alternateSatEnabled) ...[
-                        const SizedBox(height: 8),
-                         Wrap(
-                          spacing: 8,
-                          children: [1, 2, 3, 4, 5].map((week) {
-                            final isSelected = _alternateSatOff.contains(week);
-                            return ChoiceChip(
-                              label: Text("Sat $week"),
-                              selected: isSelected,
-                              onSelected: (v) {
-                                setState(() {
-                                  if (v) _alternateSatOff.add(week);
-                                  else _alternateSatOff.remove(week);
-                                });
-                              },
-                            );
-                          }).toList(),
-                        ),
-                      ],
-                      const SizedBox(height: 24),
-
-                      // Requirements Box
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: borderColor),
-                          borderRadius: BorderRadius.circular(12),
-                          color: isDark ? Colors.white.withOpacity(0.02) : Colors.grey[50],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Validation Requirements", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text("Entry", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-                                      CheckboxListTile(
-                                        title: const Text("Selfie", style: TextStyle(fontSize: 13)),
-                                        value: _entrySelfie,
-                                        onChanged: (v) => setState(() => _entrySelfie = v!),
-                                        contentPadding: EdgeInsets.zero,
-                                        controlAffinity: ListTileControlAffinity.leading,
-                                        dense: true,
-                                      ),
-                                      CheckboxListTile(
-                                        title: const Text("Geofence", style: TextStyle(fontSize: 13)),
-                                        value: _entryGeofence,
-                                        onChanged: (v) => setState(() => _entryGeofence = v!),
-                                        contentPadding: EdgeInsets.zero,
-                                        controlAffinity: ListTileControlAffinity.leading,
-                                        dense: true,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text("Exit", style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
-                                      CheckboxListTile(
-                                        title: const Text("Selfie", style: TextStyle(fontSize: 13)),
-                                        value: _exitSelfie,
-                                        onChanged: (v) => setState(() => _exitSelfie = v!),
-                                        contentPadding: EdgeInsets.zero,
-                                        controlAffinity: ListTileControlAffinity.leading,
-                                        dense: true,
-                                      ),
-                                      CheckboxListTile(
-                                        title: const Text("Geofence", style: TextStyle(fontSize: 13)),
-                                        value: _exitGeofence,
-                                        onChanged: (v) => setState(() => _exitGeofence = v!),
-                                        contentPadding: EdgeInsets.zero,
-                                        controlAffinity: ListTileControlAffinity.leading,
-                                        dense: true,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            )
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
 
                       // Grace Period
                       _buildLabel(context, 'Grace Period (Minutes)'),
                       _buildTextField(context, '0', suffixText: 'mins', controller: _graceCtrl, isNumeric: true),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Time allowed after start time before marking as "Late".',
+                        style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey),
+                      ),
                       const SizedBox(height: 24),
 
                       // Overtime Toggle

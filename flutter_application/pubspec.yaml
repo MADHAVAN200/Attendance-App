@@ -55,6 +55,7 @@ dependencies:
   csv: ^6.0.0
   google_maps_flutter: ^2.14.0
   open_filex: ^4.7.0
+  responsive_builder: ^0.7.1
 
 dev_dependencies:
   flutter_test:

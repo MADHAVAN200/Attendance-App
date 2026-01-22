@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
-import '../../services/feedback_service.dart';
+import 'package:dio/dio.dart';
+import '../constants/api_constants.dart';
 import '../models/notification_model.dart';
-import '../../services/auth_service.dart';
+import 'auth_service.dart';
 
 class NotificationService extends ChangeNotifier {
   final AuthService _authService;
-  final FeedbackService _feedbackService = FeedbackService();
+  final Dio _dio;
   
   List<NotificationModel> _notifications = [];
   int _unreadCount = 0;
@@ -15,7 +16,7 @@ class NotificationService extends ChangeNotifier {
   int get unreadCount => _unreadCount;
   bool get isLoading => _isLoading;
 
-  NotificationService(this._authService);
+  NotificationService(this._authService) : _dio = _authService.dio; // Reuse Dio from AuthService
 
   Future<void> fetchNotifications({bool refresh = false}) async {
     if (_isLoading && !refresh) return;
@@ -24,15 +25,16 @@ class NotificationService extends ChangeNotifier {
     if (refresh) notifyListeners(); // Only notify if full refresh to show spinner
 
     try {
-      final list = await _feedbackService.getNotifications(limit: 20);
-      _notifications = list.map((e) => NotificationModel.fromJson(e)).toList();
-      // Assume API returns unread_count in a wrapper if needed, 
-      // but FeedbackService currently returns List<dynamic> directly from data['data'].
-      // If we need 'unread_count', we might need to update FeedbackService to return wrapper.
-      // Checking FeedbackService... it returns data['data'].
-      // To get 'unread_count', I should update FeedbackService to return the full map or a custom object.
-      // For now, I'll calculate unread count locally or assume it's missing.
-      _unreadCount = _notifications.where((n) => !n.isRead).length; 
+      final response = await _dio.get(
+        ApiConstants.notifications, 
+        queryParameters: {'limit': 20}
+      );
+
+      if (response.statusCode == 200 && response.data['ok']) {
+         final List list = response.data['data'];
+         _notifications = list.map((e) => NotificationModel.fromJson(e)).toList();
+         _unreadCount = response.data['unread_count'] ?? 0;
+      }
     } catch (e) {
       print('Error fetching notifications: $e');
     } finally {
@@ -58,9 +60,10 @@ class NotificationService extends ChangeNotifier {
         notifyListeners();
       }
 
-      await _feedbackService.markAsRead(notificationId);
+      await _dio.put(ApiConstants.notificationMarkRead.replaceAll(':id', notificationId.toString()));
     } catch (e) {
        print('Error marking notification read: $e');
+       // Revert on failure if needed (skipped for simplicity)
     }
   }
 
@@ -79,7 +82,7 @@ class NotificationService extends ChangeNotifier {
        _unreadCount = 0;
        notifyListeners();
 
-       await _feedbackService.markAllRead();
+       await _dio.put(ApiConstants.notificationsReadAll);
      } catch (e) {
        print('Error marking all notifications read: $e');
      }

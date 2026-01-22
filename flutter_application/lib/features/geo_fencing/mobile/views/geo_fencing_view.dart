@@ -1,4 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../../services/location_service.dart';
 import '../../views/geofencing_screen.dart';
 
 class MobileGeoFencingContent extends StatelessWidget {
@@ -6,12 +11,18 @@ class MobileGeoFencingContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? Colors.transparent : const Color(0xFFF8FAFC);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final service = LocationService(authService.dio);
 
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: const GeofencingScreen(),
+    // Provide the service to the screen
+    // We don't need another Provider if we just pass it, OR we can wrap it.
+    // Holidays wrapper creates service and passes it. 
+    // I can stick to my Provider pattern if I want, or just pass it.
+    // Provider is flexible.
+    
+    return Provider<LocationService>.value(
+      value: service,
+      child: GeofencingScreen(locationService: service),
     );
   }
 }

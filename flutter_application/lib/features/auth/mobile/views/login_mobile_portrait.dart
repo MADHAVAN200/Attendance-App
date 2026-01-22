@@ -70,8 +70,10 @@ class LoginMobilePortrait extends StatelessWidget {
                       ),
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     ),
+                    const SizedBox(height: 24),
+
                     // Captcha
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 24),
                     Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 304),

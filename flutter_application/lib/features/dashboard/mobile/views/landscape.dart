@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart'; // Import GoogleFonts
 import 'package:provider/provider.dart';
 import '../../../../shared/services/dashboard_provider.dart';
-import '../../../../services/auth_service.dart';
+import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/models/dashboard_model.dart';
 import '../../../../shared/widgets/app_sidebar.dart';
 import '../../../../shared/widgets/custom_app_bar.dart';
@@ -21,7 +21,8 @@ import '../../../live_attendance/mobile/views/live_attendance_view.dart';
 import '../../../reports/mobile/views/reports_view.dart';
 import '../../../holidays/mobile/views/holidays_view.dart';
 import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
-import '../../../leave/views/apply_leave_view.dart';
+import '../../../leave/tablet/views/leave_view.dart'; // Reusing tablet view
+import '../../../feedback/tablet/views/feedback_view.dart'; // Reusing tablet view
 
 class MobileLandscape extends StatelessWidget {
   const MobileLandscape({super.key});
@@ -79,14 +80,16 @@ class MobileLandscape extends StatelessWidget {
       case PageType.reports:
           return const MobileReportsContent();
 
-      case PageType.holidays:
-          return const MobileHolidaysContent();
-
-      case PageType.applyLeave:
-         return const ApplyLeaveView();
+      case PageType.leavesAndHolidays: // UPDATED
+          return LeaveView();
 
       case PageType.geoFencing:
         return const MobileGeoFencingContent();
+
+      // PageType.leaves case REMOVED (merged above)
+           
+      case PageType.feedback:
+           return const FeedbackView();
 
       case PageType.policyEngine:
       case PageType.profile:
@@ -133,7 +136,7 @@ class MobileEmployeeDashboardLandscape extends StatelessWidget {
               EmployeeHero(
                 userName: user?.name ?? 'Employee',
                 onAttendanceTap: () => navigateTo(PageType.myAttendance),
-                onHolidayTap: () => navigateTo(PageType.holidays),
+                onHolidayTap: () => navigateTo(PageType.leavesAndHolidays), // UPDATED
               ),
               const SizedBox(height: 24),
 

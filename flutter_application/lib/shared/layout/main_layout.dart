@@ -4,15 +4,16 @@ import '../../features/dashboard/tablet/views/dashboard_view.dart';
 import '../../features/employees/tablet/views/employees_view.dart';
 import '../../features/attendance/tablet/views/my_attendance_view.dart';
 import '../../features/live_attendance/tablet/views/live_attendance_view.dart';
+import '../../features/leave/tablet/views/leave_view.dart'; // ADDED
 import '../../features/reports/tablet/views/reports_view.dart';
 import '../../features/holidays/tablet/views/holidays_view.dart';
 import '../../features/policy_engine/tablet/views/policy_engine_view.dart';
 import '../../features/geo_fencing/tablet/views/geo_fencing_view.dart';
+import '../../features/feedback/tablet/views/feedback_view.dart'; // ADDED
 import '../../features/profile/tablet/views/profile_view.dart';
 import '../navigation/navigation_controller.dart';
 import '../widgets/app_sidebar.dart';
 import '../widgets/custom_app_bar.dart';
-import '../../features/leave/views/apply_leave_view.dart';
 
 class MainLayout extends StatelessWidget {
   const MainLayout({super.key});
@@ -68,18 +69,18 @@ class MainLayout extends StatelessWidget {
         return const MyAttendanceView();
       case PageType.liveAttendance:
         return const LiveAttendanceView();
+      case PageType.leavesAndHolidays:
+        return LeaveView(); // UPDATED
       case PageType.reports:
         return const ReportsView();
-      case PageType.holidays:
-        return const HolidaysView();
       case PageType.policyEngine:
         return const PolicyEngineView();
       case PageType.geoFencing:
         return const GeoFencingView();
+      case PageType.feedback:
+        return const FeedbackView(); // ADDED
       case PageType.profile:
         return const ProfileView();
-      case PageType.applyLeave:
-        return const ApplyLeaveView();
     }
   }
 }

@@ -10,9 +10,10 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/glass_date_picker.dart';
 import '../../../../shared/widgets/custom_dialog.dart';
-import '../../../../services/auth_service.dart';
-import '../../../../shared/models/attendance_model.dart';
-import '../../../../services/attendance_service.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../../models/attendance_record.dart';
+import '../../services/attendance_service.dart';
+import '../widgets/correction_request_dialog.dart'; // ADDED
 
 class MyAttendanceView extends StatefulWidget {
   const MyAttendanceView({super.key});
@@ -32,7 +33,8 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
   @override
   void initState() {
     super.initState();
-    _attendanceService = AttendanceService();
+    final dio = Provider.of<AuthService>(context, listen: false).dio;
+    _attendanceService = AttendanceService(dio);
     _fetchRecords();
   }
 
@@ -151,12 +153,14 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
           await _attendanceService.timeIn(
             latitude: position.latitude,
             longitude: position.longitude,
+            accuracy: position.accuracy, // ADDED
             imageFile: File(photo.path),
           );
         } else {
           await _attendanceService.timeOut(
             latitude: position.latitude,
             longitude: position.longitude,
+            accuracy: position.accuracy, // ADDED
             imageFile: File(photo.path),
           );
         }
@@ -322,6 +326,23 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
           ),
         ),
         const Spacer(),
+        // Correction Button (ADDED)
+        InkWell(
+           onTap: () => CorrectionRequestDialog.show(context, date: _selectedDate),
+           child: GlassContainer(
+             height: 40,
+             padding: const EdgeInsets.symmetric(horizontal: 12),
+             borderRadius: 12,
+             child: Row(
+               children: [
+                 Icon(Icons.edit_note, size: 16, color: Theme.of(context).primaryColor),
+                 const SizedBox(width: 8),
+                 Text('Correction', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
+               ],
+             ),
+           ),
+        ),
+        const SizedBox(width: 12),
         InkWell(
           onTap: () async {
             await showDialog(

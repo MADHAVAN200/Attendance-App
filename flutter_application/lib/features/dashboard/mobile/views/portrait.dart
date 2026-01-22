@@ -17,7 +17,8 @@ import '../../../holidays/tablet/views/holidays_view.dart';
 import '../../../profile/mobile/views/profile_view.dart';
 import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
 import '../../../policy_engine/tablet/views/policy_engine_view.dart';
-import '../../../leave/views/apply_leave_view.dart';
+import '../../../leave/tablet/views/leave_view.dart';
+import '../../../feedback/tablet/views/feedback_view.dart';
 
 class MobilePortrait extends StatelessWidget {
   const MobilePortrait({super.key});
@@ -90,8 +91,8 @@ class MobilePortrait extends StatelessWidget {
       case PageType.reports:
           return const MobileReportsContent();
 
-      case PageType.holidays:
-          return const MobileHolidaysContent();
+      case PageType.leavesAndHolidays: // UPDATED
+          return LeaveView();
 
       case PageType.profile:
           return const MobileProfileContent();
@@ -99,11 +100,13 @@ class MobilePortrait extends StatelessWidget {
       case PageType.policyEngine:
          return const PolicyEngineView();
 
-      case PageType.applyLeave:
-         return const ApplyLeaveView();
-
       case PageType.geoFencing:
         return const MobileGeoFencingContent();
+
+      // PageType.leaves case REMOVED (merged above)
+
+      case PageType.feedback:
+        return const FeedbackView();
          
       default:
         return Center(child: Text('Page: ${page.title}'));

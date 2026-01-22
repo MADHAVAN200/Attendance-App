@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../services/auth_service.dart';
+import '../../../../shared/services/auth_service.dart';
 import 'admin_dashboard_view.dart';
 import 'employee_dashboard_view.dart';
 

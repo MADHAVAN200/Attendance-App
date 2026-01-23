@@ -13,6 +13,7 @@ import '../../../../shared/widgets/custom_dialog.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../models/attendance_record.dart';
 import '../../services/attendance_service.dart';
+import '../../widgets/late_arrival_dialog.dart';
 
 class MobileMyAttendanceContent extends StatefulWidget {
   const MobileMyAttendanceContent({super.key});
@@ -146,20 +147,52 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
 
+      Future<void> performTimeIn({String? reason}) async {
+         await _attendanceService.timeIn(
+            latitude: position.latitude,
+            longitude: position.longitude,
+            accuracy: position.accuracy,
+            imageFile: File(photo.path),
+            lateReason: reason,
+          );
+      }
+
       // 3. Submit
       try {
         if (isTimeIn) {
-          await _attendanceService.timeIn(
-            latitude: position.latitude,
-            longitude: position.longitude,
-            accuracy: position.accuracy, // ADDED
-            imageFile: File(photo.path),
-          );
+          try {
+             await performTimeIn(); // Try without reason first
+          } catch (e) {
+             final msg = e.toString().toLowerCase();
+             if (msg.contains("reason is required") || msg.contains("late time in")) {
+                // Show Input Dialog
+                if (!mounted) return;
+                // Temporarily hide loading to show dialog
+                Navigator.pop(context); 
+                
+                final reason = await LateArrivalDialog.show(context);
+                
+                if (reason != null && reason.isNotEmpty) {
+                   // Show loading again
+                   if (!mounted) return;
+                   showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (_) => const Center(child: CircularProgressIndicator()),
+                   );
+                   await performTimeIn(reason: reason); // Retry with reason
+                } else {
+                   return; // Cancelled
+                }
+             } else {
+               rethrow; // Other error
+             }
+          }
         } else {
           await _attendanceService.timeOut(
             latitude: position.latitude,
             longitude: position.longitude,
-            accuracy: position.accuracy, // ADDED
+            accuracy: position.accuracy,
             imageFile: File(photo.path),
           );
         }
@@ -168,11 +201,9 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
           Navigator.pop(context); // Close loading
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isTimeIn ? "Time In Successful!" : "Time Out Successful!"), backgroundColor: Colors.green));
           
-          // Invalidate cache for today as data changed
           final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
           _recordsCache.remove(todayStr);
-          
-          _fetchRecords(); // Refresh list
+          _fetchRecords(); 
         }
       } catch (e) {
         if (mounted) {

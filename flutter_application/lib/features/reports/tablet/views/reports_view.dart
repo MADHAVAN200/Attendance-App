@@ -200,9 +200,9 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                           height: 48,
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
-                            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                            color: isDark ? const Color(0xFF1E2939) : Colors.grey[100],
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
+                            border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
                           ),
                           child: Row(
                             children: [
@@ -243,9 +243,9 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                       height: 48,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                        color: isDark ? const Color(0xFF1E2939) : Colors.grey[100],
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
+                        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
@@ -258,7 +258,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                             color: Theme.of(context).textTheme.bodyLarge?.color,
                             fontWeight: FontWeight.w500,
                           ),
-                          dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+                          dropdownColor: isDark ? const Color(0xFF1E2939) : Colors.white,
                           onChanged: (String? newValue) {
                             if (newValue != null) {
                               setState(() {
@@ -397,7 +397,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
       margin: const EdgeInsets.symmetric(horizontal: 24),
       height: 48,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
+        color: isDark ? const Color(0xFF101828) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
       ),

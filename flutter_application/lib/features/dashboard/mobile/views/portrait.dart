@@ -29,15 +29,8 @@ class MobilePortrait extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? [const Color(0xFF0F172A), const Color(0xFF334155)]
-              : [const Color(0xFFF1F5F9), const Color(0xFFCBD5E1)],
-        ),
-      ),
+      color: isDark ? const Color(0xFF101828) : const Color(0xFFF1F5F9), // Solid background
+      // decoration: BoxDecoration(...) removed for flat design
       child: Scaffold(
         backgroundColor: Colors.transparent,
         drawer: AppSidebar(

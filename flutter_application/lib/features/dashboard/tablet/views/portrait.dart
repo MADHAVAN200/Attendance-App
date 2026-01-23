@@ -29,15 +29,9 @@ class TabletPortrait extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? [const Color(0xFF0F172A), const Color(0xFF334155)]
-              : [const Color(0xFFF8FAFC), const Color(0xFFE2E8F0)],
-        ),
-      ),
+      color: isDark ? const Color(0xFF101828) : const Color(0xFFF8FAFC), // Solid background
+      // Gradients removed for stricter flat design
+      // decoration: BoxDecoration(...) removed
       child: Scaffold(
         extendBodyBehindAppBar: true, 
         backgroundColor: Colors.transparent, // Transparent to show gradient

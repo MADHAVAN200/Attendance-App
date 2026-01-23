@@ -406,13 +406,13 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                                         shape: BoxShape.circle,
                                         border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
                                       ),
-                                      child: CircleAvatar(
-                                        backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1),
-                                        child: Text(
-                                          emp.userName.isNotEmpty ? emp.userName[0].toUpperCase() : '?',
-                                          style: TextStyle(color: isDark ? Colors.white : Theme.of(context).primaryColor),
+                                        child: CircleAvatar(
+                                          backgroundColor: isDark ? const Color(0xFF334155) : Theme.of(context).primaryColor.withOpacity(0.1),
+                                          child: Text(
+                                            emp.userName.isNotEmpty ? emp.userName[0].toUpperCase() : '?',
+                                            style: TextStyle(color: isDark ? Colors.white : Theme.of(context).primaryColor),
+                                          ),
                                         ),
-                                      ),
                                     ),
                               title: Text(emp.userName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: isDark ? Colors.white : null)),
                               subtitle: Column(
@@ -518,7 +518,7 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
             ),
             child: CircleAvatar(
               radius: 40,
-              backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1),
+              backgroundColor: isDark ? const Color(0xFF334155) : Theme.of(context).primaryColor.withOpacity(0.1),
               child: Text(
                 employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?', 
                 style: TextStyle(fontSize: 32, color: isDark ? Colors.white : Theme.of(context).primaryColor),

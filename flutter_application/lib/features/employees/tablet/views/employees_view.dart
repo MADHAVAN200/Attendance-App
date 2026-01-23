@@ -450,10 +450,10 @@ class _EmployeesViewState extends State<EmployeesView> {
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: isPrimary ? primaryColor : (isDark ? Colors.white.withOpacity(0.05) : Colors.white),
+          color: isPrimary ? primaryColor : (isDark ? const Color(0xFF1E2939) : Colors.white),
           borderRadius: BorderRadius.circular(12),
           border: isPrimary ? null : Border.all(
-            color: isDark ? Colors.white.withOpacity(0.08) : primaryColor.withOpacity(0.1)
+            color: isDark ? const Color(0xFF1E2939) : primaryColor.withOpacity(0.1)
           ),
           boxShadow: isPrimary ? [
             BoxShadow(
@@ -594,7 +594,7 @@ class _EmployeesViewState extends State<EmployeesView> {
                   ),
                   child: CircleAvatar(
                     radius: 20,
-                    backgroundColor: isDark ? Colors.white.withOpacity(0.2) : Theme.of(context).primaryColor.withOpacity(0.1),
+                    backgroundColor: isDark ? const Color(0xFF101828) : Theme.of(context).primaryColor.withOpacity(0.1),
                     child: Text(
                       nameInitial,
                       style: GoogleFonts.poppins(
@@ -685,7 +685,7 @@ class _EmployeesViewState extends State<EmployeesView> {
                     ),
                     child: CircleAvatar(
                       radius: 32,
-                      backgroundColor: isDark ? Colors.white.withOpacity(0.2) : Theme.of(context).primaryColor.withOpacity(0.15),
+                      backgroundColor: isDark ? const Color(0xFF101828) : Theme.of(context).primaryColor.withOpacity(0.15),
                       child: Text(
                         employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?',
                         style: GoogleFonts.poppins(

@@ -142,7 +142,7 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
                               onPressed: () => Navigator.pop(ctx),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 14),
-                                side: BorderSide(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
+                                side: BorderSide(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                               child: Text(
@@ -247,7 +247,7 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
           margin: EdgeInsets.fromLTRB(margin, 24, margin, 24),
           height: 48,
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
+            color: isDark ? const Color(0xFF101828) : Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
           ),
@@ -406,11 +406,11 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white.withOpacity(0.05)
+                    ? const Color(0xFF1E2939)
                     : Colors.white,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: Theme.of(context).dividerColor.withOpacity(0.1),
+                  color: Theme.of(context).dividerColor.withOpacity(0.05),
                 ),
               ),
               child: Row(
@@ -646,9 +646,9 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+            color: isDark ? const Color(0xFF1E2939) : Colors.grey[100],
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
+            border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
           ),
           child: Text(
             value,

@@ -260,7 +260,7 @@ class _LeaveTabletLandscapeState extends State<LeaveTabletLandscape> with Single
       margin: const EdgeInsets.fromLTRB(32, 24, 32, 24),
       height: 48,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
+        color: isDark ? const Color(0xFF1E2939) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
       ),
@@ -380,11 +380,11 @@ class _LeaveTabletLandscapeState extends State<LeaveTabletLandscape> with Single
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: isSelected 
-                              ? Theme.of(context).primaryColor.withOpacity(0.1) 
-                              : Theme.of(context).cardColor.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(12),
+                          decoration: BoxDecoration(
+                            color: isSelected 
+                                ? Theme.of(context).primaryColor.withOpacity(0.1) 
+                                : Theme.of(context).cardColor,
+                            borderRadius: BorderRadius.circular(12),
                           border: isSelected ? Border.all(color: Theme.of(context).primaryColor, width: 1.5) : Border.all(color: Colors.transparent),
                         ),
                         child: Column(

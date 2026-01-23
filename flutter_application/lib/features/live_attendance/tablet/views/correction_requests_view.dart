@@ -302,7 +302,7 @@ class _CorrectionRequestsViewState extends State<CorrectionRequestsView> {
             width: double.infinity,
             padding: const EdgeInsets.all(10),
              decoration: BoxDecoration(
-                color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+                color: isDark ? const Color(0xFF1E2939) : Colors.grey[50], // Solid instead of tint
                 borderRadius: BorderRadius.circular(8),
              ),
              child: Text(

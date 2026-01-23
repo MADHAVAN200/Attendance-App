@@ -27,6 +27,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return Container(
       // Height removed to allow content + padding to determine
       decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF101828) : Colors.white, // Explicit solid background inside decoration
         border: Border(
           bottom: BorderSide(
             color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!,

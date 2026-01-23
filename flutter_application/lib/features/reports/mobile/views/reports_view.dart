@@ -174,9 +174,9 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
                 height: 48,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                  color: isDark ? const Color(0xFF1E2939) : Colors.grey[100],
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
+                  border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
                 ),
                 child: Row(
                   children: [
@@ -212,9 +212,9 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
             height: 48,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+              color: isDark ? const Color(0xFF1E2939) : Colors.grey[100],
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
+              border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
@@ -334,7 +334,7 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
     return Container(
       height: 44, // Slightly shorter for mobile
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
+        color: isDark ? const Color(0xFF101828) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
       ),

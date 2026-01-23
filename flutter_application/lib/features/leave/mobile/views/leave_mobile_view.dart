@@ -91,6 +91,7 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
   }
 
   void _showApplyLeaveSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark; 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -98,7 +99,8 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.85,
         decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
+          color: isDark ? const Color(0xFF1E2939) : Theme.of(context).scaffoldBackgroundColor,
+          // Removed top radius to make it look more like a bottom sheet
           borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
@@ -252,7 +254,7 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       height: 48,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
+        color: isDark ? const Color(0xFF1E2939) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
       ),
@@ -287,6 +289,7 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
       itemBuilder: (context, index) {
         final holiday = _holidays[index];
         final dt = DateTime.parse(holiday.date);
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         
         return GlassContainer(
           margin: const EdgeInsets.only(bottom: 12),
@@ -297,7 +300,7 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: isDark ? const Color(0xFF334155) : Theme.of(context).primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(

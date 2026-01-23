@@ -53,40 +53,22 @@ class GlassContainer extends StatelessWidget {
       );
     }
 
+    // Dark Mode: Solid Colors, No Glass Effect
     return Container(
       width: width,
       height: height,
       margin: margin,
       decoration: BoxDecoration(
+        // Use provided color OR default to Card Color (#1E2939). 
+        // We strictly enforce opacity by .withOpacity(1.0) just in case, though likely unnecessary if solid.
+        color: (color ?? const Color(0xFF1E2939)).withOpacity(1.0),
         borderRadius: BorderRadius.circular(borderRadius),
-        boxShadow: [
-          // No heavy shadows, just extremely subtle depth
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: null, 
+        boxShadow: const <BoxShadow>[], // No shadow for flat look
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              // iPhone Style: Very low opacity tint
-              color: color ?? Colors.black.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(borderRadius),
-              border: border ?? Border.all(
-                // Subtle border highlight (always white-ish for glass effect)
-                color: Colors.white.withOpacity(0.1),
-                width: 1, // Keep it thin
-              ),
-            ),
-            child: child,
-          ),
-        ),
+      child: Padding(
+        padding: padding ?? EdgeInsets.zero,
+        child: child,
       ),
     );
   }

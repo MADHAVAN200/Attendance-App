@@ -125,7 +125,7 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       height: 48,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
+        color: isDark ? const Color(0xFF1E2939) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
       ),

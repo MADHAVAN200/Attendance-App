@@ -17,13 +17,13 @@ class AppSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
 
-    // Glassmorphism Sidebar
+    // Solid Sidebar
     return GlassContainer(
       width: isMobile ? 240 : 280,
       height: double.infinity,
-      blur: 60, // Stronger blur for iOS frosted effect
+      blur: 0, // No blur
       color: Theme.of(context).brightness == Brightness.dark 
-          ? Colors.black.withOpacity(0.2) // Explicit iOS dark glass
+          ? const Color(0xFF101828) // Explicit Black Mode Color
           : const Color(0xFFFFFFFF), // Solid White for Light Mode
       borderRadius: 0, 
       child: ValueListenableBuilder<PageType>(

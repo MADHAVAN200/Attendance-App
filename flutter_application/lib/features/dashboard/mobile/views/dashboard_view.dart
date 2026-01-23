@@ -253,9 +253,6 @@ class _MobileAdminDashboardContentState extends State<MobileAdminDashboardConten
                             action['color'],
                             () {
                               if (action['page'] != null) {
-                                if (action['initialTab'] != null) {
-                                  PolicyEngineView.initialTabNotifier.value = action['initialTab'] as int;
-                                }
                                 navigateTo(action['page'] as PageType);
                               }
                             },

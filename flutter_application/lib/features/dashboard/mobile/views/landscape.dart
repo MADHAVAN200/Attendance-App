@@ -14,6 +14,7 @@ import '../../tablet/widgets/anomalies_card.dart';
 import '../../tablet/widgets/stat_card.dart';
 import '../../tablet/widgets/trends_chart.dart';
 import '../../widgets/employee_dashboard_widgets.dart';
+import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 
 import '../../../employees/mobile/views/employees_mobile_view.dart';
 import '../../../attendance/mobile/views/my_attendance_view.dart';
@@ -85,6 +86,7 @@ class MobileLandscape extends StatelessWidget {
            return const FeedbackView();
 
       case PageType.policyEngine:
+         return const PolicyEngineView();
       case PageType.profile:
          return Center(child: Text('${page.title} (Landscape)'));
     }

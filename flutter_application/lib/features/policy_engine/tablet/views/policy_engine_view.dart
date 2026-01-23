@@ -11,47 +11,24 @@ import 'add_shift_dialog.dart';
 class PolicyEngineView extends StatefulWidget {
   const PolicyEngineView({super.key});
 
-  static final ValueNotifier<int> initialTabNotifier = ValueNotifier<int>(0);
-
   @override
   State<PolicyEngineView> createState() => _PolicyEngineViewState();
 }
 
-
-// Methods were duplicated. This cleaner block removes the redundant copies appearing before the main build method.
-// Keeping only the necessary methods here if they belong here.
-
-class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _PolicyEngineViewState extends State<PolicyEngineView> {
   late ShiftService _shiftService;
-  late PolicyService _policyService;
 
   List<Shift> _shifts = [];
   bool _isLoadingShifts = true;
 
-  // Automation Policy State
-  List<dynamic> _policies = [];
-  bool _isLoadingPolicies = false;
-
   @override
   void initState() {
     super.initState();
-    final initialIndex = PolicyEngineView.initialTabNotifier.value;
-    _tabController = TabController(length: 2, vsync: this, initialIndex: initialIndex);
-    
-    if (initialIndex != 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        PolicyEngineView.initialTabNotifier.value = 0;
-      });
-    }
-
     // Initialize Services
     WidgetsBinding.instance.addPostFrameCallback((_) {
        final dio = Provider.of<AuthService>(context, listen: false).dio;
        _shiftService = ShiftService(dio);
-       _policyService = PolicyService(dio);
        _fetchShifts();
-       _fetchPolicies();
     });
   }
 
@@ -64,18 +41,6 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error loading shifts: $e")));
     } finally {
       if (mounted) setState(() => _isLoadingShifts = false);
-    }
-  }
-
-  Future<void> _fetchPolicies() async {
-    setState(() => _isLoadingPolicies = true);
-    try {
-      final data = await _policyService.getAutomationPolicies();
-      if (mounted) setState(() => _policies = data);
-    } catch (e) {
-      print("Error loading policies: $e");
-    } finally {
-      if (mounted) setState(() => _isLoadingPolicies = false);
     }
   }
 
@@ -211,506 +176,11 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildTabs(context),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildAutomationRules(context),
-              _buildShiftConfiguration(context),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTabs(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isMobile = constraints.maxWidth < 600;
-        final margin = isMobile ? 16.0 : 32.0;
-
-        return Container(
-          margin: EdgeInsets.fromLTRB(margin, 24, margin, 24),
-          height: 48,
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF101828) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
-          ),
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: false, // Ensure tabs fill width
-            tabAlignment: TabAlignment.fill,
-            indicator: BoxDecoration(
-              color: primaryColor,
-              borderRadius: BorderRadius.circular(10),
-              boxShadow: isDark ? [
-                BoxShadow(
-                  color: primaryColor.withOpacity(0.4),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                )
-              ] : [
-                BoxShadow(
-                  color: primaryColor.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                )
-              ],
-            ),
-            labelColor: Colors.white,
-            unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
-            indicatorSize: TabBarIndicatorSize.tab,
-            dividerColor: Colors.transparent,
-            padding: const EdgeInsets.all(4),
-            labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
-            tabs: const [
-              Tab(text: 'Automation Rules'),
-              Tab(text: 'Shift Configuration'),
-            ],
-          ),
-        );
-      }
-    );
-  }
-
-  
-  Widget _buildAutomationRules(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isPortrait = constraints.maxWidth < 900;
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-
-        if (isPortrait) {
-          return Center(
-             child: Column(
-               mainAxisAlignment: MainAxisAlignment.center,
-               children: [
-                 Icon(Icons.screen_rotation, size: 64, color: Colors.grey[400]),
-                 const SizedBox(height: 24),
-                 Text(
-                   'Please rotate your device',
-                   style: GoogleFonts.poppins(
-                     fontSize: 20,
-                     fontWeight: FontWeight.w600,
-                     color: isDark ? Colors.white : Colors.black87,
-                   ),
-                 ),
-                 const SizedBox(height: 8),
-                 Text(
-                   'Automation Rules are only available in landscape mode',
-                   style: GoogleFonts.poppins(
-                     fontSize: 14,
-                     color: Colors.grey[500],
-                   ),
-                   textAlign: TextAlign.center,
-                 ),
-               ],
-             ),
-           );
-        }
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. Left: Toolbox
-              Expanded(
-                flex: 2,
-                child: _buildToolbox(context),
-              ),
-              const SizedBox(width: 24),
-
-              // 2. Center: Canvas
-              Expanded(
-                flex: 5,
-                child: _buildCanvas(context),
-              ),
-              const SizedBox(width: 24),
-
-              // 3. Right: Properties Panel
-              Expanded(
-                flex: 3,
-                child: _buildPropertiesPanel(context),
-              ),
-            ],
-          ),
-        );
-      }
-    );
-  }
-
-  Widget _buildToolbox(BuildContext context) {
-    return GlassContainer(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'TOOLBOX',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildToolboxSection(context, 'CONDITIONS', [
-            {'icon': Icons.access_time, 'label': 'Time Check'},
-            {'icon': Icons.location_on_outlined, 'label': 'Location Check'},
-            {'icon': Icons.calendar_today, 'label': 'Date Range'},
-          ]),
-          const SizedBox(height: 24),
-          _buildToolboxSection(context, 'ACTIONS', [
-            {'icon': Icons.notification_important_outlined, 'label': 'Send Alert'},
-            {'icon': Icons.check_circle_outline, 'label': 'Auto Approve'},
-            {'icon': Icons.cancel_outlined, 'label': 'Reject Request'},
-            {'icon': Icons.email_outlined, 'label': 'Email Manager'},
-          ]),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToolboxSection(BuildContext context, String title, List<Map<String, dynamic>> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).primaryColor,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...items.map((item) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF1E2939)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Theme.of(context).dividerColor.withOpacity(0.05),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(item['icon'] as IconData, size: 18, color: Theme.of(context).textTheme.bodyMedium?.color),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      item['label'] as String,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Theme.of(context).textTheme.bodyMedium?.color,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            )),
-      ],
-    );
-  }
-
-  Widget _buildCanvas(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return GlassContainer(
-      padding: EdgeInsets.zero,
-      color: isDark ? Colors.black.withOpacity(0.2) : Colors.grey.withOpacity(0.05),
-      child: Stack(
-        children: [
-          // Grid Background Pattern (Simplified)
-          Opacity(
-            opacity: 0.05,
-            child: GridPaper(
-              color: Theme.of(context).primaryColor,
-              divisions: 2,
-              subdivisions: 2,
-            ),
-          ),
-          
-          // Flow Diagram
-          Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildFlowBlock(context, 'TRIGGER', 'Attendance Marked', Icons.touch_app, isActive: false),
-                  _buildFlowArrow(context),
-                  _buildFlowBlock(context, 'CONDITION', 'Is Late > 15 mins?', Icons.access_time, isActive: true),
-                  _buildFlowArrow(context),
-                  _buildFlowBlock(context, 'ACTION', 'Send Warning Alert', Icons.notification_important_outlined, isActive: false),
-                ],
-              ),
-            ),
-          ),
-          
-          // Canvas Label
-           Positioned(
-            top: 20,
-            left: 20,
-            child: Text(
-              'RULE FLOW: LATE ARRIVAL POLICY',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).textTheme.bodySmall?.color,
-                letterSpacing: 1,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFlowBlock(BuildContext context, String type, String label, IconData icon, {bool isActive = false}) {
-    final primaryColor = Theme.of(context).primaryColor;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      width: 240,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isActive 
-            ? (isDark ? primaryColor.withOpacity(0.2) : primaryColor.withOpacity(0.1))
-            : (isDark ? Colors.white.withOpacity(0.05) : Colors.white),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isActive ? primaryColor : (isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
-          width: isActive ? 1.5 : 1,
-        ),
-        boxShadow: isActive ? [
-          BoxShadow(color: primaryColor.withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 4))
-        ] : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isActive ? primaryColor : Colors.grey[700],
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  type,
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-              const Spacer(),
-              if (isActive)
-                Icon(Icons.edit, size: 14, color: primaryColor)
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Icon(icon, size: 20, color: isActive ? primaryColor : Theme.of(context).textTheme.bodyMedium?.color),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFlowArrow(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 2,
-          height: 20,
-          color: Colors.grey.withOpacity(0.5),
-        ),
-        Icon(Icons.keyboard_arrow_down, color: Colors.grey.withOpacity(0.5)),
-        Container(
-          width: 2,
-          height: 10,
-          color: Colors.grey.withOpacity(0.5),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPropertiesPanel(BuildContext context) {
-    return GlassContainer(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'PROPERTIES',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-              letterSpacing: 1,
-            ),
-          ),
-          const SizedBox(height: 24),
-          
-          Text(
-            'Condition Settings',
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          _buildPropertyField(context, 'Label', 'Is Late > 15 mins?'),
-          const SizedBox(height: 16),
-          _buildPropertyField(context, 'Threshold (mins)', '15'),
-          const SizedBox(height: 16),
-           _buildPropertyDropdown(context, 'Operator', 'Greater Than'),
-           const SizedBox(height: 16),
-          _buildPropertyDropdown(context, 'Priority', 'High'),
-          
-          const Spacer(),
-          
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {},
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(
-                'Update Block',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPropertyField(BuildContext context, String label, String value) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            color: Theme.of(context).textTheme.bodySmall?.color,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E2939) : Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
-          ),
-          child: Text(
-            value,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-               color: Theme.of(context).textTheme.bodyLarge?.color,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-   Widget _buildPropertyDropdown(BuildContext context, String label, String value) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            color: Theme.of(context).textTheme.bodySmall?.color,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  value,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const Spacer(),
-              Icon(Icons.arrow_drop_down, size: 20, color: Theme.of(context).textTheme.bodySmall?.color),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildShiftConfiguration(BuildContext context) {
     if (_isLoadingShifts) return const Center(child: CircularProgressIndicator()); 
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: const EdgeInsets.fromLTRB(32, 24, 32, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -800,9 +270,9 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
               ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF5B60F6),
+              backgroundColor: const Color(0xFF6366F1),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
           ),
@@ -811,10 +281,7 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
     );
   }
 
-  Widget _buildShiftCard(
-    BuildContext context, {
-    required Shift shift,
-  }) {
+  Widget _buildShiftCard(BuildContext context, {required Shift shift}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = Colors.indigoAccent;
     final icon = Icons.access_time_filled;
@@ -906,17 +373,22 @@ class _PolicyEngineViewState extends State<PolicyEngineView> with SingleTickerPr
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        if (icon != null) ...[
-          Icon(icon, size: 14, color: iconColor),
-          const SizedBox(width: 8),
-        ],
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 13,
-            color: icon != null ? iconColor : Colors.grey,
-            fontWeight: icon != null ? FontWeight.w500 : FontWeight.normal,
-          ),
+        Row(
+           mainAxisSize: MainAxisSize.min,
+           children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: iconColor),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: icon != null ? iconColor : Colors.grey,
+                fontWeight: icon != null ? FontWeight.w500 : FontWeight.normal,
+              ),
+            ),
+           ],
         ),
         const SizedBox(width: 16), // Minimum gap
         Flexible(

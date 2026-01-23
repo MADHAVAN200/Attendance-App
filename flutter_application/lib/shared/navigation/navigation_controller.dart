@@ -23,7 +23,7 @@ extension PageTypeExtension on PageType {
       case PageType.liveAttendance: return 'Live Attendance';
       case PageType.leavesAndHolidays: return 'Holidays & Leave'; // UPDATED
       case PageType.reports: return 'Reports & Exports';
-      case PageType.policyEngine: return 'Policy Engine';
+      case PageType.policyEngine: return 'Shift Management';
       case PageType.geoFencing: return 'Geo-Fencing';
       case PageType.feedback: return 'Feedback & Support'; // ADDED
       case PageType.profile: return 'My Profile';

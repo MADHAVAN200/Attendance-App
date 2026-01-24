@@ -7,14 +7,14 @@ import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/services/feedback_service.dart';
 
-class FeedbackView extends StatefulWidget {
-  const FeedbackView({super.key});
+class FeedbackMobileView extends StatefulWidget {
+  const FeedbackMobileView({super.key});
 
   @override
-  State<FeedbackView> createState() => _FeedbackViewState();
+  State<FeedbackMobileView> createState() => _FeedbackMobileViewState();
 }
 
-class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderStateMixin {
+class _FeedbackMobileViewState extends State<FeedbackMobileView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late FeedbackService _feedbackService;
   
@@ -40,7 +40,6 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
     WidgetsBinding.instance.addPostFrameCallback((_) {
        final dio = Provider.of<AuthService>(context, listen: false).dio;
        _feedbackService = FeedbackService(dio);
-       // Check if admin to fetch all? For now, fetch all if on second tab
        _tabController.addListener(() {
          if (_tabController.index == 1) _fetchAllFeedback();
        });
@@ -95,11 +94,11 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-     final isAdmin = Provider.of<AuthService>(context).user?.role == 'ADMIN' || true; // Force true for dev if needed, or check real role
+     final isAdmin = Provider.of<AuthService>(context).user?.role == 'ADMIN'; 
 
      return Column(
        children: [
-         // Tabs
+         // Tabs - Compact for Mobile
          if (isAdmin) _buildTabs(context),
          
          Expanded(
@@ -122,8 +121,8 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      height: 48,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      height: 45, // Slightly taller for better touch
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E2939) : Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -138,9 +137,13 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
         ),
         labelColor: Colors.white,
         unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
+        labelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        padding: const EdgeInsets.all(4), 
         tabs: const [
-          Tab(text: 'Submit Feedback'),
-          Tab(text: 'All Feedback (Admin)'),
+          Tab(text: 'Submit'),
+          Tab(text: 'All Feedback'),
         ],
       ),
     );
@@ -148,49 +151,53 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
 
   Widget _buildSubmitForm(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       child: GlassContainer(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Submit Feedback / Report Bug", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 24),
+              Text("Submit Feedback", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
               
               DropdownButtonFormField<String>(
                 value: _selectedType,
                 items: ['BUG', 'FEATURE', 'IMPROVEMENT', 'OTHER'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
                 onChanged: (v) => setState(() => _selectedType = v!),
                 decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+                style: GoogleFonts.poppins(fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: 'Title', border: OutlineInputBorder()),
-                validator: (v) => v!.isEmpty ? 'Please enter a title' : null,
+                validator: (v) => v!.isEmpty ? 'Required' : null,
+                style: GoogleFonts.poppins(fontSize: 13),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               
               TextFormField(
                 controller: _descController,
                 decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
-                maxLines: 5,
-                validator: (v) => v!.isEmpty ? 'Please enter a description' : null,
+                maxLines: 4,
+                validator: (v) => v!.isEmpty ? 'Required' : null,
+                style: GoogleFonts.poppins(fontSize: 13),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               
               OutlinedButton.icon(
                 onPressed: _pickFiles,
-                icon: const Icon(Icons.attach_file),
-                label: const Text("Attach Files"),
+                icon: const Icon(Icons.attach_file, size: 18),
+                label: const Text("Attach"),
               ),
               if (_attachedFiles.isNotEmpty)
                 ..._attachedFiles.map((f) => ListTile(
-                  title: Text(f.path.split(Platform.pathSeparator).last),
-                  trailing: IconButton(icon: const Icon(Icons.close), onPressed: () => setState(() => _attachedFiles.remove(f))),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(f.path.split(Platform.pathSeparator).last, style: GoogleFonts.poppins(fontSize: 12)),
+                  trailing: IconButton(icon: const Icon(Icons.close, size: 16), onPressed: () => setState(() => _attachedFiles.remove(f))),
                   dense: true,
                 )),
 
@@ -200,8 +207,8 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _isSubmitting ? null : _submitFeedback,
-                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white, padding: const EdgeInsets.all(16)),
-                  child: _isSubmitting ? const CircularProgressIndicator(color: Colors.white) : const Text("Submit"),
+                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white, padding: const EdgeInsets.all(12)),
+                  child: _isSubmitting ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text("Submit"),
                 ),
               ),
             ],
@@ -216,24 +223,24 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
     if (_allFeedback.isEmpty) return const Center(child: Text("No feedback found"));
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: _allFeedback.length,
       itemBuilder: (ctx, i) {
         final fb = _allFeedback[i];
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final status = fb['status'] ?? 'OPEN';
         final color = _getStatusColor(status);
 
         return GlassContainer(
           margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
                Row(
+                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                  children: [
                    Container(
-                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                      decoration: BoxDecoration(
                        color: color.withOpacity(0.1),
                        borderRadius: BorderRadius.circular(4),
@@ -244,58 +251,34 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
                        style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: color),
                      ),
                    ),
-                   const SizedBox(width: 8),
-                   Container(
-                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                     decoration: BoxDecoration(
-                       color: Colors.grey.withOpacity(0.1),
-                       borderRadius: BorderRadius.circular(4),
-                     ),
-                     child: Text(
-                       fb['type'] ?? 'FEEDBACK',
-                       style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: isDark ? Colors.grey[400] : Colors.grey[700]),
-                     ),
-                   ),
-                   const Spacer(),
                    Text(
-                     fb['created_at'] != null ? fb['created_at'].toString().split('T')[0] : '', // Simple date format
-                     style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                     fb['created_at'] != null ? fb['created_at'].toString().split('T')[0] : '', 
+                     style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey),
                    ),
                  ],
                ),
-               const SizedBox(height: 12),
+               const SizedBox(height: 8),
                Text(
                  fb['title'] ?? 'No Title', 
-                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15, color: Theme.of(context).textTheme.bodyLarge?.color),
+                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
                ),
                const SizedBox(height: 4),
                Text(
                  fb['description'] ?? '', 
-                 style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey),
+                 style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                 maxLines: 2, 
+                 overflow: TextOverflow.ellipsis,
                ),
-               const SizedBox(height: 16),
-               Row(
-                 children: [
-                    Icon(Icons.person_outline, size: 14, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
-                    Text(
-                      "${fb['user_name']} (${fb['email']})",
-                      style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                    const Spacer(),
-                    if (fb['attachments'] != null && (fb['attachments'] as List).isNotEmpty)
-                       Icon(Icons.attach_file, size: 16, color: Theme.of(context).primaryColor),
-                 ],
-               ),
-               const SizedBox(height: 16),
+               const SizedBox(height: 12),
                SizedBox(
                  width: double.infinity,
                  child: OutlinedButton(
                    onPressed: () => _showStatusDialog(fb),
                    style: OutlinedButton.styleFrom(
+                     padding: const EdgeInsets.symmetric(vertical: 8),
                      side: BorderSide(color: Colors.grey.withOpacity(0.3)),
                    ),
-                   child: Text("Update Status", style: GoogleFonts.poppins(fontSize: 13)),
+                   child: Text("Update Status", style: GoogleFonts.poppins(fontSize: 12)),
                  ),
                ),
             ],

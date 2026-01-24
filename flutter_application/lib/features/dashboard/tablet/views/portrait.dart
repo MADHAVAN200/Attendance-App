@@ -20,6 +20,7 @@ import '../../../reports/tablet/views/reports_view.dart';
 import '../../../leave/tablet/views/leave_view.dart'; // UPDATED
 import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 import '../../../profile/tablet/views/profile_view.dart';
+import '../../../feedback/tablet/views/feedback_tablet_view.dart';
 
 class TabletPortrait extends StatelessWidget {
   const TabletPortrait({super.key});
@@ -105,6 +106,8 @@ class TabletPortrait extends StatelessWidget {
                                ],
                              ),
                            );
+                        case PageType.feedback:
+                           return const FeedbackTabletView();
                         case PageType.profile:
                            return const ProfileView();
                         default:

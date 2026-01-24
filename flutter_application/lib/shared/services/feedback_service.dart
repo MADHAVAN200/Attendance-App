@@ -47,7 +47,7 @@ class FeedbackService {
         'type': type,
         'limit': limit,
       });
-      if (response.statusCode == 200 && response.data['success']) {
+      if (response.statusCode == 200 && response.data['ok'] == true) {
         return response.data['data'] ?? [];
       }
       return [];

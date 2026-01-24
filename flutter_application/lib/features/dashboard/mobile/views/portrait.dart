@@ -18,7 +18,7 @@ import '../../../profile/mobile/views/profile_view.dart';
 import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
 import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 import '../../../leave/tablet/views/leave_view.dart';
-import '../../../feedback/tablet/views/feedback_view.dart';
+import '../../../feedback/mobile/views/feedback_mobile_view.dart';
 
 class MobilePortrait extends StatelessWidget {
   const MobilePortrait({super.key});
@@ -99,7 +99,7 @@ class MobilePortrait extends StatelessWidget {
       // PageType.leaves case REMOVED (merged above)
 
       case PageType.feedback:
-        return const FeedbackView();
+        return const FeedbackMobileView();
          
       default:
         return Center(child: Text('Page: ${page.title}'));

@@ -7,14 +7,14 @@ import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/services/feedback_service.dart';
 
-class FeedbackView extends StatefulWidget {
-  const FeedbackView({super.key});
+class FeedbackTabletView extends StatefulWidget {
+  const FeedbackTabletView({super.key});
 
   @override
-  State<FeedbackView> createState() => _FeedbackViewState();
+  State<FeedbackTabletView> createState() => _FeedbackTabletViewState();
 }
 
-class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderStateMixin {
+class _FeedbackTabletViewState extends State<FeedbackTabletView> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late FeedbackService _feedbackService;
   
@@ -40,7 +40,6 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
     WidgetsBinding.instance.addPostFrameCallback((_) {
        final dio = Provider.of<AuthService>(context, listen: false).dio;
        _feedbackService = FeedbackService(dio);
-       // Check if admin to fetch all? For now, fetch all if on second tab
        _tabController.addListener(() {
          if (_tabController.index == 1) _fetchAllFeedback();
        });
@@ -95,7 +94,7 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-     final isAdmin = Provider.of<AuthService>(context).user?.role == 'ADMIN' || true; // Force true for dev if needed, or check real role
+     final isAdmin = Provider.of<AuthService>(context).user?.role == 'ADMIN'; 
 
      return Column(
        children: [
@@ -122,6 +121,7 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
+      // width: 400, // Removed to allow full width as per request
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       height: 48,
       decoration: BoxDecoration(
@@ -138,6 +138,10 @@ class _FeedbackViewState extends State<FeedbackView> with SingleTickerProviderSt
         ),
         labelColor: Colors.white,
         unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
+        labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        padding: const EdgeInsets.all(4), // Key for pill look
         tabs: const [
           Tab(text: 'Submit Feedback'),
           Tab(text: 'All Feedback (Admin)'),

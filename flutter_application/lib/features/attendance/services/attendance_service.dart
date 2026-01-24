@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../../../shared/constants/api_constants.dart';
 import '../models/attendance_record.dart';
+import '../models/correction_request.dart';
 
 class AttendanceService {
   final Dio _dio;
@@ -49,17 +50,17 @@ class AttendanceService {
   Future<Map<String, dynamic>> timeIn({
     required double latitude,
     required double longitude,
-    required double accuracy, // ADDED
+    required double accuracy,
     required File imageFile,
-    String? lateReason, // ADDED
+    String? lateReason,
   }) async {
     try {
       String fileName = imageFile.path.split('/').last;
       
       FormData formData = FormData.fromMap({
-        "latitude": latitude,
-        "longitude": longitude,
-        "accuracy": accuracy, // ADDED
+        "latitude": latitude.toString(),
+        "longitude": longitude.toString(),
+        "accuracy": accuracy.toString(),
         if (lateReason != null) "late_reason": lateReason,
         "image": await MultipartFile.fromFile(imageFile.path, filename: fileName),
       });
@@ -75,16 +76,16 @@ class AttendanceService {
   Future<Map<String, dynamic>> timeOut({
     required double latitude,
     required double longitude,
-    required double accuracy, // ADDED
+    required double accuracy,
     required File imageFile,
   }) async {
     try {
       String fileName = imageFile.path.split('/').last;
       
       FormData formData = FormData.fromMap({
-        "latitude": latitude,
-        "longitude": longitude,
-        "accuracy": accuracy, // ADDED
+        "latitude": latitude.toString(),
+        "longitude": longitude.toString(),
+        "accuracy": accuracy.toString(),
         "image": await MultipartFile.fromFile(imageFile.path, filename: fileName),
       });
 
@@ -106,7 +107,7 @@ class AttendanceService {
   }) async {
     try {
       await _dio.post(ApiConstants.attendanceCorrectionRequest, data: {
-        if (attendanceId != null) "attendance_id": attendanceId,
+        "attendance_id": attendanceId,
         "correction_type": correctionType,
         "request_date": requestDate,
         "reason": reason,
@@ -117,11 +118,12 @@ class AttendanceService {
   }
 
   // Fetch All Requests
-  Future<List<dynamic>> getCorrectionRequests() async {
+  Future<List<CorrectionRequest>> getCorrectionRequests() async {
     try {
       final response = await _dio.get(ApiConstants.attendanceCorrectionRequests);
       if (response.statusCode == 200 && response.data['success']) {
-         return response.data['requests'] ?? [];
+         final List<dynamic> list = response.data['requests'] ?? [];
+         return list.map((json) => CorrectionRequest.fromJson(json)).toList();
       }
       return [];
     } catch (e) {

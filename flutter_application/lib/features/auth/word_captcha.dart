@@ -17,6 +17,7 @@ class WordCaptcha extends StatefulWidget {
 class _WordCaptchaState extends State<WordCaptcha> {
   String? _captchaId;
   String? _captchaSvgString;
+  String? _errorMessage;
   bool _isLoading = false;
   final TextEditingController _controller = TextEditingController();
 
@@ -29,6 +30,7 @@ class _WordCaptchaState extends State<WordCaptcha> {
   Future<void> _loadCaptcha() async {
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
       _captchaSvgString = null; // Clear previous image while loading
     });
     
@@ -69,7 +71,10 @@ class _WordCaptchaState extends State<WordCaptcha> {
     } catch (e) {
       print("Captcha Fetch Error: $e");
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+           _isLoading = false;
+           _errorMessage = e.toString();
+        });
       }
     }
   }
@@ -107,7 +112,16 @@ class _WordCaptchaState extends State<WordCaptcha> {
                               height: 60,
                             ),
                           )
-                        : const Center(child: Icon(Icons.error_outline, size: 20, color: Colors.red)),
+                        : Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                _errorMessage ?? "Error loading captcha",
+                                style: GoogleFonts.poppins(fontSize: 10, color: Colors.red),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
               ),
             ),
             const SizedBox(width: 12),

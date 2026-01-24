@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../login_screen.dart';
+import '../../views/forgot_password/forgot_password_screen.dart';
 
 class LoginMobilePortrait extends StatelessWidget {
   final LoginScreenState controller;
@@ -70,7 +71,27 @@ class LoginMobilePortrait extends StatelessWidget {
                       ),
                       validator: (v) => v!.isEmpty ? 'Required' : null,
                     ),
-                    const SizedBox(height: 24),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ForgotPasswordScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Forgot Password?',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary, 
+                            fontWeight: FontWeight.bold
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
                     // Captcha
                     const SizedBox(height: 24),

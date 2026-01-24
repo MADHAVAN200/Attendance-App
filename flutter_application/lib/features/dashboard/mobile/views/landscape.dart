@@ -23,7 +23,7 @@ import '../../../reports/mobile/views/reports_view.dart';
 import '../../../holidays/mobile/views/holidays_view.dart';
 import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
 import '../../../leave/tablet/views/leave_view.dart'; // Reusing tablet view
-import '../../../feedback/tablet/views/feedback_view.dart'; // Reusing tablet view
+import '../../../feedback/mobile/views/feedback_mobile_view.dart'; // Reusing tablet view
 
 class MobileLandscape extends StatelessWidget {
   const MobileLandscape({super.key});
@@ -83,7 +83,7 @@ class MobileLandscape extends StatelessWidget {
       // PageType.leaves case REMOVED (merged above)
            
       case PageType.feedback:
-           return const FeedbackView();
+           return const FeedbackMobileView();
 
       case PageType.policyEngine:
          return const PolicyEngineView();

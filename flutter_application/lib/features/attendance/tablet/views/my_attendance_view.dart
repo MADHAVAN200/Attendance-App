@@ -150,7 +150,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
 
       Future<void> performTimeIn({String? reason}) async {
          await _attendanceService.timeIn(
-            latitude: position.latitude,
+             latitude: position.latitude,
             longitude: position.longitude,
             accuracy: position.accuracy,
             imageFile: File(photo.path),
@@ -165,7 +165,11 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
              await performTimeIn(); // Try without reason first
           } catch (e) {
              final msg = e.toString().toLowerCase();
-             if (msg.contains("reason is required") || msg.contains("late time in")) {
+             // Check for specific error message or key keywords
+             if (msg.contains("reason' is required") || 
+                 msg.contains("late_reason") || 
+                 msg.contains("reason is required") ||
+                 msg.contains("late time in")) {
                 // Show Input Dialog
                 if (!mounted) return;
                 Navigator.pop(context); // Hide loading
@@ -358,7 +362,10 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
         const Spacer(),
         // Correction Button (ADDED)
         InkWell(
-           onTap: () => CorrectionRequestDialog.show(context, date: _selectedDate),
+           onTap: () {
+             final attendanceId = _records.isNotEmpty ? _records.first.attendanceId : null;
+             CorrectionRequestDialog.show(context, date: _selectedDate, attendanceId: attendanceId);
+           },
            child: GlassContainer(
              height: 40,
              padding: const EdgeInsets.symmetric(horizontal: 12),

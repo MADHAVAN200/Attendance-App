@@ -105,7 +105,8 @@ class AuthService extends ChangeNotifier {
       final response = await _dio.get(ApiConstants.captchaGenerate);
       return response.data;
     } catch (e) {
-      throw Exception('Failed to load captcha');
+      print("Detailed Captcha Error: $e");
+      throw Exception('Failed to load captcha: $e');
     }
   }
 
@@ -137,6 +138,61 @@ class AuthService extends ChangeNotifier {
       await _cookieJar.deleteAll();
       await _storage.deleteAll();
       notifyListeners(); // Notify UI to redirect
+    }
+  }
+
+  // Forgot Password Flow
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final response = await _dio.post(
+        '${ApiConstants.baseUrl}/auth/forgot-password',
+        data: {'email': email},
+      );
+      return response.data;
+    } catch (e) {
+      if (e is DioException && e.response?.data != null && e.response!.data is Map) {
+         throw Exception(e.response!.data['message'] ?? 'Failed to send OTP');
+      }
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
+    try {
+      final response = await _dio.post(
+        '${ApiConstants.baseUrl}/auth/verify-otp',
+        data: {
+          'email': email,
+          'otp': otp,
+        },
+      );
+      return response.data;
+    } catch (e) {
+      if (e is DioException && e.response?.data != null && e.response!.data is Map) {
+         throw Exception(e.response!.data['message'] ?? 'Invalid OTP');
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> resetPassword(String resetToken, String newPassword) async {
+    try {
+      final response = await _dio.post(
+        '${ApiConstants.baseUrl}/auth/reset-password',
+        data: {
+          'resetToken': resetToken,
+          'newPassword': newPassword,
+        },
+      );
+      
+      if (response.statusCode != 200 && response.statusCode != 201) {
+         throw Exception(response.data['message'] ?? 'Failed to reset password');
+      }
+    } catch (e) {
+      if (e is DioException && e.response?.data != null && e.response!.data is Map) {
+         throw Exception(e.response!.data['message'] ?? 'Failed to reset password');
+      }
+      rethrow;
     }
   }
   

@@ -14,6 +14,7 @@ import '../../../../shared/services/auth_service.dart';
 import '../../models/attendance_record.dart';
 import '../../services/attendance_service.dart';
 import '../../widgets/late_arrival_dialog.dart';
+import '../../tablet/widgets/correction_request_dialog.dart';
 
 class MobileMyAttendanceContent extends StatefulWidget {
   const MobileMyAttendanceContent({super.key});
@@ -149,7 +150,7 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
 
       Future<void> performTimeIn({String? reason}) async {
          await _attendanceService.timeIn(
-            latitude: position.latitude,
+             latitude: position.latitude,
             longitude: position.longitude,
             accuracy: position.accuracy,
             imageFile: File(photo.path),
@@ -164,7 +165,11 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
              await performTimeIn(); // Try without reason first
           } catch (e) {
              final msg = e.toString().toLowerCase();
-             if (msg.contains("reason is required") || msg.contains("late time in")) {
+             // Check for specific error message or key keywords
+             if (msg.contains("reason' is required") || 
+                 msg.contains("late_reason") || 
+                 msg.contains("reason is required") ||
+                 msg.contains("late time in")) {
                 // Show Input Dialog
                 if (!mounted) return;
                 // Temporarily hide loading to show dialog
@@ -365,6 +370,28 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
             overflow: TextOverflow.ellipsis,
             maxLines: 1,
           ),
+        ),
+        const SizedBox(width: 8),
+        // Correction Button
+        InkWell(
+           onTap: () {
+             final attendanceId = _records.isNotEmpty ? _records.first.attendanceId : null;
+             CorrectionRequestDialog.show(context, date: _selectedDate, attendanceId: attendanceId);
+           },
+           child: GlassContainer(
+             height: 40,
+             padding: const EdgeInsets.symmetric(horizontal: 12),
+             borderRadius: 12,
+             child: Row(
+               children: [
+                 Icon(Icons.edit_note, size: 16, color: Theme.of(context).primaryColor),
+                 if (MediaQuery.of(context).size.width > 360) ...[
+                   const SizedBox(width: 8),
+                   Text('Correction', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
+                 ]
+               ],
+             ),
+           ),
         ),
         const SizedBox(width: 8),
         InkWell(
@@ -671,9 +698,13 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
                      ),
                    ),
                    const Spacer(),
-                   IconButton(
-                     onPressed: () => Navigator.pop(context),
-                     icon: const Icon(Icons.close),
+                  // Correction Button (ADDED)
+        InkWell(
+           onTap: () {
+             final attendanceId = _records.isNotEmpty ? _records.first.attendanceId : null;
+             CorrectionRequestDialog.show(context, date: _selectedDate, attendanceId: attendanceId);
+           },
+           child: GlassContainer(child: const Icon(Icons.close)),
                    ),
                 ],
               ),

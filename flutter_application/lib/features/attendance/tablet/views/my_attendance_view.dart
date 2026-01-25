@@ -15,6 +15,10 @@ import '../../models/attendance_record.dart';
 import '../../services/attendance_service.dart';
 import '../widgets/correction_request_dialog.dart';
 import '../../widgets/late_arrival_dialog.dart';
+import '../../../../shared/widgets/attendance_success_dialog.dart';
+import '../../widgets/attendance_history_tab.dart';
+import '../../widgets/attendance_analytics_tab.dart';
+import '../../providers/attendance_provider.dart'; // Import Provider
 
 class MyAttendanceView extends StatefulWidget {
   const MyAttendanceView({super.key});
@@ -25,54 +29,24 @@ class MyAttendanceView extends StatefulWidget {
 
 class _MyAttendanceViewState extends State<MyAttendanceView> {
   late AttendanceService _attendanceService;
-  List<AttendanceRecord> _records = [];
-  final Map<String, List<AttendanceRecord>> _recordsCache = {}; // Cache
-  bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
   DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    final dio = Provider.of<AuthService>(context, listen: false).dio;
-    _attendanceService = AttendanceService(dio);
-    _fetchRecords();
+    final auth = Provider.of<AuthService>(context, listen: false);
+    _attendanceService = AttendanceService(auth.dio);
+    
+    // Initial Fetch via Provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AttendanceProvider>(context, listen: false).fetchRecords(_selectedDate);
+    });
   }
 
   Future<void> _fetchRecords() async {
-    if (!mounted) return;
-    
-    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-
-    // Check Cache
-    if (_recordsCache.containsKey(dateStr)) {
-      if (mounted) {
-        setState(() {
-          _records = _recordsCache[dateStr]!;
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      final data = await _attendanceService.getMyRecords(fromDate: dateStr, toDate: dateStr);
-      if (mounted) {
-        setState(() {
-          _records = data;
-          _recordsCache[dateStr] = data; // Store in cache
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error fetching records: $e")));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
+     await Provider.of<AttendanceProvider>(context, listen: false)
+        .fetchRecords(_selectedDate, forceRefresh: false);
   }
 
   Future<Position?> _getCurrentLocation() async {
@@ -202,11 +176,17 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
         
         if (mounted) {
           Navigator.pop(context); // Close loading
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(isTimeIn ? "Time In Successful!" : "Time Out Successful!"), backgroundColor: Colors.green));
           
-          final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-          _recordsCache.remove(todayStr);
+           // Show Success Popup
+          final timeStr = DateFormat('hh:mm a').format(DateTime.now());
+          await AttendanceSuccessDialog.show(
+            context, 
+            type: isTimeIn ? 'Time In' : 'Time Out', 
+            time: timeStr
+          );
 
+          final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+          Provider.of<AttendanceProvider>(context, listen: false).invalidateCache(DateTime.now());
           _fetchRecords(); // Refresh list
         }
       } catch (e) {
@@ -222,37 +202,94 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine active state for buttons based on last record
-    bool isCheckedIn = false;
-    if (_records.isNotEmpty) {
-      final activeRecord = _records.any((r) => r.timeOut == null);
-      isCheckedIn = activeRecord;
-    }
+    return Consumer<AttendanceProvider>(
+      builder: (context, provider, child) {
+        final _records = provider.records;
+        final _isLoading = provider.isLoading;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. Top Actions (Stacked Time In / Time Out)
-          _buildActionButtons(context, isCheckedIn),
-          
-          const SizedBox(height: 32),
+        // Determine active state for buttons based on last record
+        bool isCheckedIn = false;
+        if (_records.isNotEmpty) {
+          final activeRecord = _records.any((r) => r.timeOut == null);
+          isCheckedIn = activeRecord;
+        }
 
-          // 2. Date Selector
-          _buildDateSelector(context),
+        return DefaultTabController(
+          length: 2,
+          child: Column(
+            children: [
+              // Tab Bar (Unchanged)
+               Container(
+                margin: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark 
+                      ? const Color(0xFF0F172A) 
+                      : const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? Colors.white.withOpacity(0.1) 
+                        : Colors.transparent
+                  ),
+                ),
+                child: TabBar(
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    color: Theme.of(context).brightness == Brightness.dark 
+                        ? const Color(0xFF334155) 
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  dividerColor: Colors.transparent,
+                  labelColor: const Color(0xFF5B60F6),
+                  unselectedLabelColor: Theme.of(context).brightness == Brightness.dark 
+                      ? const Color(0xFF94A3B8)
+                      : const Color(0xFF64748B),
+                  labelStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+                  tabs: const [
+                    Tab(text: "Mark Attendance"),
+                    Tab(text: "My Attendance"),
+                  ],
+                ),
+              ),
 
-          const SizedBox(height: 16),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    // Tab 1: Mark Attendance
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildActionButtons(context, isCheckedIn),
+                          const SizedBox(height: 32),
+                          _buildDateSelector(context),
+                          const SizedBox(height: 16),
+                          _buildHistoryList(context, _records, _isLoading), // No Expanded
+                        ],
+                      ),
+                    ),
 
-          // 3. Attendance History List
-          Expanded(
-            child: _buildHistoryList(context),
+                    // Tab 2: My Attendance Reports
+                    const _MyAttendanceReportsTab(),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
-
   Widget _buildActionButtons(BuildContext context, bool isCheckedIn) {
     // Stacked vertically as requested using Glass Cards
     return Column(
@@ -361,24 +398,32 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
         ),
         const Spacer(),
         // Correction Button (ADDED)
-        InkWell(
-           onTap: () {
-             final attendanceId = _records.isNotEmpty ? _records.first.attendanceId : null;
-             CorrectionRequestDialog.show(context, date: _selectedDate, attendanceId: attendanceId);
-           },
-           child: GlassContainer(
-             height: 40,
-             padding: const EdgeInsets.symmetric(horizontal: 12),
-             borderRadius: 12,
-             child: Row(
-               children: [
-                 Icon(Icons.edit_note, size: 16, color: Theme.of(context).primaryColor),
-                 const SizedBox(width: 8),
-                 Text('Correction', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
-               ],
+             // Correction Button 
+             // Same as Mobile, removing complex logic or relying on global/passed state if needed.
+             // For now just triggering dialog which needs id.
+             // We can get ID from provider inside default dialog if current day.
+             // But simpler to just show for now with null ID or handle internally.
+             InkWell(
+                onTap: () {
+                  // Get records from Provider directly if needed, or pass them down.
+                  final provider = Provider.of<AttendanceProvider>(context, listen: false);
+                  final records = provider.records;
+                  final attendanceId = records.isNotEmpty ? records.first.attendanceId : null;
+                  CorrectionRequestDialog.show(context, date: _selectedDate, attendanceId: attendanceId);
+                },
+                child: GlassContainer(
+                  height: 40,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  borderRadius: 12,
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit_note, size: 16, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).primaryColor),
+                      const SizedBox(width: 8),
+                      Text('Correction', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
              ),
-           ),
-        ),
         const SizedBox(width: 12),
         InkWell(
           onTap: () async {
@@ -427,12 +472,12 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
     );
   }
 
-  Widget _buildHistoryList(BuildContext context) {
-    if (_isLoading) {
+  Widget _buildHistoryList(BuildContext context, List<AttendanceRecord> records, bool isLoading) {
+    if (isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
     
-    if (_records.isEmpty) {
+    if (records.isEmpty) {
       return Center(
         child: Text(
           "No records for this date",
@@ -445,10 +490,12 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
     }
 
     return ListView.separated(
-      itemCount: _records.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: records.length,
       separatorBuilder: (c, i) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        return _buildSessionCard(context, _records[index]);
+        return _buildSessionCard(context, records[index]);
       },
     );
   }
@@ -815,6 +862,77 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
           ),
         ),
       ],
+    );
+  }
+}
+
+
+
+class _MyAttendanceReportsTab extends StatefulWidget {
+  const _MyAttendanceReportsTab();
+
+  @override
+  State<_MyAttendanceReportsTab> createState() => _MyAttendanceReportsTabState();
+}
+
+class _MyAttendanceReportsTabState extends State<_MyAttendanceReportsTab> {
+  int _selectedIndex = 0; // 0: History, 1: Analytics
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView( // Make whole tab scrollable
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Sub-tabs
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildSubTab('History', 0, Icons.history),
+                const SizedBox(width: 32),
+                _buildSubTab('Analytics', 1, Icons.analytics_outlined),
+              ],
+            ),
+          ),
+          
+          // Content
+          _selectedIndex == 0 
+            ? const AttendanceHistoryTab(shrinkWrap: true, physics: NeverScrollableScrollPhysics()) 
+            : const AttendanceAnalyticsTab(shrinkWrap: true, physics: NeverScrollableScrollPhysics()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubTab(String label, int index, IconData icon) {
+    final isSelected = _selectedIndex == index;
+    return InkWell(
+      onTap: () => setState(() => _selectedIndex = index),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: isSelected ? const Color(0xFF5B60F6) : Colors.grey),
+              const SizedBox(width: 8),
+              Text(
+                label, 
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600, 
+                  color: isSelected ? const Color(0xFF5B60F6) : Colors.grey
+                )
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            height: 2,
+            width: 80,
+            color: isSelected ? const Color(0xFF5B60F6) : Colors.transparent,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -38,7 +38,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       child: SafeArea(
         bottom: false,
         child: Container(
-          height: 70, // Content height
+          height: 59, // Content height
           padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
@@ -286,5 +286,5 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(80);
+  Size get preferredSize => const Size.fromHeight(70);
 }

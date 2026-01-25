@@ -83,6 +83,7 @@ class AppSidebar extends StatelessWidget {
                      PageType.myAttendance,
                      PageType.myAttendance,
                      PageType.leavesAndHolidays,   // UPDATED
+                     PageType.dailyActivity, // ADDED
                      PageType.feedback, // ADDED
                      PageType.profile,
                    ];

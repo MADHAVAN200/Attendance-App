@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../services/attendance_service.dart';
 import '../../../../shared/services/auth_service.dart';
+import '../../../../shared/widgets/glass_container.dart';
 
 class CorrectionRequestDialog extends StatefulWidget {
   final int? attendanceId; // Optional, if correcting a specific record
@@ -88,102 +89,114 @@ class _CorrectionRequestDialogState extends State<CorrectionRequestDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Dialog(
-      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Request Correction',
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black87,
+      backgroundColor: Colors.transparent, // Transparent for Glass effect
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400), // Slimmer width
+        child: GlassContainer(
+          borderRadius: 24,
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Request Correction',
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close, color: Theme.of(context).disabledColor),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Date
-              InkWell(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _selectedDate,
-                    firstDate: DateTime(2023),
-                    lastDate: DateTime.now(),
-                  );
-                  if (picked != null) {
-                    setState(() => _selectedDate = picked);
-                  }
-                },
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Date',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today, size: 20),
+                const SizedBox(height: 24),
+                
+                // Date
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: _selectedDate,
+                      firstDate: DateTime(2023),
+                      lastDate: DateTime.now(),
+                    );
+                    if (picked != null) {
+                      setState(() => _selectedDate = picked);
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: 'Date',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      prefixIcon: const Icon(Icons.calendar_today, size: 20),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    child: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
                   ),
-                  child: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Type
-              DropdownButtonFormField<String>(
-                value: _correctionType,
-                decoration: const InputDecoration(
-                  labelText: 'Issue Type',
-                  border: OutlineInputBorder(),
-                ),
-                items: _types.map((t) {
-                  return DropdownMenuItem(value: t['value'], child: Text(t['label']!));
-                }).toList(),
-                onChanged: (v) => setState(() => _correctionType = v!),
-              ),
-              const SizedBox(height: 16),
-
-              // Reason
-              TextFormField(
-                controller: _reasonController,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: 'Justification / Comments',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-                validator: (v) => v!.isEmpty ? 'Please provide a reason' : null,
-              ),
-              const SizedBox(height: 24),
-
-              // Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: _isLoading ? null : () => Navigator.pop(context),
-                    child: const Text('Cancel'),
+                // Type
+                DropdownButtonFormField<String>(
+                  value: _correctionType,
+                  decoration: InputDecoration(
+                    labelText: 'Issue Type',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
+                  items: _types.map((t) {
+                    return DropdownMenuItem(value: t['value'], child: Text(t['label']!, style: const TextStyle(fontSize: 14)));
+                  }).toList(),
+                  onChanged: (v) => setState(() => _correctionType = v!),
+                ),
+                const SizedBox(height: 16),
+
+                // Reason
+                TextFormField(
+                  controller: _reasonController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Justification / Comments',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    alignLabelWithHint: true,
+                    contentPadding: const EdgeInsets.all(16),
+                  ),
+                  validator: (v) => v!.isEmpty ? 'Please provide a reason' : null,
+                ),
+                const SizedBox(height: 24),
+
+                // Actions
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
                     onPressed: _isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
+                      backgroundColor: const Color(0xFF5B60F6),
                       foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
                     ),
                     child: _isLoading 
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Submit Request'),
+                        : Text('Submit Request', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

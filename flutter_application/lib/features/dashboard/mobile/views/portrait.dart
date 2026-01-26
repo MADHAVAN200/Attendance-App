@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../shared/widgets/app_sidebar.dart';
+import '../../../../shared/widgets/sidebars/sidebar_mobile.dart';
 import '../../../../shared/widgets/custom_app_bar.dart'; // Import CustomAppBar
 import '../../../../shared/navigation/navigation_controller.dart';
 import 'dashboard_view.dart';
@@ -18,6 +18,7 @@ import '../../../profile/mobile/views/profile_view.dart';
 import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
 import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 import '../../../leave/tablet/views/leave_view.dart';
+import '../../../daily_activity/daily_activity_screen.dart'; // ADDED
 import '../../../feedback/mobile/views/feedback_mobile_view.dart';
 
 class MobilePortrait extends StatelessWidget {
@@ -29,11 +30,11 @@ class MobilePortrait extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      color: isDark ? const Color(0xFF101828) : const Color(0xFFF1F5F9), // Solid background
+      color: isDark ? const Color(0xFF101828) : const Color(0xFFF1F5F9), // Light grey for light mode
       // decoration: BoxDecoration(...) removed for flat design
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        drawer: AppSidebar(
+        drawer: SidebarMobile(
           onLinkTap: () {
             Navigator.pop(context); // Close drawer
           },
@@ -95,6 +96,9 @@ class MobilePortrait extends StatelessWidget {
 
       case PageType.geoFencing:
         return const MobileGeoFencingContent();
+
+      case PageType.dailyActivity:
+        return const DailyActivityScreen(); // ADDED
 
       // PageType.leaves case REMOVED (merged above)
 

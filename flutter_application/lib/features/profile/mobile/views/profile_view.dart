@@ -14,7 +14,7 @@ class MobileProfileContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           // Hero Profile Card
@@ -44,8 +44,8 @@ class MobileProfileContent extends StatelessWidget {
         children: [
           // Avatar
           Container(
-            width: 80,
-            height: 80,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               color: const Color(0xFF5B60F6).withOpacity(0.2),
               shape: BoxShape.circle,
@@ -67,7 +67,7 @@ class MobileProfileContent extends StatelessWidget {
           Text(
             'Mano Admin',
             style: GoogleFonts.poppins(
-              fontSize: 24,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Theme.of(context).textTheme.titleLarge?.color,
             ),
@@ -206,20 +206,20 @@ class MobileProfileContent extends StatelessWidget {
       },
       child: GlassContainer(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        color: Colors.red.withOpacity(0.1), // Distinctive red tint
-        border: Border.all(color: Colors.red.withOpacity(0.3)),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        color: const Color(0xFFEF4444), // Solid Red
+        border: Border.all(color: Colors.red.shade700),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.logout, color: Colors.red),
-            const SizedBox(width: 12),
+            const Icon(Icons.logout, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
             Text(
               'Log Out',
               style: GoogleFonts.poppins(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: Colors.red,
+                color: Colors.white,
               ),
             ),
           ],
@@ -260,7 +260,7 @@ class MobileProfileContent extends StatelessWidget {
               Text(
                 value,
                 style: GoogleFonts.poppins(
-                  fontSize: valueFontSize ?? 14,
+                  fontSize: valueFontSize ?? 13,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),

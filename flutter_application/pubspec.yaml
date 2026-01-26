@@ -56,6 +56,7 @@ dependencies:
   google_maps_flutter: ^2.14.0
   open_filex: ^4.7.0
   responsive_builder: ^0.7.1
+  table_calendar: ^3.2.0
 
 dev_dependencies:
   flutter_test:

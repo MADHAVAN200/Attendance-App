@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../../../shared/widgets/glass_container.dart';
+
+
 import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/services/feedback_service.dart';
+import '../../../../shared/services/mail_service.dart';
+import '../../../../shared/widgets/feedback_success_dialog.dart';
 
 class FeedbackMobileView extends StatefulWidget {
   const FeedbackMobileView({super.key});
@@ -15,63 +18,77 @@ class FeedbackMobileView extends StatefulWidget {
 }
 
 class _FeedbackMobileViewState extends State<FeedbackMobileView> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  late FeedbackService _feedbackService;
-  
-  // State
-  // Admin Lists
-  List<dynamic> _allFeedback = [];
-  bool _isLoadingAll = false;
+  TabController? _tabController; // 1. Nullable
+  int _selectedTabIndex = 0; // Added declaration for _selectedTabIndex
+  late FeedbackService _feedbackService; // Added declaration for _feedbackService
 
-  // Submit Form
-  final _formKey = GlobalKey<FormState>();
+  final _bugFormKey = GlobalKey<FormState>();
+  final _feedbackFormKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
-  String _selectedType = 'BUG';
   List<File> _attachedFiles = [];
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    // 2. Init logic moved to helper or kept here?
+    // We can keep it here for new instances, but for hot reload we need it in build.
+    // Let's rely on _initTabController() called from both or just build.
+    // Simpler: Just do it in build ??= logic is risky if build is called often? 
+    // TabController should only be created once.
     
-    // Initialize Service
     WidgetsBinding.instance.addPostFrameCallback((_) {
        final dio = Provider.of<AuthService>(context, listen: false).dio;
        _feedbackService = FeedbackService(dio);
-       _tabController.addListener(() {
-         if (_tabController.index == 1) _fetchAllFeedback();
-       });
     });
   }
 
-  Future<void> _fetchAllFeedback() async {
-    setState(() => _isLoadingAll = true);
-    try {
-      final data = await _feedbackService.getAllFeedback();
-      if (mounted) setState(() => _allFeedback = data);
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error fetching feedback: $e")));
-    } finally {
-      if (mounted) setState(() => _isLoadingAll = false);
-    }
+  void _initTabController() {
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController!.addListener(() {
+      if (_tabController!.indexIsChanging || _tabController!.index != _selectedTabIndex) {
+        setState(() => _selectedTabIndex = _tabController!.index);
+        FocusManager.instance.primaryFocus?.unfocus();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController?.dispose(); // 4. Safe dispose
+    _titleController.dispose();
+    _descController.dispose();
+    super.dispose();
   }
 
   Future<void> _submitFeedback() async {
-    if (!_formKey.currentState!.validate()) return;
+    final activeKey = _selectedTabIndex == 0 ? _bugFormKey : _feedbackFormKey;
+    if (!activeKey.currentState!.validate()) return;
     
     setState(() => _isSubmitting = true);
     try {
+      final type = _selectedTabIndex == 0 ? 'BUG' : 'FEEDBACK'; // Map tabs to types
+      
       await _feedbackService.submitFeedback(
         title: _titleController.text,
         description: _descController.text,
-        type: _selectedType,
+        type: type,
         files: _attachedFiles,
       );
       
+      // Trigger Email (Async - don't await if you want faster UI, but user wants popup AFTER sending, so await is fine)
+      await MailService().sendFeedbackEmail(
+        title: _titleController.text,
+        description: _descController.text,
+        type: type,
+        attachments: _attachedFiles,
+      );
+      
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Feedback Submitted Successfully")));
+        // Show Success Dialog
+        await FeedbackSuccessDialog.showMobile(context, type: _selectedTabIndex == 0 ? 'Bug Report' : 'Feedback');
+        
         _titleController.clear();
         _descController.clear();
         setState(() => _attachedFiles = []);
@@ -84,7 +101,7 @@ class _FeedbackMobileViewState extends State<FeedbackMobileView> with SingleTick
   }
   
   Future<void> _pickFiles() async {
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true, type: FileType.image);
     if (result != null) {
       setState(() {
         _attachedFiles.addAll(result.paths.where((p) => p != null).map((p) => File(p!)));
@@ -94,242 +111,199 @@ class _FeedbackMobileViewState extends State<FeedbackMobileView> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-     final isAdmin = Provider.of<AuthService>(context).user?.role == 'ADMIN'; 
+     // Lazy init for Hot Reload support
+     if (_tabController == null) {
+       _initTabController();
+     }
 
-     return Column(
-       children: [
-         // Tabs - Compact for Mobile
-         if (isAdmin) _buildTabs(context),
-         
-         Expanded(
-           child: isAdmin 
-             ? TabBarView(
-                 controller: _tabController,
+     final isDark = Theme.of(context).brightness == Brightness.dark; 
+     final primaryColor = const Color(0xFF5B60F6);
+
+     return Scaffold(
+       backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+       body: SafeArea(
+         top: false, // Prevent double padding with CustomAppBar
+         child: Column(
+           children: [
+             // Tab Switcher Fixed at Top
+             Padding(
+               padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+               child: Container(
+                 height: 40,
+                 decoration: BoxDecoration(
+                   color: isDark ? const Color(0xFF1E2939) : const Color(0xFFF1F5F9), 
+                   borderRadius: BorderRadius.circular(12),
+                 ),
+                 padding: const EdgeInsets.all(4),
+                 child: TabBar(
+                   controller: _tabController!,
+                   indicator: BoxDecoration(
+                     color: Colors.white,
+                     borderRadius: BorderRadius.circular(10),
+                     boxShadow: [
+                       BoxShadow(
+                         color: Colors.black.withOpacity(0.05),
+                         blurRadius: 4,
+                         offset: const Offset(0, 1),
+                       ),
+                     ],
+                   ),
+                   indicatorSize: TabBarIndicatorSize.tab,
+                   dividerColor: Colors.transparent,
+                   labelColor: isDark ? const Color(0xFF818CF8) : const Color(0x334155),
+                   unselectedLabelColor: Colors.grey[600],
+                   labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+                   tabs: const [
+                     Tab(text: "Bug Report"),
+                     Tab(text: "Feedback"),
+                   ],
+                 ),
+               ),
+             ),
+
+             Expanded(
+               child: TabBarView(
+                 controller: _tabController!,
                  children: [
-                   _buildSubmitForm(context),
-                   _buildAllFeedbackList(context),
+                   _buildFormContent(isBugReport: true, isDark: isDark, primaryColor: primaryColor),
+                   _buildFormContent(isBugReport: false, isDark: isDark, primaryColor: primaryColor),
                  ],
-               )
-             : _buildSubmitForm(context),
+               ),
+             ),
+           ],
          ),
-       ],
+       ),
      );
   }
 
-  Widget _buildTabs(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      height: 45, // Slightly taller for better touch
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E2939) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        isScrollable: false,
-        indicator: BoxDecoration(
-          color: primaryColor,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        labelColor: Colors.white,
-        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
-        labelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
-        padding: const EdgeInsets.all(4), 
-        tabs: const [
-          Tab(text: 'Submit'),
-          Tab(text: 'All Feedback'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSubmitForm(BuildContext context) {
+  Widget _buildFormContent({required bool isBugReport, required bool isDark, required Color primaryColor}) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: GlassContainer(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Submit Feedback", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-              
-              DropdownButtonFormField<String>(
-                value: _selectedType,
-                items: ['BUG', 'FEATURE', 'IMPROVEMENT', 'OTHER'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-                onChanged: (v) => setState(() => _selectedType = v!),
-                decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
-                style: GoogleFonts.poppins(fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
-              ),
-              const SizedBox(height: 12),
-              
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(labelText: 'Title', border: OutlineInputBorder()),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
-                style: GoogleFonts.poppins(fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              
-              TextFormField(
-                controller: _descController,
-                decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
-                maxLines: 4,
-                validator: (v) => v!.isEmpty ? 'Required' : null,
-                style: GoogleFonts.poppins(fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              
-              OutlinedButton.icon(
-                onPressed: _pickFiles,
-                icon: const Icon(Icons.attach_file, size: 18),
-                label: const Text("Attach"),
-              ),
-              if (_attachedFiles.isNotEmpty)
-                ..._attachedFiles.map((f) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(f.path.split(Platform.pathSeparator).last, style: GoogleFonts.poppins(fontSize: 12)),
-                  trailing: IconButton(icon: const Icon(Icons.close, size: 16), onPressed: () => setState(() => _attachedFiles.remove(f))),
-                  dense: true,
-                )),
-
-              const SizedBox(height: 24),
-              
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submitFeedback,
-                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor, foregroundColor: Colors.white, padding: const EdgeInsets.all(12)),
-                  child: _isSubmitting ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text("Submit"),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+      child: Form(
+         key: isBugReport ? _bugFormKey : _feedbackFormKey,
+         child: Column(
+           crossAxisAlignment: CrossAxisAlignment.start,
+           children: [
+             _buildLabel(isBugReport ? "BUG TITLE" : "FEEDBACK TITLE"),
+             const SizedBox(height: 8),
+             TextFormField(
+               controller: _titleController,
+               style: GoogleFonts.poppins(fontSize: 14),
+               validator: (v) => v!.isEmpty ? 'Required' : null,
+               decoration: InputDecoration(
+                 hintText: isBugReport ? "e.g., Error on Leave Page" : "e.g., Suggestion for Dashboard",
+                 hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
+                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0))),
+                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor)),
+                 filled: true,
+                 fillColor: isDark ? const Color(0xFF1E2939) : const Color(0xFFF8FAFC),
+               ),
+             ),
+             const SizedBox(height: 20),
+             
+             _buildLabel(isBugReport ? "BUG DESCRIPTION" : "DESCRIPTION"),
+             const SizedBox(height: 8),
+             TextFormField(
+               controller: _descController,
+               minLines: 4,
+               maxLines: null,
+               style: GoogleFonts.poppins(fontSize: 14),
+               validator: (v) => v!.isEmpty ? 'Required' : null,
+               decoration: InputDecoration(
+                 hintText: isBugReport ? "Describe the issue and steps to reproduce..." : "Describe your feedback or suggestion...",
+                 hintStyle: GoogleFonts.poppins(color: Colors.grey[400]),
+                 contentPadding: const EdgeInsets.all(16),
+                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[300]!)),
+                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.white10 : const Color(0xFFE2E8F0))),
+                 focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: primaryColor)),
+                 filled: true,
+                 fillColor: isDark ? const Color(0xFF1E2939) : const Color(0xFFF8FAFC),
+               ),
+             ),
+             const SizedBox(height: 20),
+             
+             _buildLabel("SCREENSHOTS (OPTIONAL)"),
+             const SizedBox(height: 8),
+             
+             InkWell(
+                onTap: _pickFiles,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF1E2939) : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark ? Colors.white10 : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.attach_file, color: primaryColor, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _attachedFiles.isEmpty 
+                            ? "Attach Screenshots (Optional)" 
+                            : "${_attachedFiles.length} file(s) attached",
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: isDark ? Colors.white70 : const Color(0xFF475569),
+                            fontWeight: _attachedFiles.isNotEmpty ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                      if (_attachedFiles.isNotEmpty)
+                        InkWell(
+                          onTap: () => setState(() => _attachedFiles.clear()),
+                          child: Icon(Icons.close, color: Colors.grey[400], size: 18),
+                        )
+                      else 
+                        Icon(Icons.add_a_photo_outlined, color: Colors.grey[400], size: 18),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
+             ),
+             const SizedBox(height: 32),
+             
+             SizedBox(
+               width: double.infinity,
+               child: ElevatedButton(
+                 onPressed: _isSubmitting ? null : _submitFeedback,
+                 style: ElevatedButton.styleFrom(
+                   padding: const EdgeInsets.symmetric(vertical: 16),
+                   backgroundColor: primaryColor,
+                   foregroundColor: Colors.white,
+                   elevation: 0,
+                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                 ),
+                 child: _isSubmitting 
+                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) 
+                   : Text(isBugReport ? "Submit Bug Report" : "Submit Feedback", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+               ),
+             ),
+             const SizedBox(height: 20),
+           ],
+         ),
       ),
     );
   }
 
-  Widget _buildAllFeedbackList(BuildContext context) {
-    if (_isLoadingAll) return const Center(child: CircularProgressIndicator());
-    if (_allFeedback.isEmpty) return const Center(child: Text("No feedback found"));
-
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: _allFeedback.length,
-      itemBuilder: (ctx, i) {
-        final fb = _allFeedback[i];
-        final status = fb['status'] ?? 'OPEN';
-        final color = _getStatusColor(status);
-
-        return GlassContainer(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-               Row(
-                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                 children: [
-                   Container(
-                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                     decoration: BoxDecoration(
-                       color: color.withOpacity(0.1),
-                       borderRadius: BorderRadius.circular(4),
-                       border: Border.all(color: color.withOpacity(0.2)),
-                     ),
-                     child: Text(
-                       status,
-                       style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: color),
-                     ),
-                   ),
-                   Text(
-                     fb['created_at'] != null ? fb['created_at'].toString().split('T')[0] : '', 
-                     style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey),
-                   ),
-                 ],
-               ),
-               const SizedBox(height: 8),
-               Text(
-                 fb['title'] ?? 'No Title', 
-                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color),
-               ),
-               const SizedBox(height: 4),
-               Text(
-                 fb['description'] ?? '', 
-                 style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
-                 maxLines: 2, 
-                 overflow: TextOverflow.ellipsis,
-               ),
-               const SizedBox(height: 12),
-               SizedBox(
-                 width: double.infinity,
-                 child: OutlinedButton(
-                   onPressed: () => _showStatusDialog(fb),
-                   style: OutlinedButton.styleFrom(
-                     padding: const EdgeInsets.symmetric(vertical: 8),
-                     side: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                   ),
-                   child: Text("Update Status", style: GoogleFonts.poppins(fontSize: 12)),
-                 ),
-               ),
-            ],
-          ),
-        );
-      },
+  Widget _buildLabel(String text) {
+    return Text(
+      text, 
+      style: GoogleFonts.poppins(
+        fontSize: 10, 
+        fontWeight: FontWeight.bold, 
+        color: const Color(0xFF64748B),
+        letterSpacing: 0.5,
+      )
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'OPEN': return Colors.blue;
-      case 'IN_PROGRESS': return Colors.orange;
-      case 'RESOLVED': return Colors.green;
-      case 'CLOSED': return Colors.grey;
-      default: return Colors.blue;
-    }
-  }
-
-  void _showStatusDialog(dynamic feedback) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text("Update Status"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'].map((s) => 
-               ListTile(
-                 title: Text(s),
-                 onTap: () async {
-                    Navigator.pop(ctx);
-                    await _updateStatus(feedback['feedback_id'], s);
-                 },
-               )
-            ).toList(),
-          ),
-        );
-      }
-    );
-  }
-
-  Future<void> _updateStatus(int id, String status) async {
-    try {
-      await _feedbackService.updateFeedbackStatus(id, status);
-      if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Status Updated")));
-         _fetchAllFeedback();
-      }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed: $e")));
-    }
-  }
 }
+
+

@@ -14,7 +14,7 @@ class SidebarMobile extends StatelessWidget {
   Widget build(BuildContext context) {
     // Mobile Drawer Standard Width
     return Drawer(
-      width: 280,
+      width: 240,
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: GlassContainer(
@@ -41,59 +41,80 @@ class _SidebarContent extends StatelessWidget {
     return ValueListenableBuilder<PageType>(
       valueListenable: navigationNotifier,
       builder: (context, currentPage, _) {
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-            // Sidebar Header
-            Container(
-              height: 100, // Taller header for mobile drawer
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              alignment: Alignment.bottomLeft,
-              margin: const EdgeInsets.only(bottom: 24),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.change_history, 
-                    color: Theme.of(context).primaryColor,
-                    size: 32,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'MANO',
-                    style: GoogleFonts.poppins(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).brightness == Brightness.dark 
-                          ? Colors.white 
-                          : Theme.of(context).primaryColor,
+        return Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Sidebar Header
+                    Container(
+                      height: 80, // Taller header for mobile drawer
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      alignment: Alignment.bottomLeft,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.change_history, 
+                            color: Theme.of(context).primaryColor,
+                            size: 28,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'MANO',
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                  ? Colors.white 
+                                  : Theme.of(context).primaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    
+                    // Menu Items (Excluding Feedback)
+                    ...PageType.values.where((p) {
+                      if (p == PageType.feedback) return false; // Handled separately at bottom
+                      final user = context.read<AuthService>().user;
+                      if (user != null && user.isEmployee) {
+                          final allowed = [
+                            PageType.dashboard,
+                            PageType.myAttendance,
+                            PageType.leavesAndHolidays,
+                            PageType.dailyActivity,
+                            PageType.feedback, // Kept in logic for permission check, but excluded from this loop
+                            PageType.profile,
+                          ];
+                          if (!allowed.contains(p)) return false;
+                      }
+                      return true; 
+                    }).map((page) => _buildMenuItem(
+                      context, 
+                      page,
+                      currentPage == page,
+                    )),
+                  ],
+                ),
               ),
             ),
             
-            // Menu Items
-            ...PageType.values.where((p) {
-              final user = context.read<AuthService>().user;
-              if (user != null && user.isEmployee) {
-                  final allowed = [
-                    PageType.dashboard,
-                    PageType.myAttendance,
-                    PageType.leavesAndHolidays,
-                    PageType.dailyActivity,
-                    PageType.feedback,
-                    PageType.profile,
-                  ];
-                  if (!allowed.contains(p)) return false;
-              }
-              return true; // Show all on mobile
-            }).map((page) => _buildMenuItem(
-              context, 
-              page,
-              currentPage == page,
-            )),
+            // Fixed Bottom Item: Feedback
+            if (PageType.values.contains(PageType.feedback)) ...[
+               Padding(
+                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                 child: Divider(color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withOpacity(0.1) : Colors.black12, height: 1),
+               ),
+               _buildMenuItem(
+                 context, 
+                 PageType.feedback, 
+                 currentPage == PageType.feedback
+               ),
+               const SizedBox(height: 16), // Bottom Padding
+            ]
           ],
-          ),
         );
       }
     );
@@ -103,29 +124,33 @@ class _SidebarContent extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       decoration: BoxDecoration(
         color: isActive 
-            ? (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05))
+            ? (isDark ? Colors.white.withOpacity(0.1) : const Color(0xFF4338CA).withOpacity(0.1))
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
       child: ListTile(
         horizontalTitleGap: 8,
         minLeadingWidth: 20,
+        dense: true,
+        visualDensity: VisualDensity.compact,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
         leading: Icon(
           page.icon,
+          size: 20,
           color: isActive 
-              ? (isDark ? Colors.white : Colors.black)
+              ? (isDark ? Colors.white : const Color(0xFF4338CA))
               : (isDark ? Colors.grey : Colors.black54),
         ),
         title: Text(
           page.title,
           style: GoogleFonts.poppins(
-            fontSize: 14, // Slightly larger font for mobile touch
+            fontSize: 12, // Slightly larger font for mobile touch
             fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
             color: isActive 
-                ? (isDark ? Colors.white : Colors.black)
+                ? (isDark ? Colors.white : const Color(0xFF4338CA))
                 : (isDark ? Colors.grey[400] : Colors.black87),
           ),
         ),

@@ -15,7 +15,7 @@ import '../../../../shared/services/auth_service.dart';
 import '../../models/attendance_record.dart';
 import '../../services/attendance_service.dart';
 import 'late_arrival_dialog_mobile.dart';
-import '../../tablet/widgets/correction_request_dialog.dart';
+import 'correction_request_dialog_mobile.dart';
 import '../../providers/attendance_provider.dart';
 
 class MarkAttendanceMobile extends StatefulWidget {
@@ -253,8 +253,8 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(isActive ? 1.0 : 0.5))),
-                  Text(subLabel, style: GoogleFonts.poppins(fontSize: 13, color: Theme.of(context).textTheme.bodySmall?.color)),
+                  Text(label, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(isActive ? 1.0 : 0.5))),
+                  Text(subLabel, style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color)),
                 ],
               ),
               const Spacer(),
@@ -274,7 +274,7 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
         Text(
           'Activity',
           style: GoogleFonts.poppins(
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).textTheme.bodyLarge?.color,
           ),
@@ -286,7 +286,7 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
               child: InkWell(
                  onTap: () {
                    final attendanceId = records.isNotEmpty ? records.first.attendanceId : null;
-                   CorrectionRequestDialog.show(context, date: _selectedDate, attendanceId: attendanceId);
+                   CorrectionRequestDialogMobile.show(context, date: _selectedDate, attendanceId: attendanceId);
                  },
                  child: GlassContainer(
                    height: 44,
@@ -297,7 +297,7 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
                      children: [
                        Icon(Icons.edit_note, size: 18, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).primaryColor),
                        const SizedBox(width: 8),
-                       Text('Correction', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
+                       Text('Correction', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500)),
                      ],
                    ),
                  ),
@@ -333,7 +333,7 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
                       Flexible(
                         child: Text(
                           DateFormat('dd MMM').format(_selectedDate),
-                          style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                          style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -389,7 +389,7 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
                     : Text(
                         'Currently Active', 
                         style: GoogleFonts.poppins(
-                          fontSize: 14, 
+                          fontSize: 13, 
                           fontWeight: FontWeight.w600, 
                           color: const Color(0xFF10B981)
                         )
@@ -418,30 +418,111 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
         Text(
           time, 
           style: GoogleFonts.poppins(
-            fontSize: 16, 
+            fontSize: 14, 
             fontWeight: FontWeight.bold,
             color: Theme.of(context).textTheme.bodyLarge?.color
           )
         ),
         const SizedBox(height: 4),
-        Text(location, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey, height: 1.3)),
+        Text(location, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey, height: 1.3)),
       ],
     );
   }
 
   Widget _buildAvatar(BuildContext context, String? imageUrl) {
-      return Container(
-        width: 40,
-        height: 40,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+      if (imageUrl == null || imageUrl.isEmpty) {
+        return Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+          ),
+          child: const Icon(Icons.person, size: 24, color: Colors.white),
+        );
+      }
+
+      return InkWell(
+        onTap: () => _showImagePreview(context, imageUrl, "Attendance Image"),
+        child: Container(
+          width: 40,
+          height: 40,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+          ),
+          child: CachedNetworkImage(
+            imageUrl: imageUrl, 
+            fit: BoxFit.cover, // Fixed: Use cover to fill the box (portrait look)
+            errorWidget: (_,__,___) => const Icon(Icons.person, color: Colors.white),
+            placeholder: (_,__) => const Center(child: SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))),
+          ),
         ),
-        child: imageUrl != null && imageUrl.isNotEmpty
-            ? CachedNetworkImage(imageUrl: imageUrl, fit: BoxFit.contain, errorWidget: (_,__,___) => const Icon(Icons.person, color: Colors.white))
-            : const Icon(Icons.person, size: 24, color: Colors.white),
       );
+  }
+
+  void _showImagePreview(BuildContext context, String imageUrl, String title) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E2939) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  )
+                ],
+              ),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 200,
+                    color: Colors.grey[200],
+                    alignment: Alignment.center,
+                    child: Column(
+                       mainAxisAlignment: MainAxisAlignment.center,
+                       children: [
+                         const Icon(Icons.broken_image, color: Colors.grey, size: 40),
+                         const SizedBox(height: 8),
+                         Text("Image not available", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                       ],
+                    ),
+                  ),
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 200,
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

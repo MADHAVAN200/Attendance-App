@@ -28,7 +28,12 @@ class AttendanceHistoryMobile extends StatelessWidget {
         const SizedBox(height: 32),
 
         _buildWeekSection(context, 'Week 3', [
-           _buildHistoryCard(context, 15, 'Thursday, Jan 15', 'LATE', 'Simulated Office Location', '01:30 PM', '05:02 PM', '-'),
+           _buildHistoryCard(
+             context, 
+             15, 'Thursday, Jan 15', 'LATE', 'Simulated Office Location', '01:30 PM', '05:02 PM', '-', 
+             inImage: 'https://via.placeholder.com/150',
+             outImage: 'https://via.placeholder.com/150'
+           ),
         ]),
         const SizedBox(height: 24),
 
@@ -48,7 +53,7 @@ class AttendanceHistoryMobile extends StatelessWidget {
         Text(
           title, 
           style: GoogleFonts.poppins(
-            fontSize: 16, 
+            fontSize: 14, 
             fontWeight: FontWeight.bold, 
             color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(0.7) ?? Colors.grey[600]
           )
@@ -59,7 +64,7 @@ class AttendanceHistoryMobile extends StatelessWidget {
     );
   }
 
-  Widget _buildHistoryCard(BuildContext context, int day, String date, String status, String location, String timeIn, String timeOut, String hrs) {
+  Widget _buildHistoryCard(BuildContext context, int day, String date, String status, String location, String timeIn, String timeOut, String hrs, {String? inImage, String? outImage}) {
     final isLate = status == 'LATE';
     final statusColor = isLate ? Colors.orange : Colors.green[100];
     final statusText = isLate ? Colors.orange[800] : Colors.green[800];
@@ -93,8 +98,8 @@ class AttendanceHistoryMobile extends StatelessWidget {
                       Text(
                         date, 
                         style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold, 
-                          fontSize: 13,
+                          fontWeight: FontWeight.w600, 
+                          fontSize: 12,
                           color: Theme.of(context).textTheme.bodyLarge?.color
                         )
                       ),
@@ -102,7 +107,7 @@ class AttendanceHistoryMobile extends StatelessWidget {
                       Text(
                         location, 
                         style: GoogleFonts.poppins(
-                          fontSize: 11, 
+                          fontSize: 10, 
                           color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -125,8 +130,8 @@ class AttendanceHistoryMobile extends StatelessWidget {
            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildTimeColumn(context, 'IN', timeIn),
-                _buildTimeColumn(context, 'OUT', timeOut),
+                _buildTimeColumn(context, 'IN', timeIn, imageUrl: inImage),
+                _buildTimeColumn(context, 'OUT', timeOut, imageUrl: outImage),
                 _buildTimeColumn(context, 'HRS', hrs),
               ],
            )
@@ -135,28 +140,114 @@ class AttendanceHistoryMobile extends StatelessWidget {
     );
   }
 
-  Widget _buildTimeColumn(BuildContext context, String label, String value) {
+  Widget _buildTimeColumn(BuildContext context, String label, String value, {String? imageUrl}) {
+    final isUndefined = value == '-' || value.isEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label, 
           style: GoogleFonts.poppins(
-            fontSize: 10, 
+            fontSize: 9, 
             color: Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey, 
             fontWeight: FontWeight.w600
           )
         ),
         const SizedBox(height: 2),
-        Text(
-          value, 
-          style: GoogleFonts.poppins(
-            fontSize: 12, 
-            fontWeight: FontWeight.w500,
-            color: Theme.of(context).textTheme.bodyLarge?.color
+        if (imageUrl != null && !isUndefined)
+          InkWell(
+            onTap: () => _showImagePreview(context, imageUrl, "$label Image"),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value, 
+                  style: GoogleFonts.poppins(
+                    decoration: TextDecoration.underline,
+                  )
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.remove_red_eye_outlined, size: 12, color: Theme.of(context).primaryColor),
+              ],
+            ),
           )
-        ),
+        else
+          Text(
+            value, 
+            style: GoogleFonts.poppins(
+              fontSize: 12, 
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).textTheme.bodyLarge?.color
+            )
+          ),
       ],
+    );
+  }
+
+  void _showImagePreview(BuildContext context, String imageUrl, String title) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E2939) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14)),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  )
+                ],
+              ),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  imageUrl,
+                  height: 450, // Allow sufficient height for portrait
+                  width: double.infinity,
+                  fit: BoxFit.contain, // Show full image without cropping
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 200,
+                    color: Colors.grey[200],
+                    alignment: Alignment.center,
+                    child: Column(
+                       mainAxisAlignment: MainAxisAlignment.center,
+                       children: [
+                         const Icon(Icons.broken_image, color: Colors.grey, size: 40),
+                         const SizedBox(height: 8),
+                         Text("Image not available", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                         // Debug helper
+                         // Text(imageUrl, style: const TextStyle(fontSize: 8)),
+                       ],
+                    ),
+                  ),
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 200,
+                      alignment: Alignment.center,
+                      child: const CircularProgressIndicator(),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

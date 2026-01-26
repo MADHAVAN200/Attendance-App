@@ -30,45 +30,41 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
               children: [
               // Main Tab Bar
               Container(
-                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                 padding: const EdgeInsets.all(2), 
+                 margin: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+                 height: 40,
+                 padding: const EdgeInsets.all(4), 
                  decoration: BoxDecoration(
                    color: Theme.of(context).brightness == Brightness.dark 
-                       ? const Color(0xFF0F172A)
+                       ? const Color(0xFF1E293B)
                        : const Color(0xFFF1F5F9), 
                    borderRadius: BorderRadius.circular(12),
-                   border: Border.all(
-                     color: Theme.of(context).brightness == Brightness.dark 
-                         ? Colors.white.withOpacity(0.1) 
-                         : Colors.transparent
-                   ),
                  ),
-                child: TabBar(
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicator: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.dark 
-                        ? const Color(0xFF334155) 
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
+                  child: TabBar(
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicator: BoxDecoration(
+                      color: Theme.of(context).brightness == Brightness.dark 
+                          ? const Color(0xFF334155) 
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    dividerColor: Colors.transparent,
+                    labelColor: Theme.of(context).brightness == Brightness.dark 
+                        ? const Color(0xFF818CF8) 
+                        : const Color(0xFF4338CA),
+                    unselectedLabelColor: Colors.grey[600],
+                    labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                    tabs: const [
+                      Tab(text: "Mark Attendance"),
+                      Tab(text: "My Attendance"),
                     ],
                   ),
-                  dividerColor: Colors.transparent,
-                  labelColor: const Color(0xFF5B60F6),
-                  unselectedLabelColor: Theme.of(context).brightness == Brightness.dark 
-                      ? const Color(0xFF94A3B8)
-                      : const Color(0xFF64748B),
-                  labelStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
-                  tabs: const [
-                    Tab(text: "Mark Attendance"),
-                    Tab(text: "My Attendance"),
-                  ],
-                ),
               ),
 
               // Tab View
@@ -140,6 +136,7 @@ class _MyAttendanceReportsTabState extends State<_MyAttendanceReportsTab> {
                 label, 
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600, 
+                  fontSize: 12,
                   color: isSelected ? const Color(0xFF5B60F6) : Colors.grey
                 )
               ),

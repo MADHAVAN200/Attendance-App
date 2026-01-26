@@ -122,7 +122,7 @@ class _SidebarContent extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: isActive 
-            ? (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05))
+            ? (isDark ? Colors.white.withOpacity(0.1) : const Color(0xFF4338CA).withOpacity(0.1))
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
@@ -132,7 +132,7 @@ class _SidebarContent extends StatelessWidget {
         leading: Icon(
           page.icon,
           color: isActive 
-              ? (isDark ? Colors.white : Colors.black)
+              ? (isDark ? Colors.white : const Color(0xFF4338CA))
               : (isDark ? Colors.grey : Colors.black54),
         ),
         title: Text(
@@ -141,7 +141,7 @@ class _SidebarContent extends StatelessWidget {
             fontSize: 13,
             fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
             color: isActive 
-                ? (isDark ? Colors.white : Colors.black)
+                ? (isDark ? Colors.white : const Color(0xFF4338CA))
                 : (isDark ? Colors.grey[400] : Colors.black87),
           ),
         ),

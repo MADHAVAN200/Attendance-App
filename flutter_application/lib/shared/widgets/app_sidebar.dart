@@ -23,7 +23,7 @@ class AppSidebar extends StatelessWidget {
       height: double.infinity,
       blur: 0, // No blur
       color: Theme.of(context).brightness == Brightness.dark 
-          ? const Color(0xFF101828) // Explicit Black Mode Color
+          ? const Color(0xFF0F172A) // Darker Sidebar (Slate 900)
           : const Color(0xFFFFFFFF), // Solid White for Light Mode
       borderRadius: 0, 
       child: ValueListenableBuilder<PageType>(

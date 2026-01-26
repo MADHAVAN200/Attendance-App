@@ -6,11 +6,13 @@ import 'attendance_common_widgets.dart';
 class AttendanceHistoryTab extends StatelessWidget {
   final bool shrinkWrap;
   final ScrollPhysics? physics;
+  final EdgeInsetsGeometry? padding;
 
   const AttendanceHistoryTab({
     super.key, 
     this.shrinkWrap = false, 
     this.physics,
+    this.padding,
   });
 
   @override
@@ -18,7 +20,7 @@ class AttendanceHistoryTab extends StatelessWidget {
     return ListView(
       shrinkWrap: shrinkWrap,
       physics: physics,
-      padding: const EdgeInsets.all(24),
+      padding: padding ?? const EdgeInsets.all(24),
       children: [
         // 1. Report Header
         MonthlyReportHeader(

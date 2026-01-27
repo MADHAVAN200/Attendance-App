@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../services/leave_service.dart';
@@ -27,6 +29,7 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
 
   // Form State
   final _reasonController = TextEditingController();
+  final _otherTypeController = TextEditingController(); // ADDED
   String _selectedType = 'Casual Leave';
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now();
@@ -72,10 +75,15 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
 
   Future<void> _submitapplication() async {
       try {
+        if (_selectedType == 'Other' && _otherTypeController.text.trim().isEmpty) {
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please specify the leave type")));
+           return;
+        }
+
         await _leaveService.submitLeaveRequest({
-          'leave_type': _selectedType,
-          'start_date': _startDate.toIso8601String().split('T')[0],
-          'end_date': _endDate.toIso8601String().split('T')[0],
+          'leave_type': _selectedType == 'Other' ? _otherTypeController.text : _selectedType,
+          'start_date': DateFormat('yyyy-MM-dd').format(_startDate),
+          'end_date': DateFormat('yyyy-MM-dd').format(_endDate),
           'reason': _reasonController.text,
         });
         
@@ -83,11 +91,50 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
           Navigator.pop(context); // Close sheet
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Leave Requested Successfully")));
           _reasonController.clear();
+          _otherTypeController.clear(); // Clear other
+          setState(() { // Reset
+             _selectedType = 'Casual Leave'; 
+          });
           _fetchLeaves();
         }
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Submit Failed: $e")));
+        String msg = "Submit Failed: $e";
+        if (e is DioException && e.response?.data != null && e.response!.data is Map) {
+           msg = e.response!.data['message'] ?? msg;
+        }
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       }
+  }
+
+  Future<void> _withdrawRequest(int id) async {
+    try {
+      if (!mounted) return;
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text("Withdraw Request", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+          content: Text("Are you sure you want to withdraw this leave request?", style: GoogleFonts.poppins(fontSize: 14)),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true), 
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text("Withdraw")
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        await _leaveService.withdrawRequest(id);
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Request Withdrawn Successfully")));
+           _fetchLeaves();
+        }
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Withdraw Failed: $e")));
+    }
   }
 
   void _showApplyLeaveSheet() {
@@ -120,93 +167,246 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("New Leave Request", style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),
+                    // Header
+                    Row(
+                      children: [
+                        const Icon(Icons.add, size: 20, color: Color(0xFF5B60F6)),
+                        const SizedBox(width: 8),
+                        Text("Apply for Leave", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Divider(color: isDark ? Colors.white10 : Colors.grey.shade200, height: 1),
                     const SizedBox(height: 24),
-                    
+
+                    // Leave Type
+                    Text("LEAVE TYPE", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[500], letterSpacing: 0.5)),
+                    const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       value: _selectedType,
-                      items: ['Casual Leave', 'Sick Leave', 'Annual Leave', 'Unpaid Leave'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                      dropdownColor: isDark ? const Color(0xFF1E2939) : Colors.white,
+                      style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87, fontSize: 13),
+                      items: ['Casual Leave', 'Sick Leave', 'Other'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
                       onChanged: (v) => setState(() => _selectedType = v!),
                       decoration: InputDecoration(
-                        labelText: 'Leave Type', 
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: const Icon(Icons.category_outlined),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF0F172A) : Colors.grey[50],
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: const Color(0xFF5B60F6)),
+                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
+                      icon: Icon(Icons.keyboard_arrow_down, size: 20, color: Colors.grey[500]),
                     ),
                     const SizedBox(height: 20),
-                    
+
+                    // Conditional: Specify Other
+                    if (_selectedType == 'Other') ...[
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _otherTypeController,
+                        style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87, fontSize: 13),
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF0F172A) : Colors.grey[50],
+                          hintText: "Enter custom leave type",
+                          hintStyle: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 13),
+                          contentPadding: const EdgeInsets.all(16),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: const Color(0xFF5B60F6)),
+                          ),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // Dates
                     Row(
                       children: [
                         Expanded(
-                          child: InkWell(
-                            onTap: () async {
-                              final d = await showDatePicker(
-                                context: context, 
-                                initialDate: _startDate, 
-                                firstDate: DateTime(2020), 
-                                lastDate: DateTime(2030)
-                              );
-                              if(d != null) setState(() => _startDate = d);
-                            },
-                            child: InputDecorator(
-                              decoration: InputDecoration(
-                                labelText: 'Start Date',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                prefixIcon: const Icon(Icons.date_range),
-                              ),
-                              child: Text("${_startDate.toLocal()}".split(' ')[0], style: GoogleFonts.poppins()),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("START DATE", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[500], letterSpacing: 0.5)),
+                              const SizedBox(height: 8),
+                                InkWell(
+                                  borderRadius: BorderRadius.circular(8),
+                                  onTap: () async {
+                                    final d = await showDatePicker(
+                                      context: context, 
+                                      initialDate: _startDate, 
+                                      firstDate: DateTime(2020), 
+                                      lastDate: DateTime(2030),
+                                      builder: (ctx, child) => Theme(
+                                        data: isDark ? ThemeData.dark().copyWith(
+                                          colorScheme: const ColorScheme.dark(
+                                            primary: Color(0xFF5B60F6),
+                                            onPrimary: Colors.white,
+                                            surface: Color(0xFF1E2939),
+                                            onSurface: Colors.white,
+                                          )
+                                        ) : ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: Color(0xFF5B60F6))),
+                                        child: child!,
+                                      ),
+                                    );
+                                    if(d != null && mounted) setState(() => _startDate = d);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF0F172A) : Colors.grey[50],
+                                      border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey[500]),
+                                        const SizedBox(width: 10),
+                                        Text(DateFormat('yyyy-MM-dd').format(_startDate), style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87, fontSize: 13)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: InkWell(
-                            onTap: () async {
-                              final d = await showDatePicker(
-                                context: context, 
-                                initialDate: _endDate, 
-                                firstDate: DateTime(2020), 
-                                lastDate: DateTime(2030)
-                              );
-                              if(d != null) setState(() => _endDate = d);
-                            },
-                            child: InputDecorator(
-                              decoration: InputDecoration(
-                                labelText: 'End Date',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                prefixIcon: const Icon(Icons.event_busy),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("END DATE", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[500], letterSpacing: 0.5)),
+                              const SizedBox(height: 8),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: () async {
+                                  final d = await showDatePicker(
+                                    context: context, 
+                                    initialDate: _endDate, 
+                                    firstDate: DateTime(2020), 
+                                    lastDate: DateTime(2030),
+                                    builder: (ctx, child) => Theme(
+                                      data: isDark ? ThemeData.dark().copyWith(
+                                        colorScheme: const ColorScheme.dark(
+                                          primary: Color(0xFF5B60F6),
+                                          onPrimary: Colors.white,
+                                          surface: Color(0xFF1E2939),
+                                          onSurface: Colors.white,
+                                        )
+                                      ) : ThemeData.light().copyWith(colorScheme: const ColorScheme.light(primary: Color(0xFF5B60F6))),
+                                      child: child!,
+                                    ),
+                                  );
+                                  if(d != null && mounted) setState(() => _endDate = d);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF0F172A) : Colors.grey[50],
+                                    border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey[500]),
+                                      const SizedBox(width: 10),
+                                      Text(DateFormat('yyyy-MM-dd').format(_endDate), style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87, fontSize: 13)),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              child: Text("${_endDate.toLocal()}".split(' ')[0], style: GoogleFonts.poppins()),
-                            ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    
+
+                    // Reason
+                    Text("REASON", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[500], letterSpacing: 0.5)),
+                    const SizedBox(height: 8),
                     TextFormField(
                       controller: _reasonController,
+                      style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87, fontSize: 13),
                       decoration: InputDecoration(
-                        labelText: 'Reason', 
-                        alignLabelWithHint: true,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: const Icon(Icons.description_outlined),
+                        filled: true,
+                        fillColor: isDark ? const Color(0xFF0F172A) : Colors.grey[50],
+                        hintText: "Why do you need leave?",
+                        hintStyle: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 13),
+                        contentPadding: const EdgeInsets.all(16),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: const Color(0xFF5B60F6)),
+                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      maxLines: 4,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Attachment
+                    Text("ATTACHMENT (OPTIONAL)", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey[500], letterSpacing: 0.5)),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF5B60F6).withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.attach_file, size: 14, color: Color(0xFF5B60F6)),
+                          ),
+                          const SizedBox(width: 12),
+                          Text("Click to attach document...", style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 12)),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 32),
-                    
+
                     SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
                         onPressed: _submitapplication,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor, 
+                          backgroundColor: const Color(0xFF5B60F6), 
                           foregroundColor: Colors.white, 
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 0,
                         ),
-                        child: Text("Submit Request", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.check_circle_outline, size: 20),
+                            const SizedBox(width: 8),
+                            Text("Submit Request", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -222,13 +422,11 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: _tabController.index == 1 
-          ? FloatingActionButton(
-              onPressed: _showApplyLeaveSheet,
-              backgroundColor: Theme.of(context).primaryColor,
-              child: const Icon(Icons.add, color: Colors.white),
-            )
-          : null,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showApplyLeaveSheet,
+        backgroundColor: Theme.of(context).primaryColor,
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       body: Column(
         children: [
           _buildTabs(context),
@@ -251,29 +449,35 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      height: 48,
+      margin: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      height: 40,
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E2939) : Colors.white,
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
       ),
       child: TabBar(
         controller: _tabController,
         onTap: (index) => setState(() {}),
         indicator: BoxDecoration(
-          color: primaryColor,
+          color: isDark ? const Color(0xFF334155) : Colors.white,
           borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
-        labelColor: Colors.white,
-        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
+        labelColor: isDark ? const Color(0xFF818CF8) : const Color(0xFF4338CA),
+        unselectedLabelColor: Colors.grey[600],
         labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
-        padding: const EdgeInsets.all(4),
         tabs: const [
           Tab(text: 'Holidays List'),
-          Tab(text: 'Leave Applications'),
+          Tab(text: 'Leaves'),
         ],
       ),
     );
@@ -306,8 +510,8 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(DateFormat('d').format(dt), style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
-                    Text(DateFormat('MMM').format(dt).toUpperCase(), style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                    Text(DateFormat('d').format(dt), style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFF818CF8) : Theme.of(context).primaryColor)),
+                    Text(DateFormat('MMM').format(dt).toUpperCase(), style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: isDark ? const Color(0xFF818CF8) : Theme.of(context).primaryColor)),
                   ],
                 ),
               ),
@@ -339,9 +543,10 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
         final leave = _leaves[index];
         
         Color statusColor = Colors.grey;
-        if (leave['status'] == 'Approved') statusColor = Colors.green;
-        if (leave['status'] == 'Rejected') statusColor = Colors.red;
-        if (leave['status'] == 'Pending') statusColor = Colors.orange;
+        final status = leave['status']?.toString().toLowerCase().trim() ?? '';
+        if (status == 'approved') statusColor = const Color(0xFF22C55E);
+        if (status == 'rejected') statusColor = const Color(0xFFEF4444);
+        if (status == 'pending') statusColor = const Color(0xFFF59E0B);
 
         return GlassContainer(
            margin: const EdgeInsets.only(bottom: 12),
@@ -352,7 +557,10 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
                Row(
                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                  children: [
-                    Text(leave['leave_type'], style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                    Expanded(
+                       child: Text(leave['leave_type'], style: GoogleFonts.poppins(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
@@ -365,13 +573,39 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
                  ],
                ),
                const SizedBox(height: 8),
-               Row(
-                 children: [
-                   Icon(Icons.calendar_today, size: 12, color: Colors.grey[600]),
-                   const SizedBox(width: 6),
-                   Text("${leave['start_date']} - ${leave['end_date']}", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                 ],
-               ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today, size: 12, color: Colors.grey[600]),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              "${leave['start_date']} - ${leave['end_date']}", 
+                              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (leave['status'] == 'Pending')
+                      InkWell(
+                        onTap: () => _withdrawRequest(leave['id']),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.red.withOpacity(0.1),
+                          ),
+                          child: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                        ),
+                      ),
+                  ],
+                ),
              ],
            ),
         );

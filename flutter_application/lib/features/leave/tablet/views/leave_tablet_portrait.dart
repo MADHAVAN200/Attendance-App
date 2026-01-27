@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../services/leave_service.dart';
 import '../../../holidays/services/holiday_service.dart';
+import '../../widgets/holiday_details_dialog.dart';
+import '../../widgets/leave_details_dialog.dart';
 
 class LeaveTabletPortrait extends StatefulWidget {
   const LeaveTabletPortrait({super.key});
@@ -27,6 +31,7 @@ class _LeaveTabletPortraitState extends State<LeaveTabletPortrait> with SingleTi
 
   // Form State
   final _reasonController = TextEditingController();
+  final _otherTypeController = TextEditingController(); // ADDED
   String _selectedType = 'Casual Leave';
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now();
@@ -72,10 +77,15 @@ class _LeaveTabletPortraitState extends State<LeaveTabletPortrait> with SingleTi
 
   Future<void> _submitapplication() async {
       try {
+        if (_selectedType == 'Other' && _otherTypeController.text.trim().isEmpty) {
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Please specify the leave type")));
+           return;
+        }
+
         await _leaveService.submitLeaveRequest({
-          'leave_type': _selectedType,
-          'start_date': _startDate.toIso8601String().split('T')[0],
-          'end_date': _endDate.toIso8601String().split('T')[0],
+          'leave_type': _selectedType == 'Other' ? _otherTypeController.text : _selectedType,
+          'start_date': DateFormat('yyyy-MM-dd').format(_startDate),
+          'end_date': DateFormat('yyyy-MM-dd').format(_endDate),
           'reason': _reasonController.text,
         });
         
@@ -83,10 +93,28 @@ class _LeaveTabletPortraitState extends State<LeaveTabletPortrait> with SingleTi
           Navigator.pop(context); // Close sheet
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Leave Requested Successfully")));
           _reasonController.clear();
+          _otherTypeController.clear();
+          setState(() { _selectedType = 'Casual Leave'; });
           _fetchLeaves();
         }
       } catch (e) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Submit Failed: $e")));
+        String msg = "Submit Failed: $e";
+        if (e is DioException && e.response?.data != null && e.response!.data is Map) {
+           msg = e.response!.data['message'] ?? msg;
+        }
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
+  }
+
+  Future<void> _withdrawRequest(int id) async {
+      try {
+        await _leaveService.withdrawRequest(id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Request Withdrawn")));
+          _fetchLeaves();
+        }
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Withdraw Failed: $e")));
       }
   }
 
@@ -108,7 +136,7 @@ class _LeaveTabletPortraitState extends State<LeaveTabletPortrait> with SingleTi
                 
                 DropdownButtonFormField<String>(
                   value: _selectedType,
-                  items: ['Casual Leave', 'Sick Leave', 'Annual Leave', 'Unpaid Leave'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                  items: ['Casual Leave', 'Sick Leave', 'Other'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
                   onChanged: (v) => setState(() => _selectedType = v!),
                   decoration: InputDecoration(
                     labelText: 'Leave Type', 
@@ -116,6 +144,16 @@ class _LeaveTabletPortraitState extends State<LeaveTabletPortrait> with SingleTi
                     prefixIcon: const Icon(Icons.category_outlined),
                   ),
                 ),
+                if (_selectedType == 'Other') ...[
+                   const SizedBox(height: 16),
+                   TextFormField(
+                     controller: _otherTypeController,
+                     decoration: InputDecoration(
+                       labelText: 'Specify Custom Type', 
+                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                     ),
+                   )
+                ],
                 const SizedBox(height: 20),
                 
                 Row(
@@ -204,26 +242,7 @@ class _LeaveTabletPortraitState extends State<LeaveTabletPortrait> with SingleTi
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
-           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-           children: [
-             _buildTabs(context),
-             Padding(
-               padding: const EdgeInsets.only(right: 24.0),
-               child: _tabController.index == 1 ? ElevatedButton.icon(
-                 onPressed: _showApplyLeaveDialog,
-                 icon: const Icon(Icons.add, size: 18),
-                 label: const Text("Apply"),
-                 style: ElevatedButton.styleFrom(
-                   backgroundColor: Theme.of(context).primaryColor,
-                   foregroundColor: Colors.white,
-                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                 ),
-               ) : null,
-             )
-           ],
-        ),
+        _buildTabs(context),
         
         Expanded(
           child: TabBarView(
@@ -239,34 +258,63 @@ class _LeaveTabletPortraitState extends State<LeaveTabletPortrait> with SingleTi
   }
 
   Widget _buildTabs(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
-      width: 350,
-      margin: const EdgeInsets.all(24),
-      height: 48,
+      margin: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A).withOpacity(0.5) : Colors.white,
+        color: Theme.of(context).brightness == Brightness.dark 
+            ? const Color(0xFF0F172A) 
+            : const Color(0xFFF1F5F9), // Match MyAttendanceView
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? Colors.white.withOpacity(0.1) 
+              : Colors.grey[300]!
+        ),
       ),
       child: TabBar(
         controller: _tabController,
-        onTap: (index) => setState(() {}),
-        indicator: BoxDecoration(
-          color: primaryColor,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        labelColor: Colors.white,
-        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
-        labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
         indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? const Color(0xFF334155) 
+              : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
         dividerColor: Colors.transparent,
-        padding: const EdgeInsets.all(4),
+        labelColor: const Color(0xFF5B60F6), // Match MyAttendanceView
+        unselectedLabelColor: Theme.of(context).brightness == Brightness.dark 
+            ? const Color(0xFF94A3B8)
+            : const Color(0xFF64748B),
+        labelStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
         tabs: const [
-          Tab(text: 'Holidays List'),
-          Tab(text: 'Leave Applications'),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.calendar_today_outlined, size: 16),
+                SizedBox(width: 8),
+                Text("Holidays List"),
+              ],
+            ),
+          ),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.description_outlined, size: 16),
+                SizedBox(width: 8),
+                Text("Leave Applications"),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -283,37 +331,40 @@ class _LeaveTabletPortraitState extends State<LeaveTabletPortrait> with SingleTi
         final holiday = _holidays[index];
         final dt = DateTime.parse(holiday.date);
         
-        return GlassContainer(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+        return InkWell(
+          onTap: () => HolidayDetailsDialog.showPortrait(context, holiday: holiday),
+          child: GlassContainer(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(DateFormat('d').format(dt), style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                      Text(DateFormat('MMM').format(dt).toUpperCase(), style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(DateFormat('d').format(dt), style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
-                    Text(DateFormat('MMM').format(dt).toUpperCase(), style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
-                  ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(holiday.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
+                      Text(DateFormat('EEEE').format(dt), style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(holiday.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16)),
-                    Text(DateFormat('EEEE').format(dt), style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -324,52 +375,82 @@ class _LeaveTabletPortraitState extends State<LeaveTabletPortrait> with SingleTi
     if (_isLoadingLeaves) return const Center(child: CircularProgressIndicator());
     if (_leaves.isEmpty) return Center(child: Text("No leave requests found", style: GoogleFonts.poppins(color: Colors.grey)));
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      itemCount: _leaves.length,
-      itemBuilder: (context, index) {
-        final leave = _leaves[index];
-        
-        Color statusColor = Colors.grey;
-        if (leave['status'] == 'Approved') statusColor = Colors.green;
-        if (leave['status'] == 'Rejected') statusColor = Colors.red;
-        if (leave['status'] == 'Pending') statusColor = Colors.orange;
-
-        return GlassContainer(
-           margin: const EdgeInsets.only(bottom: 12),
-           padding: const EdgeInsets.all(16),
-           child: Column(
-             crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      children: [
+         Padding(
+           padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+           child: Row(
              children: [
-               Row(
-                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                 children: [
-                    Text(leave['leave_type'], style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: statusColor.withOpacity(0.2))
-                      ),
-                      child: Text(leave['status'], style: GoogleFonts.poppins(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold)),
-                    ),
-                 ],
+               const Spacer(),
+               ElevatedButton.icon(
+                 onPressed: _showApplyLeaveDialog,
+                 icon: const Icon(Icons.add, size: 18),
+                 label: const Text("Apply Leave"),
+                 style: ElevatedButton.styleFrom(
+                   backgroundColor: Theme.of(context).primaryColor,
+                   foregroundColor: Colors.white,
+                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                   textStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                 ),
                ),
-               const SizedBox(height: 8),
-               Row(
-                 children: [
-                   Icon(Icons.calendar_today, size: 12, color: Colors.grey[600]),
-                   const SizedBox(width: 6),
-                   Text("${leave['start_date']} - ${leave['end_date']}", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                 ],
-               ),
-               const SizedBox(height: 8),
-               Text(leave['reason'] ?? '', style: GoogleFonts.poppins(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey[500])),
              ],
            ),
-        );
-      },
+         ),
+         Expanded(
+           child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              itemCount: _leaves.length,
+              itemBuilder: (context, index) {
+                final leave = _leaves[index];
+                
+                Color statusColor = Colors.grey;
+                final status = leave['status']?.toString().toLowerCase().trim() ?? '';
+                if (status == 'approved') statusColor = const Color(0xFF22C55E);
+                if (status == 'rejected') statusColor = const Color(0xFFEF4444);
+                if (status == 'pending') statusColor = const Color(0xFFF59E0B);
+        
+                return InkWell(
+                  onTap: () => LeaveDetailsDialog.showPortrait(context, leave: leave, onWithdraw: () => _withdrawRequest(leave['id'])),
+                  child: GlassContainer(
+                   margin: const EdgeInsets.only(bottom: 12),
+                   padding: const EdgeInsets.all(16),
+                   child: Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Row(
+                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                         children: [
+                            Text(leave['leave_type'], style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: statusColor.withOpacity(0.2))
+                              ),
+                              child: Text(leave['status'], style: GoogleFonts.poppins(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold)),
+                            ),
+                         ],
+                       ),
+                       const SizedBox(height: 8),
+                       Row(
+                         children: [
+                           Icon(Icons.calendar_today, size: 12, color: Colors.grey[600]),
+                           const SizedBox(width: 6),
+                           Text("${leave['start_date']} - ${leave['end_date']}", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                         ],
+                       ),
+                       const SizedBox(height: 8),
+                       Text(leave['reason'] ?? '', style: GoogleFonts.poppins(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey[500])),
+                     ],
+                   ),
+                 ),
+               );
+              },
+            ),
+         ),
+      ],
     );
   }
 }

@@ -124,20 +124,27 @@ class _MyAttendanceReportsTabState extends State<_MyAttendanceReportsTab> {
 
   Widget _buildSubTab(String label, int index, IconData icon) {
     final isSelected = _selectedIndex == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Standardized Tab Colors
+    final selectedColor = isDark ? const Color(0xFF818CF8) : const Color(0xFF4338CA);
+    final unselectedColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final activeColor = isSelected ? selectedColor : unselectedColor;
+
     return InkWell(
       onTap: () => setState(() => _selectedIndex = index),
       child: Column(
         children: [
           Row(
             children: [
-              Icon(icon, size: 16, color: isSelected ? const Color(0xFF5B60F6) : Colors.grey),
+              Icon(icon, size: 16, color: activeColor),
               const SizedBox(width: 8),
               Text(
                 label, 
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600, 
                   fontSize: 12,
-                  color: isSelected ? const Color(0xFF5B60F6) : Colors.grey
+                  color: activeColor
                 )
               ),
             ],
@@ -146,7 +153,7 @@ class _MyAttendanceReportsTabState extends State<_MyAttendanceReportsTab> {
           Container(
             height: 2,
             width: 80,
-            color: isSelected ? const Color(0xFF5B60F6) : Colors.transparent,
+            color: isSelected ? selectedColor : Colors.transparent,
           ),
         ],
       ),

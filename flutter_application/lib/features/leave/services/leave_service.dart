@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
 import '../../../shared/constants/api_constants.dart';
 
@@ -10,7 +11,7 @@ class LeaveService {
   Future<List<dynamic>> getMyHistory() async {
     try {
       final response = await _dio.get(ApiConstants.leavesMyHistory);
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if (response.statusCode == 200 && (response.data['ok'] == true || response.data['success'] == true)) {
         return response.data['leaves'] ?? [];
       }
       return [];
@@ -21,27 +22,63 @@ class LeaveService {
 
   // 2. Submit Leave Request
   Future<void> submitLeaveRequest(Map<String, dynamic> requestData) async {
-    try {
-      await _dio.post(ApiConstants.leavesRequest, data: requestData);
-    } catch (e) {
-      throw Exception('Failed to submit leave request: $e');
-    }
+      dynamic data = requestData;
+      
+      // Check for file attachment and convert to FormData
+      // Check if attachment exists and is not null
+      if (requestData.containsKey('attachment') && requestData['attachment'] != null) {
+        final attachment = requestData['attachment'];
+        
+        // Robust check: Check type OR if it looks like a PlatformFile (has bytes/path)
+        final isFile = attachment is PlatformFile || attachment.runtimeType.toString().contains('PlatformFile');
+        
+        if (isFile) {
+           final dynamic file = attachment; // Cast to dynamic to avoid type issues if class identity mismatch
+           
+           // Remove attachment from map to avoid duplicate or error
+           final map = Map<String, dynamic>.from(requestData);
+           map.remove('attachment');
+
+           final formData = FormData.fromMap(map);
+           
+           bool added = false;
+           // Append file
+           if (file.bytes != null) {
+             formData.files.add(MapEntry(
+               'attachment',
+               MultipartFile.fromBytes(file.bytes!, filename: file.name),
+             ));
+             added = true;
+           } else if (file.path != null) {
+             formData.files.add(MapEntry(
+               'attachment',
+               await MultipartFile.fromFile(file.path!, filename: file.name),
+             ));
+             added = true;
+           }
+           
+           if(added) data = formData;
+        } else {
+          // If it's something else not encodable, remove it to prevent crash
+           final map = Map<String, dynamic>.from(requestData);
+           map.remove('attachment');
+           data = map;
+        }
+      }
+
+      await _dio.post(ApiConstants.leavesRequest, data: data);
   }
 
   // 3. Withdraw Request
   Future<void> withdrawRequest(int id) async {
-    try {
       await _dio.delete('${ApiConstants.leavesRequest}/$id');
-    } catch (e) {
-      throw Exception('Failed to withdraw request: $e');
-    }
   }
 
   // 4. Admin - Pending Requests
   Future<List<dynamic>> getPendingRequests() async {
     try {
       final response = await _dio.get(ApiConstants.leavesAdminPending);
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if (response.statusCode == 200 && (response.data['ok'] == true || response.data['success'] == true)) {
         return response.data['requests'] ?? [];
       }
       return [];
@@ -56,7 +93,7 @@ class LeaveService {
       final response = await _dio.get(ApiConstants.leavesAdminHistory, queryParameters: {
         'status': status
       });
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if (response.statusCode == 200 && (response.data['ok'] == true || response.data['success'] == true)) {
         return response.data['history'] ?? [];
       }
       return [];

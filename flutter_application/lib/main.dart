@@ -9,7 +9,8 @@ import 'shared/widgets/orientation_guard.dart';
 import 'shared/services/auth_service.dart';
 
 import 'shared/services/notification_service.dart';
-import 'shared/services/dashboard_provider.dart'; // Import NotificationService
+import 'shared/services/dashboard_provider.dart'; 
+import 'features/attendance/providers/attendance_provider.dart'; // Import AttendanceProvider
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,7 @@ void main() async {
         ChangeNotifierProvider<AuthService>.value(value: authService),
         ChangeNotifierProvider<NotificationService>.value(value: notificationService),
         ChangeNotifierProvider<DashboardProvider>(create: (_) => DashboardProvider(authService)),
+        ChangeNotifierProvider<AttendanceProvider>(create: (_) => AttendanceProvider(authService)),
       ],
       child: const AttendanceApp(),
     ),

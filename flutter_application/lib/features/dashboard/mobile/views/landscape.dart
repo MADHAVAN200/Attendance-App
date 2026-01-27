@@ -23,6 +23,7 @@ import '../../../reports/mobile/views/reports_view.dart';
 import '../../../holidays/mobile/views/holidays_view.dart';
 import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
 import '../../../leave/tablet/views/leave_view.dart'; // Reusing tablet view
+import '../../../daily_activity/daily_activity_screen.dart'; // ADDED
 import '../../../feedback/mobile/views/feedback_mobile_view.dart'; // Reusing tablet view
 
 class MobileLandscape extends StatelessWidget {
@@ -80,7 +81,8 @@ class MobileLandscape extends StatelessWidget {
       case PageType.geoFencing:
         return const MobileGeoFencingContent();
 
-      // PageType.leaves case REMOVED (merged above)
+      case PageType.dailyActivity:
+        return const DailyActivityScreen(); // ADDED
            
       case PageType.feedback:
            return const FeedbackMobileView();

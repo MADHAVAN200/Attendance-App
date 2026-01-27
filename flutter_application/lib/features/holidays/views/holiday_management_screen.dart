@@ -312,7 +312,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
       text,
       textAlign: alignRight ? TextAlign.end : TextAlign.start,
       style: GoogleFonts.poppins(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.bold,
         color: Colors.grey,
         letterSpacing: 0.5,
@@ -335,7 +335,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
                 holiday.name,
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                  fontSize: 13,
                   color: isDark ? Colors.white : Colors.black87,
                 ),
               ),
@@ -347,13 +347,13 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
             flex: 2,
             child: Row(
               children: [
-                Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey[500]),
+                Icon(Icons.calendar_today_outlined, size: 16, color: isDark ? Colors.white70 : Colors.grey[500]),
                 const SizedBox(width: 8),
                 Text(
                   _formatDate(holiday.date),
                   style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.grey[400],
+                    fontSize: 13,
+                    color: isDark ? Colors.white70 : Colors.grey[400],
                   ),
                 ),
               ],
@@ -404,7 +404,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
                     holiday.name,
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w600,
-                      fontSize: 15,
+                      fontSize: 14,
                       color: isDark ? Colors.white : Colors.black87,
                     ),
                   ),
@@ -415,11 +415,11 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey[500]),
+                Icon(Icons.calendar_today_outlined, size: 14, color: isDark ? Colors.white70 : Colors.grey[500]),
                 const SizedBox(width: 8),
                 Text(
                   _formatDate(holiday.date),
-                  style: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[400]),
+                  style: GoogleFonts.poppins(fontSize: 12, color: isDark ? Colors.white70 : Colors.grey[400]),
                 ),
                 const Spacer(),
                 if (!isEmployee)
@@ -465,7 +465,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
       child: Text(
         type,
         style: GoogleFonts.poppins(
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: FontWeight.w500,
           color: textColor,
         ),
@@ -625,7 +625,7 @@ class __HolidayFormDialogState extends State<_HolidayFormDialog> {
         Text(
           "Add Holiday",
           style: GoogleFonts.poppins(
-            fontSize: 20, 
+            fontSize: 18, 
             fontWeight: FontWeight.w600, 
             color: isDark ? Colors.white : Colors.black87
           ),

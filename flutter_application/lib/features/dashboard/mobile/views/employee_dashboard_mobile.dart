@@ -36,9 +36,9 @@ class MobileEmployeeDashboardContent extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1.1, // Adjust for portrait
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1.3, // Adjust for portrait
                 children: [
                   EmployeeStatCard(
                     label: 'Present Days',

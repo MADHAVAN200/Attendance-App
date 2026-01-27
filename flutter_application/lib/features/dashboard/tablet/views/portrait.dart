@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../../shared/services/dashboard_provider.dart';
 import '../../../../shared/models/dashboard_model.dart';
-import '../../../../shared/widgets/app_sidebar.dart';
+import '../../../../shared/widgets/sidebars/sidebar_tablet_portrait.dart';
 import '../../../../shared/widgets/custom_app_bar.dart';
 import '../../../../shared/navigation/navigation_controller.dart';
 import '../../dashboard.dart';
@@ -20,7 +20,8 @@ import '../../../reports/tablet/views/reports_view.dart';
 import '../../../leave/tablet/views/leave_view.dart'; // UPDATED
 import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 import '../../../profile/tablet/views/profile_view.dart';
-import '../../../feedback/tablet/views/feedback_tablet_view.dart';
+import '../../../feedback/tablet/views/portrait.dart';
+import '../../../daily_activity/daily_activity_screen.dart'; // ADDED
 
 class TabletPortrait extends StatelessWidget {
   const TabletPortrait({super.key});
@@ -30,13 +31,13 @@ class TabletPortrait extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      color: isDark ? const Color(0xFF101828) : const Color(0xFFF8FAFC), // Solid background
+      color: isDark ? const Color(0xFF101828) : const Color(0xFFF8FAFC), // Dynamic background
       // Gradients removed for stricter flat design
       // decoration: BoxDecoration(...) removed
       child: Scaffold(
         extendBodyBehindAppBar: true, 
         backgroundColor: Colors.transparent, // Transparent to show gradient
-        drawer: AppSidebar(
+        drawer: SidebarTabletPortrait(
           onLinkTap: () {
             Navigator.pop(context); // Close drawer on selection
           },
@@ -79,6 +80,8 @@ class TabletPortrait extends StatelessWidget {
                            return LeaveView(); // UPDATED (removed const)
                         case PageType.policyEngine:
                            return const PolicyEngineView();
+                        case PageType.dailyActivity:
+                           return const DailyActivityScreen(); // ADDED
                         case PageType.geoFencing:
                            return Center(
                              child: Column(
@@ -107,7 +110,7 @@ class TabletPortrait extends StatelessWidget {
                              ),
                            );
                         case PageType.feedback:
-                           return const FeedbackTabletView();
+                           return const FeedbackTabletPortrait();
                         case PageType.profile:
                            return const ProfileView();
                         default:

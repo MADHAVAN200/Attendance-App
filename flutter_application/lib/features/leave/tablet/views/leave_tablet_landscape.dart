@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:dio/dio.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../services/leave_service.dart';
 import '../../../holidays/services/holiday_service.dart';
+import '../../widgets/leave_calendar.dart';
+import '../../widgets/leave_form.dart';
+import '../../widgets/holiday_details_dialog.dart';
+import '../../widgets/leave_details_dialog.dart';
 
 class LeaveTabletLandscape extends StatefulWidget {
   const LeaveTabletLandscape({super.key});
@@ -21,17 +26,13 @@ class _LeaveTabletLandscapeState extends State<LeaveTabletLandscape> with Single
 
   bool _isLoadingLeaves = false;
   List<dynamic> _leaves = [];
-  dynamic _selectedLeave; 
-
+  
   bool _isLoadingHolidays = false;
   List<dynamic> _holidays = [];
-
-  // Form State for Apply Dialog
-  final _formKey = GlobalKey<FormState>();
-  final _reasonController = TextEditingController();
-  String _formSelectedType = 'Casual Leave';
-  DateTime _formStartDate = DateTime.now();
-  DateTime _formEndDate = DateTime.now();
+  
+  DateTime _focusedMonth = DateTime.now();
+  DateTime? _selectedStartDate;
+  DateTime? _selectedEndDate;
 
   @override
   void initState() {
@@ -52,14 +53,7 @@ class _LeaveTabletLandscapeState extends State<LeaveTabletLandscape> with Single
     setState(() => _isLoadingLeaves = true);
     try {
       final data = await _leaveService.getMyHistory();
-      if (mounted) {
-        setState(() {
-          _leaves = data;
-          if (_leaves.isNotEmpty && _selectedLeave == null) {
-            _selectedLeave = _leaves.first;
-          }
-        });
-      }
+      if (mounted) setState(() => _leaves = data);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error fetching leaves: $e")));
     } finally {
@@ -79,175 +73,104 @@ class _LeaveTabletLandscapeState extends State<LeaveTabletLandscape> with Single
     }
   }
 
-    Future<void> _submitapplication() async {
-      if (!_formKey.currentState!.validate()) return;
-      try {
-        await _leaveService.submitLeaveRequest({
-          'leave_type': _formSelectedType,
-          'start_date': _formStartDate.toIso8601String().split('T')[0],
-          'end_date': _formEndDate.toIso8601String().split('T')[0],
-          'reason': _reasonController.text,
-        });
-        
-        if (mounted) {
-          Navigator.pop(context); // Close dialog
+  Future<void> _submitLeaveRequest(Map<String, dynamic> data) async {
+    setState(() => _isLoadingLeaves = true); // Use local loading state or pass to form if needed
+    try {
+      // API expects formatted dates? typically YYYY-MM-DD
+      // The form sends them as strings already split by 'T', checking..
+      // Form: 'start_date': _startDate.toIso8601String().split('T')[0] -> Correct
+      
+      await _leaveService.submitLeaveRequest(data);
+       if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Leave Requested Successfully")));
-          _reasonController.clear();
-          _fetchLeaves();
+          _fetchLeaves(); // Refresh history
+          // Reset form? Form handles it or we re-build
         }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Submit Failed: $e")));
+    } catch (e) {
+      String msg = "Submit Failed";
+      if (e is DioException) {
+          msg += " (${e.response?.statusCode ?? 'No Status'})"; // Add Status Code
+          if (e.response?.data != null && e.response!.data is Map) {
+              msg += ": ${e.response!.data['message'] ?? e.message}";
+          } else {
+              msg += ": ${e.message}";
+          }
+      } else {
+        msg += ": $e";
       }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 5)));
+    } finally {
+      if(mounted) setState(() => _isLoadingLeaves = false);
+    }
   }
 
-  void _showApplyLeaveDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: SizedBox(
-          width: 500,
-          child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("New Leave Request", style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 24),
-                  
-                  DropdownButtonFormField<String>(
-                    value: _formSelectedType,
-                    items: ['Casual Leave', 'Sick Leave', 'Annual Leave', 'Unpaid Leave'].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-                    onChanged: (v) => setState(() => _formSelectedType = v!),
-                    decoration: InputDecoration(
-                      labelText: 'Leave Type', 
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      prefixIcon: const Icon(Icons.category_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () async {
-                            final d = await showDatePicker(
-                              context: context, 
-                              initialDate: _formStartDate, 
-                              firstDate: DateTime(2020), 
-                              lastDate: DateTime(2030)
-                            );
-                            if(d != null) setState(() => _formStartDate = d);
-                          },
-                          child: InputDecorator(
-                            decoration: InputDecoration(
-                              labelText: 'Start Date',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              prefixIcon: const Icon(Icons.date_range),
-                            ),
-                            child: Text("${_formStartDate.toLocal()}".split(' ')[0], style: GoogleFonts.poppins()),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () async {
-                            final d = await showDatePicker(
-                              context: context, 
-                              initialDate: _formEndDate, 
-                              firstDate: DateTime(2020), 
-                              lastDate: DateTime(2030)
-                            );
-                            if(d != null) setState(() => _formEndDate = d);
-                          },
-                          child: InputDecorator(
-                            decoration: InputDecoration(
-                              labelText: 'End Date',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              prefixIcon: const Icon(Icons.event_busy),
-                            ),
-                            child: Text("${_formEndDate.toLocal()}".split(' ')[0], style: GoogleFonts.poppins()),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  TextFormField(
-                    controller: _reasonController,
-                    decoration: InputDecoration(
-                      labelText: 'Reason', 
-                      alignLabelWithHint: true,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      prefixIcon: const Icon(Icons.description_outlined),
-                    ),
-                    maxLines: 4,
-                    validator: (v) => v!.isEmpty ? 'Please enter a reason' : null,
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _submitapplication,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor, 
-                        foregroundColor: Colors.white, 
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: Text("Submit Request", style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      )
-    );
+  Future<void> _withdrawRequest(int id) async {
+    try {
+      await _leaveService.withdrawRequest(id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Request Withdrawn")));
+        _fetchLeaves();
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Withdraw Failed: $e")));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildTabs(context),
-            Padding(
-              padding: const EdgeInsets.only(right: 32.0),
-              child: _tabController.index == 1 ? ElevatedButton.icon(
-                onPressed: _showApplyLeaveDialog,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text("Apply Leave"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Left Panel: Content (Flex 1)
+          Expanded(
+            flex: 1,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTabs(context),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      // Tab 1: Holidays List
+                      _buildHolidaysView(context),
+                      // Tab 2: Leave Application
+                      _buildLeaveApplicationView(context),
+                    ],
+                  ),
                 ),
-              ) : null,
-            )
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildHolidaysList(context),
-              _buildMasterDetailLeave(context),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+          
+          const SizedBox(width: 24),
+          
+          // Right Panel: Calendar (Flex 1) now takes 50%
+          Expanded(
+            flex: 1,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Column(
+                children: [
+                  // Calendar Widget
+                  LeaveCalendar(
+                    holidays: _holidays,
+                    leaves: _leaves,
+                    focusedDay: _focusedMonth,
+                    onMonthChanged: (d) => setState(() => _focusedMonth = d),
+                    rangeStart: _selectedStartDate, // Pass trace start
+                    rangeEnd: _selectedEndDate,     // Pass trace end
+                  ),
+                  // Could add Upcoming Events List below calendar here if needed
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -255,305 +178,313 @@ class _LeaveTabletLandscapeState extends State<LeaveTabletLandscape> with Single
     final primaryColor = Theme.of(context).primaryColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      width: 400,
-      margin: const EdgeInsets.fromLTRB(32, 24, 32, 24),
-      height: 48,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E2939) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        onTap: (index) => setState(() {}),
-        indicator: BoxDecoration(
-          color: primaryColor,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        labelColor: Colors.white,
-        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
-        labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
+    return      Container(
+        margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         padding: const EdgeInsets.all(4),
-        tabs: const [
-          Tab(text: 'Holidays List'),
-          Tab(text: 'Leave Application'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHolidaysList(BuildContext context) {
-     if (_isLoadingHolidays) return const Center(child: CircularProgressIndicator());
-    if (_holidays.isEmpty) return Center(child: Text("No holidays found", style: GoogleFonts.poppins(color: Colors.grey)));
-
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3, 
-        childAspectRatio: 2.5,
-        crossAxisSpacing: 20,
-        mainAxisSpacing: 20,
-      ),
-      itemCount: _holidays.length,
-      itemBuilder: (context, index) {
-        final holiday = _holidays[index];
-        final dt = DateTime.parse(holiday.date);
-        
-        return GlassContainer(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(DateFormat('d').format(dt), style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
-                    Text(DateFormat('MMM').format(dt).toUpperCase(), style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(holiday.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Text(DateFormat('EEEE').format(dt), style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!
+          ),
+        ),
+        child: TabBar(
+          controller: _tabController,
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicator: BoxDecoration(
+            color: isDark ? const Color(0xFF334155) : Colors.white,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-        );
-      },
-    );
+          dividerColor: Colors.transparent,
+          labelColor: const Color(0xFF5B60F6),
+          unselectedLabelColor: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+          labelStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+          tabs: const [
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.calendar_today_outlined, size: 16),
+                  SizedBox(width: 8),
+                  Text("Holidays List"),
+                ],
+              ),
+            ),
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.description_outlined, size: 16),
+                  SizedBox(width: 8),
+                  Text("Leave Application"),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
   }
 
-  Widget _buildMasterDetailLeave(BuildContext context) {
-    if (_isLoadingLeaves) return const Center(child: CircularProgressIndicator());
-    if (_leaves.isEmpty) return Center(child: Text("No leave requests found", style: GoogleFonts.poppins(color: Colors.grey)));
+  Widget _buildHolidaysView(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E2939) : Colors.white;
+    final borderColor = isDark ? Colors.transparent : Colors.grey[200]!;
 
-    return Row(
+    return Column(
       children: [
-        // Left Panel: List
-        SizedBox(
-          width: 350,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(32, 0, 16, 16),
-                child: TextField(
-                   decoration: InputDecoration(
-                     hintText: 'Search by leave type...',
-                     prefixIcon: const Icon(Icons.search),
-                     filled: true,
-                     fillColor: Theme.of(context).cardColor,
-                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                   ),
-                ),
-              ),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(left: 32, right: 16, bottom: 20),
-                  itemCount: _leaves.length,
+         TextField(
+             decoration: InputDecoration(
+               hintText: 'Search holidays..',
+               hintStyle: GoogleFonts.poppins(color: Colors.grey),
+               prefixIcon: const Icon(Icons.search, color: Colors.grey),
+               filled: true,
+               fillColor: cardColor,
+               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.transparent : Colors.grey[200]!)),
+               enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: isDark ? Colors.transparent : Colors.grey[200]!)), // Clean white border
+               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+             ),
+          ),
+          const SizedBox(height: 24),
+          // Month Header based on focusedMonth
+          Container(
+             width: double.infinity,
+             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+             decoration: BoxDecoration(
+               color: cardColor,
+               borderRadius: BorderRadius.circular(12),
+               border: Border.all(color: isDark ? Colors.transparent : Colors.grey[200]!),
+             ),
+             child: Text(
+               DateFormat('MMMM yyyy').format(_focusedMonth),
+               style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+             ),
+          ),
+          Expanded(
+            child: _holidays.isEmpty 
+              ? Center(child: _isLoadingHolidays ? const CircularProgressIndicator() : const Text("No holidays"))
+              : ListView.separated(
+                  itemCount: _holidays.length,
+                  separatorBuilder: (c, i) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final leave = _leaves[index];
-                    final isSelected = _selectedLeave == leave;
+                    final holiday = _holidays[index];
+                    final dt = DateTime.parse(holiday.date);
                     
-                    Color statusColor = Colors.grey;
-                    if (leave['status'] == 'Approved') statusColor = Colors.green;
-                    if (leave['status'] == 'Rejected') statusColor = Colors.red;
-                    if (leave['status'] == 'Pending') statusColor = Colors.orange;
+                    if (dt.month != _focusedMonth.month || dt.year != _focusedMonth.year) {
+                      return const SizedBox.shrink(); 
+                    }
 
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedLeave = leave),
+                    return InkWell(
+                      onTap: () => HolidayDetailsDialog.showLandscape(context, holiday: holiday),
                       child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: isSelected 
-                                ? Theme.of(context).primaryColor.withOpacity(0.1) 
-                                : Theme.of(context).cardColor,
-                            borderRadius: BorderRadius.circular(12),
-                          border: isSelected ? Border.all(color: Theme.of(context).primaryColor, width: 1.5) : Border.all(color: Colors.transparent),
+                        decoration: BoxDecoration(
+                          color: cardColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                             Row(
-                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                               children: [
-                                  Text(leave['leave_type'], style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
-                                  Text(leave['status'], style: GoogleFonts.poppins(fontSize: 10, color: statusColor, fontWeight: FontWeight.bold)),
-                               ],
-                             ),
-                             const SizedBox(height: 8),
-                             Text("${leave['start_date']}", style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF6366F1).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                 children: [
+                                    Text(DateFormat('dd').format(dt), style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: const Color(0xFF6366F1))),
+                                    Text(DateFormat('EEE').format(dt).toUpperCase(), style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF6366F1))),
+                                 ],
+                              ),
+                            ),
+                            const SizedBox(width: 20),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                 Text(holiday.name, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16, color: isDark ? Colors.white : Colors.black87)),
+                                 const SizedBox(height: 6),
+                                 Container(
+                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                   decoration: BoxDecoration(
+                                     color: Colors.purple.withOpacity(0.1),
+                                     borderRadius: BorderRadius.circular(6),
+                                   ),
+                                   child: Text("PUBLIC", style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.purple)),
+                                 )
+                              ],
+                            )
                           ],
                         ),
                       ),
                     );
                   },
-                ),
               ),
-            ],
           ),
-        ),
-        
-        // Right Panel: Details
-        Expanded(
-          child: Container(
-            margin: const EdgeInsets.only(right: 32, bottom: 32, left: 16),
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
-            ),
-            child: _selectedLeave == null 
-               ? const Center(child: Text("Select a leave request to view details"))
-               : _buildLeaveDetailPanel(context),
-          ),
-        ),
       ],
     );
   }
 
-  Widget _buildLeaveDetailPanel(BuildContext context) {
-      Color statusColor = Colors.grey;
-      if (_selectedLeave['status'] == 'Approved') statusColor = Colors.green;
-      if (_selectedLeave['status'] == 'Rejected') statusColor = Colors.red;
-      if (_selectedLeave['status'] == 'Pending') statusColor = Colors.orange;
-
-      // Calculate duration roughly
-      final start = DateTime.parse(_selectedLeave['start_date']);
-      final end = DateTime.parse(_selectedLeave['end_date']);
-      final duration = end.difference(start).inDays + 1;
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Leave Request #${_selectedLeave['id']}", style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text("Applied on: ${_selectedLeave['created_at'] ?? 'N/A'}", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)),
-                ],
-              ),
-              Container(
-                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                 decoration: BoxDecoration(color: statusColor, borderRadius: BorderRadius.circular(20)),
-                 child: Row(
-                   children: [
-                     const Icon(Icons.circle, size: 8, color: Colors.white),
-                     const SizedBox(width: 6),
-                     Text(_selectedLeave['status'].toUpperCase(), style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                   ],
-                 ),
-              )
-            ],
-          ),
-          const SizedBox(height: 40),
-          
-          Text("LEAVE DETAILS", style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-          const SizedBox(height: 16),
-          
-          Row(
-            children: [
-               Expanded(
-                 child: _buildDetailBox(context, "Type", _selectedLeave['leave_type']),
-               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-               Expanded(child: _buildDetailBox(context, "From", _selectedLeave['start_date'])),
-               const SizedBox(width: 16),
-               Expanded(child: _buildDetailBox(context, "To", _selectedLeave['end_date'])),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildDetailBox(context, "Duration", "$duration Days", isHighlight: true),
-          
-          const SizedBox(height: 40),
-           Text("JUSTIFICATION & REMARKS", style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
-           const SizedBox(height: 16),
-           
-           Container(
-             width: double.infinity,
-             padding: const EdgeInsets.all(20),
-             decoration: BoxDecoration(
-               border: Border.all(color: Colors.grey.withOpacity(0.3)),
-               borderRadius: BorderRadius.circular(12),
-             ),
-             child: Column(
-               crossAxisAlignment: CrossAxisAlignment.start,
-               children: [
-                 Row(
-                   children: [
-                     const Icon(Icons.comment, size: 16, color: Colors.grey),
-                     const SizedBox(width: 8),
-                     Text("Reason", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)),
-                   ],
-                 ),
-                 const SizedBox(height: 8),
-                 Text('"${_selectedLeave['reason']}"', style: GoogleFonts.poppins(fontStyle: FontStyle.italic, fontSize: 15)),
-               ],
-             ),
-           ),
-           
-           if (_selectedLeave['admin_remarks'] != null) ...[
-             const SizedBox(height: 16),
-             Container(
-               width: double.infinity,
-               padding: const EdgeInsets.all(20),
-               decoration: BoxDecoration(
-                 border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                 borderRadius: BorderRadius.circular(12),
-               ),
-               child: Column(
-                 crossAxisAlignment: CrossAxisAlignment.start,
-                 children: [
-                   Text("Admin Remarks", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12)),
-                   const SizedBox(height: 8),
-                   Text(_selectedLeave['admin_remarks'], style: GoogleFonts.poppins(fontSize: 14)),
-                 ],
-               ),
-             ),
-           ]
-        ],
-      );
-  }
-
-  Widget _buildDetailBox(BuildContext context, String label, String value, {bool isHighlight = false}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isHighlight ? Theme.of(context).primaryColor.withOpacity(0.05) : Colors.transparent,
-        border: Border.all(color: isHighlight ? Theme.of(context).primaryColor.withOpacity(0.2) : Colors.grey.withOpacity(0.3)),
-        borderRadius: BorderRadius.circular(12),
-      ),
+  Widget _buildLeaveApplicationView(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E2939) : Colors.white;
+    final borderColor = isDark ? Colors.transparent : Colors.grey[200]!;
+    
+    return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: GoogleFonts.poppins(color: isHighlight ? Theme.of(context).primaryColor : Colors.grey, fontSize: 12)),
-          const SizedBox(height: 4),
-          Text(value, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: isHighlight ? Theme.of(context).primaryColor : null)),
+          Container(
+             width: double.infinity,
+             padding: const EdgeInsets.all(32),
+             decoration: BoxDecoration(
+               color: cardColor,
+               borderRadius: BorderRadius.circular(24),
+               border: Border.all(color: isDark ? Colors.white.withOpacity(0.02) : borderColor),
+             ),
+             child: LeaveForm(
+               onSubmit: _submitLeaveRequest, 
+               isLoading: _isLoadingLeaves,
+               onDatesChanged: (start, end) {
+                 setState(() {
+                   _selectedStartDate = start;
+                   _selectedEndDate = end;
+                 });
+               },
+             ),
+          ),
+          
+          const SizedBox(height: 32),
+          
+           // History Section (Restored)
+          Text("Leave History", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+          const SizedBox(height: 16),
+          
+           // Summary Card
+           Container(
+             width: double.infinity,
+             padding: const EdgeInsets.all(12),
+             decoration: BoxDecoration(
+               color: cardColor,
+               borderRadius: BorderRadius.circular(16),
+               border: Border.all(color: isDark ? Colors.white.withOpacity(0.02) : borderColor),
+             ),
+             child: Column(
+               children: [
+                 Row(
+                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                   children: [
+                      Text("${_leaves.length} Records", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 13)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(color: const Color(0xFF5B60F6).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                        child: Text("Total Approved: ${_leaves.where((l) => l['status'] == 'Approved').length} Days", style: GoogleFonts.poppins(color: const Color(0xFF5B60F6), fontSize: 11)),
+                      ),
+                   ],
+                 ),
+                 const SizedBox(height: 8),
+                 Row(
+                   children: [
+                     Expanded(
+                       child: Row(
+                         children: [
+                           Expanded(
+                             child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(border: Border.all(color: Colors.grey.withOpacity(0.3)), borderRadius: BorderRadius.circular(8)),
+                                child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("January", style: GoogleFonts.poppins(fontSize: 12, color: isDark?Colors.white:Colors.black)), Icon(Icons.keyboard_arrow_down, size: 16, color: isDark?Colors.white:Colors.black)]),
+                             ),
+                           ),
+                           const SizedBox(width: 8),
+                           SizedBox(
+                             width: 100,
+                             child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                  decoration: BoxDecoration(border: Border.all(color: Colors.grey.withOpacity(0.3)), borderRadius: BorderRadius.circular(8)),
+                                  child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("2026", style: GoogleFonts.poppins(fontSize: 12, color: isDark?Colors.white:Colors.black)), Icon(Icons.keyboard_arrow_down, size: 16, color: isDark?Colors.white:Colors.black)]),
+                               ),
+                           ),
+                         ],
+                       ),
+                     ),
+                   ],
+                 ),
+               ],
+             ),
+           ),
+
+           const SizedBox(height: 16),
+
+           // Cards List
+           ListView.separated(
+               shrinkWrap: true,
+               physics: const NeverScrollableScrollPhysics(),
+               itemCount: _leaves.length,
+               separatorBuilder: (c,i) => const SizedBox(height: 12),
+               itemBuilder: (context, index) {
+                  final leave = _leaves[index];
+                  Color statusColor = Colors.grey;
+                  final status = leave['status']?.toString().toLowerCase().trim() ?? '';
+                  if (status == 'approved') statusColor = const Color(0xFF22C55E);
+                  if (status == 'rejected') statusColor = const Color(0xFFEF4444);
+                  if (status == 'pending') statusColor = const Color(0xFFF59E0B);
+                  
+                  return InkWell(
+                    onTap: () => LeaveDetailsDialog.showLandscape(context, leave: leave, onWithdraw: () => _withdrawRequest(leave['id'])),
+                    child: GlassContainer(
+                      padding: const EdgeInsets.all(12),
+                      borderRadius: 12,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(leave['leave_type'], style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15, color: isDark ? Colors.white : Colors.black87)),
+                              Container(
+                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                 decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                                 child: Text("● ${leave['status'].toUpperCase()}", style: GoogleFonts.poppins(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Divider(height: 1, color: Colors.grey.withOpacity(0.1)),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                              const SizedBox(width: 6),
+                              Text(leave['created_at'] != null ? DateFormat('MMM dd, yyyy').format(DateTime.parse(leave['created_at'])) : '-', style: GoogleFonts.poppins(color: Colors.grey, fontSize: 11)),
+                              const Spacer(),
+                              Text("${leave['days'] ?? '1'} Days", style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.w500, fontSize: 12)), 
+                            ],
+                          ),
+                          if(leave['status'] == 'Pending') ...[
+                             const SizedBox(height: 8),
+                             Align(
+                               alignment: Alignment.centerRight,
+                               child: InkWell(
+                                 onTap: () => _withdrawRequest(leave['id']),
+                                 child: Padding(
+                                   padding: const EdgeInsets.all(2.0),
+                                   child: Text("Withdraw Request", style: GoogleFonts.poppins(color: Colors.red, fontSize: 11, fontWeight: FontWeight.w500)),
+                                 ),
+                               ),
+                             )
+                          ]
+                        ],
+                      ),
+                    ),
+                  );
+               },
+             ),
         ],
       ),
     );

@@ -230,7 +230,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                   border: Border.all(
                     color: Theme.of(context).brightness == Brightness.dark 
                         ? Colors.white.withOpacity(0.1) 
-                        : Colors.transparent
+                        : Colors.grey[300]!
                   ),
                 ),
                 child: TabBar(
@@ -255,8 +255,26 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                       : const Color(0xFF64748B),
                   labelStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
                   tabs: const [
-                    Tab(text: "Mark Attendance"),
-                    Tab(text: "My Attendance"),
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.touch_app_outlined, size: 16),
+                          SizedBox(width: 8),
+                          Text("Mark Attendance"),
+                        ],
+                      ),
+                    ),
+                    Tab(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.history, size: 16),
+                          SizedBox(width: 8),
+                          Text("My Attendance"),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -630,9 +648,9 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E2939) : Colors.grey[100],
+          color: isDark ? const Color(0xFF1E2939) : Colors.white, // Use White instead of grey[100] for cleaner look
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: accentColor.withOpacity(0.1)),
+          border: Border.all(color: accentColor.withOpacity(0.3)), // Increased from 0.1
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -908,19 +926,26 @@ class _MyAttendanceReportsTabState extends State<_MyAttendanceReportsTab> {
 
   Widget _buildSubTab(String label, int index, IconData icon) {
     final isSelected = _selectedIndex == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Standardized Tab Colors
+    final selectedColor = isDark ? const Color(0xFF818CF8) : const Color(0xFF4338CA);
+    final unselectedColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final activeColor = isSelected ? selectedColor : unselectedColor;
+
     return InkWell(
       onTap: () => setState(() => _selectedIndex = index),
       child: Column(
         children: [
           Row(
             children: [
-              Icon(icon, size: 16, color: isSelected ? const Color(0xFF5B60F6) : Colors.grey),
+              Icon(icon, size: 16, color: activeColor),
               const SizedBox(width: 8),
               Text(
                 label, 
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w600, 
-                  color: isSelected ? const Color(0xFF5B60F6) : Colors.grey
+                  color: activeColor
                 )
               ),
             ],
@@ -929,7 +954,7 @@ class _MyAttendanceReportsTabState extends State<_MyAttendanceReportsTab> {
           Container(
             height: 2,
             width: 80,
-            color: isSelected ? const Color(0xFF5B60F6) : Colors.transparent,
+            color: isSelected ? selectedColor : Colors.transparent,
           ),
         ],
       ),

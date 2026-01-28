@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../services/report_service.dart';
+import '../../models/report_history_model.dart';
 
 class ReportsView extends StatefulWidget {
   const ReportsView({super.key});
@@ -28,7 +29,8 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
   bool _isDownloading = false;
   
   // Local History State
-  final List<Map<String, String>> _downloadHistory = [];
+  List<ReportHistory> _downloadHistory = [];
+  bool _isLoadingHistory = false;
 
   final Map<String, String> _reportTypes = {
     'matrix_daily': 'Daily Matrix',
@@ -49,7 +51,20 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
     final authService = Provider.of<AuthService>(context, listen: false);
     _reportService = ReportService(authService.dio);
     
+    
     _fetchPreview();
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    setState(() => _isLoadingHistory = true);
+    final history = await _reportService.getDownloadHistory();
+    if (mounted) {
+      setState(() {
+        _downloadHistory = history;
+        _isLoadingHistory = false;
+      });
+    }
   }
 
   @override
@@ -94,7 +109,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
   Future<void> _handleDownload() async {
     setState(() => _isDownloading = true);
     try {
-      final path = await _reportService.downloadReport(
+      final path = await _reportService.exportReport(
         type: _selectedReportType,
         format: _selectedFormat,
         month: _requiresMonth ? _fmtMonth(_selectedDate) : null,
@@ -102,26 +117,92 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
       );
       
       if (path != null && mounted) {
-        // Add to history
-        final fileName = path.split('/').last;
-        final timestamp = DateFormat('MMM dd, hh:mm a').format(DateTime.now());
-        
-        setState(() {
-          _downloadHistory.insert(0, {
-            'name': fileName,
-            'date': timestamp,
-            'path': path
-          });
-        });
+        // Refresh history from storage
+        _loadHistory();
 
-        ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text("Report Saved: $path"), action: SnackBarAction(label: "Open", onPressed: () {
-             OpenFilex.open(path);
-           }))
+        // Show Success Popup
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.all(24),
+            child: GlassContainer(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.check_circle, color: Colors.green, size: 32),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "Download Successful",
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "File saved to:",
+                      style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark ? Colors.black26 : Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        path,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).textTheme.bodyMedium?.color),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text("Close", style: GoogleFonts.poppins()),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              OpenFilex.open(path);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: Text("Open File", style: GoogleFonts.poppins()),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Download Failed: $e")));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Export Failed: $e")));
     } finally {
       if (mounted) setState(() => _isDownloading = false);
     }
@@ -202,7 +283,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                           decoration: BoxDecoration(
                             color: isDark ? const Color(0xFF1E2939) : Colors.grey[100],
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
+                            border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[300]!),
                           ),
                           child: Row(
                             children: [
@@ -245,7 +326,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                       decoration: BoxDecoration(
                         color: isDark ? const Color(0xFF1E2939) : Colors.grey[100],
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
+                        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[300]!),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
@@ -305,7 +386,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                       height: 48,
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[200],
+                        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[200],
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
@@ -318,10 +399,10 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                   color: isSelected 
-                                      ? (isDark ? Colors.white.withOpacity(0.1) : Colors.white) 
+                                      ? (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.white) 
                                       : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
-                                  boxShadow: isSelected && !isDark ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 2, offset: const Offset(0, 1))] : null,
+                                  boxShadow: isSelected && !isDark ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 2, offset: const Offset(0, 1))] : null,
                                 ),
                                 child: Text(
                                   format.toUpperCase(),
@@ -399,7 +480,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF101828) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[300]!),
       ),
       child: TabBar(
         controller: _tabController,
@@ -407,7 +488,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
           color: primaryColor,
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
-             if (isDark) BoxShadow(color: primaryColor.withOpacity(0.4), blurRadius: 8, offset: const Offset(0, 2)),
+             if (isDark) BoxShadow(color: primaryColor.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(0, 2)),
           ],
         ),
         labelColor: Colors.white,
@@ -453,7 +534,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                   child: DataTable(
                     columnSpacing: 24,
                     horizontalMargin: 24,
-                    headingRowColor: MaterialStateProperty.all(Colors.transparent),
+                    headingRowColor: WidgetStateProperty.all(Colors.transparent),
                     dataRowMaxHeight: 60,
                     columns: columns.map((c) => _buildColumnHeader(context, c.toString())).toList(),
                     rows: rows.map((row) {
@@ -484,7 +565,7 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
         style: GoogleFonts.poppins(
           fontWeight: FontWeight.w600,
           fontSize: 11,
-          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
           letterSpacing: 0.5,
         ),
       ),
@@ -492,12 +573,14 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
   }
 
   Widget _buildExportHistory(BuildContext context) {
+    if (_isLoadingHistory) return const Center(child: CircularProgressIndicator());
+
     if (_downloadHistory.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history_toggle_off, size: 48, color: Colors.grey.withOpacity(0.5)),
+            Icon(Icons.history_toggle_off, size: 48, color: Colors.grey.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text("No reports downloaded yet", style: GoogleFonts.poppins(color: Colors.grey)),
           ],
@@ -517,26 +600,24 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.withOpacity(0.1),
+                    color: (e.fileName.endsWith('pdf') ? Colors.red : Colors.indigo).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.table_chart, color: Colors.indigo, size: 20),
+                  child: Icon(Icons.table_chart, color: e.fileName.endsWith('pdf') ? Colors.red : Colors.indigo, size: 20),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(e['name']!, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color)),
-                      Text('Exported on ${e['date']}', style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
+                      Text(e.fileName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                      Text('Exported on ${e.timestamp}', style: GoogleFonts.poppins(fontSize: 11, color: Theme.of(context).textTheme.bodySmall?.color)),
                     ],
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.open_in_new, size: 20, color: Colors.grey), 
-                  onPressed: () {
-                    if (e['path'] != null) OpenFilex.open(e['path']!);
-                  },
+                  onPressed: () => OpenFilex.open(e.path),
                   tooltip: 'Open File',
                 ),
               ],

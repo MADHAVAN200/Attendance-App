@@ -184,7 +184,7 @@ class AttendanceAnalyticsTab extends StatelessWidget {
                 titleTextStyle: GoogleFonts.poppins(fontSize: 10, color: Colors.grey),
                 tickCount: 1,
                 ticksTextStyle: const TextStyle(color: Colors.transparent),
-                gridBorderData: BorderSide(color: Colors.grey.withOpacity(0.1), width: 1),
+                gridBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.1), width: 1),
                 radarShape: RadarShape.polygon,
                 getTitle: (index, angle) {
                   const titles = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -193,7 +193,7 @@ class AttendanceAnalyticsTab extends StatelessWidget {
                 },
                 dataSets: [
                   RadarDataSet(
-                    fillColor: const Color(0xFF5B60F6).withOpacity(0.2),
+                    fillColor: const Color(0xFF5B60F6).withValues(alpha: 0.2),
                     borderColor: const Color(0xFF5B60F6),
                     entryRadius: 2,
                     dataEntries: [
@@ -227,7 +227,7 @@ class _LineChartWidget extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: 0.2,
           getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.grey.withOpacity(0.1),
+            color: Colors.grey.withValues(alpha: 0.1),
             strokeWidth: 1,
           ),
         ),
@@ -291,7 +291,7 @@ class _LineChartWidget extends StatelessWidget {
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: const Color(0xFF5B60F6).withOpacity(0.1),
+              color: const Color(0xFF5B60F6).withValues(alpha: 0.1),
             ),
           ),
         ],

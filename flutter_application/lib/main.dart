@@ -68,7 +68,7 @@ class AttendanceApp extends StatelessWidget {
         brightness: brightness, // Explicitly match the brightness
         seedColor: const Color(0xFF5B60F6),
         primary: const Color(0xFF5B60F6),
-        background: isDark ? const Color(0xFF101828) : const Color(0xFFF8FAFC),
+
         surface: isDark ? const Color(0xFF1E2939) : const Color(0xFFFFFFFF),
         onSurface: isDark ? const Color(0xFFE5E7EB) : const Color(0xFF0F172A),
         secondary: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),

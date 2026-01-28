@@ -24,7 +24,7 @@ class MonthlyReportHeader extends StatelessWidget {
            Container(
              padding: const EdgeInsets.all(12),
              decoration: BoxDecoration(
-               color: const Color(0xFF5B60F6).withOpacity(0.1),
+               color: const Color(0xFF5B60F6).withValues(alpha: 0.1),
                borderRadius: BorderRadius.circular(12)
              ),
              child: const Icon(Icons.description_outlined, color: Color(0xFF5B60F6)),
@@ -69,7 +69,7 @@ class MonthlyReportHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [

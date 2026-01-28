@@ -72,7 +72,7 @@ class AttendanceHistoryTab extends StatelessWidget {
             height: 50,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: const Color(0xFF5B60F6).withOpacity(0.1),
+              color: const Color(0xFF5B60F6).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text('$day', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold, color: const Color(0xFF5B60F6))),
@@ -95,7 +95,7 @@ class AttendanceHistoryTab extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(color: statusColor?.withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
+                      decoration: BoxDecoration(color: statusColor?.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
                       child: Text(status, style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: statusText)),
                     ),
                     const SizedBox(width: 8),

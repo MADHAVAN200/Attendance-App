@@ -9,7 +9,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/glass_date_picker.dart';
-import '../../../../shared/widgets/custom_dialog.dart';
 import '../../../../shared/widgets/attendance_success_dialog.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../models/attendance_record.dart';
@@ -60,7 +59,7 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
     
     if (permission == LocationPermission.deniedForever) return null;
 
-    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    return await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
   }
 
   Future<void> _handleAttendanceAction(bool isTimeIn) async {
@@ -84,49 +83,26 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
       if (photo == null) return;
 
       if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator()),
-      );
+      
+      // Helper to show loading
+      void showLoading() {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(child: CircularProgressIndicator()),
+        );
+      }
 
-      Future<void> performTimeIn({String? reason}) async {
-         await _attendanceService.timeIn(
+      // Helper to perform API call
+      Future<void> performApiCall(String? lateReason) async {
+        if (isTimeIn) {
+          await _attendanceService.timeIn(
             latitude: position.latitude,
             longitude: position.longitude,
             accuracy: position.accuracy,
             imageFile: File(photo.path),
-            lateReason: reason,
+            lateReason: lateReason,
           );
-      }
-
-      try {
-        if (isTimeIn) {
-          try {
-             await performTimeIn(); 
-          } catch (e) {
-             final msg = e.toString().toLowerCase();
-             if (msg.contains("reason")) {
-                if (!mounted) return;
-                Navigator.pop(context); 
-                
-                final reason = await LateArrivalDialogMobile.show(context);
-                
-                if (reason != null && reason.isNotEmpty) {
-                   if (!mounted) return;
-                   showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (_) => const Center(child: CircularProgressIndicator()),
-                   );
-                   await performTimeIn(reason: reason); 
-                } else {
-                   return; 
-                }
-             } else {
-               rethrow;
-             }
-          }
         } else {
           await _attendanceService.timeOut(
             latitude: position.latitude,
@@ -135,27 +111,83 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
             imageFile: File(photo.path),
           );
         }
-        
-        if (mounted) {
-          Navigator.pop(context);
-          final timeStr = DateFormat('hh:mm a').format(DateTime.now());
-          await AttendanceSuccessDialog.show(
-            context, 
-            type: isTimeIn ? 'Time In' : 'Time Out', 
-            time: timeStr
-          );
-          
-          Provider.of<AttendanceProvider>(context, listen: false).invalidateCache(DateTime.now());
-          _fetchRecords(); 
-        }
+      }
+
+      // 1. First Attempt
+      showLoading();
+      bool success = false;
+      String? caughtReasonError;
+
+      try {
+        await performApiCall(null);
+        success = true;
       } catch (e) {
-        if (mounted) {
-          Navigator.pop(context); 
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed: $e"), backgroundColor: Colors.red));
+        // Check for specific "reason" error
+        final msg = e.toString().toLowerCase();
+        if (isTimeIn && msg.contains("reason")) {
+           caughtReasonError = msg;
+        } else {
+           if (mounted) {
+             Navigator.pop(context); // Pop Loading 1
+             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed: $e"), backgroundColor: Colors.red));
+           }
+           return; // Stop here
         }
       }
+
+      if (success) {
+        if (mounted) {
+          Navigator.pop(context); // Pop Loading 1
+          await _showSuccessDialog(isTimeIn);
+        }
+        return;
+      }
+
+      // 2. Handle Late Reason (if applicable)
+      if (caughtReasonError != null) {
+        if (mounted) Navigator.pop(context); // Pop Loading 1
+        
+        // Show Reason Dialog
+        if (!mounted) return;
+        final reason = await LateArrivalDialogMobile.show(context);
+        
+        if (reason == null || reason.isEmpty) return; // User cancelled
+
+        // 3. Second Attempt with Reason
+        if (!mounted) return;
+        showLoading(); // Show Loading 2
+
+        try {
+          await performApiCall(reason);
+          
+          if (mounted) {
+             Navigator.pop(context); // Pop Loading 2
+             await _showSuccessDialog(isTimeIn);
+          }
+        } catch (e) {
+          if (mounted) {
+            Navigator.pop(context); // Pop Loading 2
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed with reason: $e"), backgroundColor: Colors.red));
+          }
+        }
+      }
+
     } catch (e) {
-       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Camera Error: $e")));
+       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Camera/Location Error: $e")));
+    }
+  }
+
+  Future<void> _showSuccessDialog(bool isTimeIn) async {
+    final timeStr = DateFormat('hh:mm a').format(DateTime.now());
+    await AttendanceSuccessDialog.show(
+      context, 
+      type: isTimeIn ? 'Time In' : 'Time Out', 
+      time: timeStr
+    );
+    
+    if (mounted) {
+      Provider.of<AttendanceProvider>(context, listen: false).invalidateCache(DateTime.now());
+      _fetchRecords(); 
     }
   }
 
@@ -243,17 +275,17 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: isActive ? color.withOpacity(0.2) : color.withOpacity(0.1),
+                  color: isActive ? color.withValues(alpha: 0.2) : color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(icon, color: isActive ? color : color.withOpacity(0.7), size: 28),
+                child: Icon(icon, color: isActive ? color : color.withValues(alpha: 0.7), size: 28),
               ),
               const SizedBox(width: 20),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(isActive ? 1.0 : 0.5))),
+                  Text(label, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: isActive ? 1.0 : 0.5))),
                   Text(subLabel, style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color)),
                 ],
               ),
@@ -360,7 +392,6 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
 
   Widget _buildSessionCard(BuildContext context, AttendanceRecord record) {
      // Reusing session card logic but ensured generic
-    final statusColor = record.status == 'ABSENT' ? Colors.red : Colors.green;
 
     return GlassContainer(
       padding: const EdgeInsets.all(20),
@@ -372,7 +403,7 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
             Column(
               children: [
                 Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
-                Expanded(child: Container(width: 2, color: Colors.grey.withOpacity(0.3), margin: const EdgeInsets.symmetric(vertical: 4))),
+                Expanded(child: Container(width: 2, color: Colors.grey.withValues(alpha: 0.3), margin: const EdgeInsets.symmetric(vertical: 4))),
                 Container(width: 12, height: 12, decoration: BoxDecoration(color: record.timeOut != null ? Colors.red : Colors.grey, shape: BoxShape.circle)),
               ],
             ),
@@ -434,10 +465,9 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
         return Container(
           width: 40,
           height: 40,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.black,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+            shape: BoxShape.circle,
           ),
           child: const Icon(Icons.person, size: 24, color: Colors.white),
         );
@@ -449,16 +479,15 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
           width: 40,
           height: 40,
           clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.black,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+            shape: BoxShape.circle,
           ),
           child: CachedNetworkImage(
             imageUrl: imageUrl, 
-            fit: BoxFit.cover, // Fixed: Use cover to fill the box (portrait look)
-            errorWidget: (_,__,___) => const Icon(Icons.person, color: Colors.white),
-            placeholder: (_,__) => const Center(child: SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))),
+            fit: BoxFit.cover,
+            errorWidget: (context, url, error) => const Icon(Icons.person, color: Colors.white),
+            placeholder: (context, url) => const Center(child: SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))),
           ),
         ),
       );

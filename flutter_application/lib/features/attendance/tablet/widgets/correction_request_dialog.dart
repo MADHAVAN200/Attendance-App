@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../../services/attendance_service.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../features/leave/widgets/custom_date_picker_dialog.dart';
+import '../../../../shared/widgets/custom_dialog.dart';
 
 class CorrectionRequestDialog extends StatefulWidget {
   final int? attendanceId; // Optional, if correcting a specific record
@@ -12,11 +14,24 @@ class CorrectionRequestDialog extends StatefulWidget {
 
   const CorrectionRequestDialog({super.key, this.attendanceId, this.initialDate});
 
-  static Future<void> show(BuildContext context, {int? attendanceId, DateTime? date}) {
-    return showDialog(
+  static Future<void> show(BuildContext context, {int? attendanceId, DateTime? date}) async {
+    final result = await showDialog(
       context: context,
       builder: (context) => CorrectionRequestDialog(attendanceId: attendanceId, initialDate: date),
     );
+
+    if (result == true && context.mounted) {
+       await CustomDialog.show(
+          context: context,
+          title: "Request Submitted",
+          message: "Your correction request has been sent for approval.",
+          icon: Icons.check_circle,
+          iconColor: const Color(0xFF10B981),
+          positiveButtonText: "Done",
+          positiveButtonColor: const Color(0xFF10B981),
+          onPositivePressed: () => Navigator.pop(context),
+       );
+    }
   }
 
   @override
@@ -71,10 +86,7 @@ class _CorrectionRequestDialogState extends State<CorrectionRequestDialog> {
       );
 
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Request submitted successfully'), backgroundColor: Colors.green),
-        );
+        Navigator.pop(context, true); // Return true for success logic
       }
     } catch (e) {
       if (mounted) {
@@ -89,6 +101,12 @@ class _CorrectionRequestDialogState extends State<CorrectionRequestDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final labelColor = isDark ? Colors.grey : const Color(0xFF64748B); // Slate 500
+    final inputFillColor = isDark ? Colors.transparent : Colors.white;
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0); // Slate 200
+
     return Dialog(
       backgroundColor: Colors.transparent, // Transparent for Glass effect
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -111,7 +129,7 @@ class _CorrectionRequestDialogState extends State<CorrectionRequestDialog> {
                       style: GoogleFonts.poppins(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                        color: textColor,
                       ),
                     ),
                     IconButton(
@@ -125,53 +143,80 @@ class _CorrectionRequestDialogState extends State<CorrectionRequestDialog> {
                 const SizedBox(height: 24),
                 
                 // Date
+                Text("DATE", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: labelColor)),
+                const SizedBox(height: 6),
                 InkWell(
                   onTap: () async {
-                    final picked = await showDatePicker(
+                    final picked = await showDialog<DateTime>(
                       context: context,
-                      initialDate: _selectedDate,
-                      firstDate: DateTime(2023),
-                      lastDate: DateTime.now(),
+                      builder: (context) => CustomDatePickerDialog(
+                        initialDate: _selectedDate,
+                        firstDate: DateTime(2023),
+                        lastDate: DateTime.now(),
+                      ),
                     );
                     if (picked != null) {
                       setState(() => _selectedDate = picked);
                     }
                   },
-                  child: InputDecorator(
-                    decoration: InputDecoration(
-                      labelText: 'Date',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      prefixIcon: const Icon(Icons.calendar_today, size: 20),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: borderColor),
+                      borderRadius: BorderRadius.circular(12),
+                      color: inputFillColor,
                     ),
-                    child: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today, size: 18, color: labelColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          DateFormat('yyyy-MM-dd').format(_selectedDate),
+                          style: GoogleFonts.poppins(color: textColor, fontSize: 14),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
 
                 // Type
+                Text("ISSUE TYPE", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: labelColor)),
+                const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  value: _correctionType,
+                  initialValue: _correctionType,
+                  style: GoogleFonts.poppins(color: textColor, fontSize: 14),
                   decoration: InputDecoration(
-                    labelText: 'Issue Type',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF5B60F6))),
+                    filled: true,
+                    fillColor: inputFillColor,
                   ),
+                  dropdownColor: isDark ? const Color(0xFF1E2939) : Colors.white,
                   items: _types.map((t) {
-                    return DropdownMenuItem(value: t['value'], child: Text(t['label']!, style: const TextStyle(fontSize: 14)));
+                    return DropdownMenuItem(value: t['value'], child: Text(t['label']!));
                   }).toList(),
                   onChanged: (v) => setState(() => _correctionType = v!),
                 ),
                 const SizedBox(height: 16),
 
                 // Reason
+                Text("JUSTIFICATION / COMMENTS", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: labelColor)),
+                const SizedBox(height: 6),
                 TextFormField(
                   controller: _reasonController,
                   maxLines: 3,
+                  style: GoogleFonts.poppins(color: textColor, fontSize: 14),
                   decoration: InputDecoration(
-                    labelText: 'Justification / Comments',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    alignLabelWithHint: true,
+                    hintText: 'Explain why you are requesting this...',
+                    hintStyle: GoogleFonts.poppins(color: labelColor, fontSize: 14),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF5B60F6))),
+                    filled: true,
+                    fillColor: inputFillColor,
                     contentPadding: const EdgeInsets.all(16),
                   ),
                   validator: (v) => v!.isEmpty ? 'Please provide a reason' : null,
@@ -181,18 +226,18 @@ class _CorrectionRequestDialogState extends State<CorrectionRequestDialog> {
                 // Actions
                 SizedBox(
                   width: double.infinity,
+                  height: 48,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF5B60F6),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 0,
                     ),
                     child: _isLoading 
                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : Text('Submit Request', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                        : Text('Submit Request', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15)),
                   ),
                 ),
               ],

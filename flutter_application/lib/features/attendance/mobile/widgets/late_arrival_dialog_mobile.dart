@@ -49,9 +49,9 @@ class _LateArrivalDialogMobileState extends State<LateArrivalDialogMobile> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
-                    border: Border.all(color: color.withOpacity(0.2), width: 1),
+                    border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
                   ),
                   child: Icon(Icons.access_time_filled_rounded, color: color, size: 32),
                 ),
@@ -81,7 +81,7 @@ class _LateArrivalDialogMobileState extends State<LateArrivalDialogMobile> {
                 // 3. Input Field
                 Container(
                    decoration: BoxDecoration(
-                     color: isDark ? const Color(0xFF1E293B).withOpacity(0.5) : Colors.white.withOpacity(0.5),
+                     color: isDark ? const Color(0xFF1E293B).withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
                      borderRadius: BorderRadius.circular(12),
                      border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
                    ),
@@ -128,7 +128,7 @@ class _LateArrivalDialogMobileState extends State<LateArrivalDialogMobile> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           elevation: 0,
-                          shadowColor: color.withOpacity(0.4),
+                          shadowColor: color.withValues(alpha: 0.4),
                         ),
                         child: Text("Submit", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
                       ),

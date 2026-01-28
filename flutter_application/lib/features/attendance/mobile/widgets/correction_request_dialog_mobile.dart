@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 import '../../services/attendance_service.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/widgets/glass_container.dart';
-import '../../../../shared/widgets/glass_date_picker.dart';
+import '../../../../features/leave/widgets/custom_date_picker_dialog.dart';
+import '../../../../shared/widgets/custom_dialog.dart';
 
 class CorrectionRequestDialogMobile extends StatefulWidget {
   final int? attendanceId;
@@ -13,11 +14,24 @@ class CorrectionRequestDialogMobile extends StatefulWidget {
 
   const CorrectionRequestDialogMobile({super.key, this.attendanceId, this.initialDate});
 
-  static Future<void> show(BuildContext context, {int? attendanceId, DateTime? date}) {
-    return showDialog(
+  static Future<void> show(BuildContext context, {int? attendanceId, DateTime? date}) async {
+    final result = await showDialog(
       context: context,
       builder: (context) => CorrectionRequestDialogMobile(attendanceId: attendanceId, initialDate: date),
     );
+
+    if (result == true && context.mounted) {
+       await CustomDialog.show(
+          context: context,
+          title: "Request Submitted",
+          message: "Your correction request has been sent for approval.",
+          icon: Icons.check_circle,
+          iconColor: const Color(0xFF10B981),
+          positiveButtonText: "Done",
+          positiveButtonColor: const Color(0xFF10B981),
+          onPositivePressed: () => Navigator.pop(context),
+       );
+    }
   }
 
   @override
@@ -72,10 +86,7 @@ class _CorrectionRequestDialogMobileState extends State<CorrectionRequestDialogM
       );
 
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Request submitted successfully'), backgroundColor: Colors.green),
-        );
+        Navigator.pop(context, true); // Return true to trigger success dialog
       }
     } catch (e) {
       if (mounted) {
@@ -90,6 +101,12 @@ class _CorrectionRequestDialogMobileState extends State<CorrectionRequestDialogM
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : Colors.black87;
+    final labelColor = isDark ? Colors.grey : const Color(0xFF64748B); // Slate 500
+    final inputFillColor = isDark ? Colors.transparent : Colors.white;
+    final borderColor = isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0); // Slate 200
+
     // Mobile optimization: Use SingleChildScrollView to avoid overflow
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -115,7 +132,7 @@ class _CorrectionRequestDialogMobileState extends State<CorrectionRequestDialogM
                         style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          color: textColor,
                         ),
                       ),
                       IconButton(
@@ -129,60 +146,83 @@ class _CorrectionRequestDialogMobileState extends State<CorrectionRequestDialogM
                   const SizedBox(height: 24),
                   
                   // Date
+                  Text("DATE", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: labelColor)),
+                  const SizedBox(height: 6),
                   InkWell(
                     onTap: () async {
-                      await showDialog(
+                      final picked = await showDialog<DateTime>(
                         context: context,
-                        builder: (context) => GlassDatePicker(
+                        builder: (context) => CustomDatePickerDialog(
                           initialDate: _selectedDate,
                           firstDate: DateTime(2023),
                           lastDate: DateTime.now(),
-                          onDateSelected: (newDate) {
-                            setState(() => _selectedDate = newDate);
-                          },
                         ),
                       );
+                      if (picked != null) {
+                        setState(() => _selectedDate = picked);
+                      }
                     },
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        labelText: 'Date',
-                        labelStyle: GoogleFonts.poppins(fontSize: 13),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        prefixIcon: const Icon(Icons.calendar_today, size: 20),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: borderColor),
+                        borderRadius: BorderRadius.circular(12),
+                        color: inputFillColor,
                       ),
-                      child: Text(DateFormat('yyyy-MM-dd').format(_selectedDate)),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today_outlined, size: 18, color: labelColor),
+                          const SizedBox(width: 8),
+                          Text(
+                            DateFormat('yyyy-MM-dd').format(_selectedDate),
+                            style: GoogleFonts.poppins(color: textColor, fontSize: 14),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
         
                   // Type
+                  Text("ISSUE TYPE", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: labelColor)),
+                  const SizedBox(height: 6),
                   DropdownButtonFormField<String>(
-                    value: _correctionType,
+                    initialValue: _correctionType,
+                    style: GoogleFonts.poppins(color: textColor, fontSize: 14),
                     decoration: InputDecoration(
-                      labelText: 'Issue Type',
-                      labelStyle: GoogleFonts.poppins(fontSize: 13),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF5B60F6))),
+                      filled: true,
+                      fillColor: inputFillColor,
                     ),
+                    dropdownColor: isDark ? const Color(0xFF1E2939) : Colors.white,
+                    icon: Icon(Icons.keyboard_arrow_down, color: labelColor),
                     items: _types.map((t) {
-                      return DropdownMenuItem(value: t['value'], child: Text(t['label']!, style: const TextStyle(fontSize: 13)));
+                      return DropdownMenuItem(value: t['value'], child: Text(t['label']!));
                     }).toList(),
                     onChanged: (v) => setState(() => _correctionType = v!),
                   ),
                   const SizedBox(height: 16),
         
                   // Reason
+                  Text("JUSTIFICATION / COMMENTS", style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: labelColor)),
+                  const SizedBox(height: 6),
                   TextFormField(
                     controller: _reasonController,
-                    minLines: 1,
+                    minLines: 3,
                     maxLines: 5,
                     keyboardType: TextInputType.multiline,
+                    style: GoogleFonts.poppins(color: textColor, fontSize: 14),
                     decoration: InputDecoration(
-                      labelText: 'Justification / Comments',
-                      labelStyle: GoogleFonts.poppins(fontSize: 13),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      alignLabelWithHint: true,
+                      hintText: 'Explain why you are requesting this...',
+                      hintStyle: GoogleFonts.poppins(color: labelColor, fontSize: 14),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderColor)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF5B60F6))),
+                      filled: true,
+                      fillColor: inputFillColor,
                       contentPadding: const EdgeInsets.all(16),
                     ),
                     validator: (v) => v!.isEmpty ? 'Please provide a reason' : null,
@@ -192,18 +232,18 @@ class _CorrectionRequestDialogMobileState extends State<CorrectionRequestDialogM
                   // Actions
                   SizedBox(
                     width: double.infinity,
+                    height: 48,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF5B60F6),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
                       child: _isLoading 
                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : Text('Submit Request', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13)),
+                          : Text('Submit Request', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15)),
                     ),
                   ),
                 ],

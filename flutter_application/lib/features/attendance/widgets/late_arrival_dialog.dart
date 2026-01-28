@@ -48,12 +48,12 @@ class _LateArrivalDialogState extends State<LateArrivalDialog> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
-                  border: Border.all(color: color.withOpacity(0.2), width: 1),
+                  border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: color.withOpacity(0.2),
+                      color: color.withValues(alpha: 0.2),
                       blurRadius: 24,
                       offset: const Offset(0, 8),
                     )
@@ -87,7 +87,7 @@ class _LateArrivalDialogState extends State<LateArrivalDialog> {
               // 3. Input Field
               Container(
                  decoration: BoxDecoration(
-                   color: isDark ? const Color(0xFF1E293B).withOpacity(0.5) : Colors.white.withOpacity(0.5),
+                   color: isDark ? const Color(0xFF1E293B).withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
                    borderRadius: BorderRadius.circular(16),
                    border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
                  ),
@@ -134,7 +134,7 @@ class _LateArrivalDialogState extends State<LateArrivalDialog> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         elevation: 0,
-                        shadowColor: color.withOpacity(0.4),
+                        shadowColor: color.withValues(alpha: 0.4),
                       ),
                       child: Text("Submit", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
                     ),

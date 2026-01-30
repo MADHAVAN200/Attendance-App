@@ -61,10 +61,37 @@ class EmployeeService {
 
   // 5. Delete Employee
   Future<void> deleteEmployee(int id) async {
-    try {
-      await _dio.delete('${ApiConstants.user}/$id');
-    } catch (e) {
-      throw Exception('Failed to delete employee: ${e.toString()}');
+    final endpoints = [
+      '${ApiConstants.user}/$id',       // /admin/user/123
+      '${ApiConstants.user}/$id/',      // /admin/user/123/
+      '${ApiConstants.users}/$id',      // /admin/users/123
+      '${ApiConstants.users}/$id/',     // /admin/users/123/
+    ];
+
+    DioException? lastError;
+
+    for (final endpoint in endpoints) {
+      try {
+        await _dio.delete(endpoint);
+        return; // Success!
+      } on DioException catch (e) {
+        lastError = e;
+        // If 404, we continue to next endpoint. 
+        // If other error (e.g. 500, 403), we might want to stop, but for now we try all just in case 403 is route-specific.
+        if (e.response?.statusCode != 404) {
+           // Optional: break here if we want to bubble up auth/server errors immediately,
+           // but keeping it robust is safer for now.
+        }
+      } catch (e) {
+         // Non-dio error
+      }
+    }
+
+    // If we exhausted all endpoints
+    if (lastError != null) {
+      throw Exception('Failed to delete user. Tried endpoints: ${endpoints.map((e) => e.split('/').last).join(', ')}. Last Error: ${lastError.message} (Status: ${lastError.response?.statusCode})');
+    } else {
+      throw Exception('Failed to delete user: Unknown error');
     }
   }
 

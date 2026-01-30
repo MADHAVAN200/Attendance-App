@@ -12,6 +12,8 @@ import '../../../../shared/services/auth_service.dart';
 import 'add_employee_view.dart';
 import '../../widgets/bulk_upload_report_dialog.dart';
 import '../../widgets/glass_confirmation_dialog.dart';
+import '../../widgets/employee_detail_dialog.dart';
+import '../../widgets/employee_action_menu.dart';
 
 class EmployeesView extends StatefulWidget {
   const EmployeesView({super.key});
@@ -42,7 +44,6 @@ class _EmployeesViewState extends State<EmployeesView> {
   Future<void> _fetchEmployees() async {
     setState(() => _isLoading = true);
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
       final employees = await _employeeService.getEmployees();
       setState(() {
         _employees = employees;
@@ -122,9 +123,9 @@ class _EmployeesViewState extends State<EmployeesView> {
     showDialog(
       context: context, 
       barrierDismissible: false, 
-      builder: (_) => WillPopScope(
-        onWillPop: () async => false,
-        child: const Center(child: CircularProgressIndicator()),
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(child: CircularProgressIndicator()),
       ),
     );
 
@@ -149,24 +150,14 @@ class _EmployeesViewState extends State<EmployeesView> {
   }
 
   Future<void> _deleteEmployee(int id) async {
-    // Confirmation
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => GlassConfirmationDialog(
-        title: 'Confirm Delete',
-        content: 'Are you sure you want to delete this employee?',
-        confirmLabel: 'Delete',
-        onConfirm: () => Navigator.pop(context, true),
-      ),
-    );
-
-    if (confirm != true) return;
-
+    // Confirmation handled by EmployeeActionMenu
     try {
       await _employeeService.deleteEmployee(id);
       _fetchEmployees(); // Refresh list
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Employee deleted')));
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
     }
   }
@@ -225,9 +216,9 @@ class _EmployeesViewState extends State<EmployeesView> {
         showDialog(
           context: context, 
           barrierDismissible: false, 
-          builder: (_) => WillPopScope(
-            onWillPop: () async => false,
-            child: const Center(child: CircularProgressIndicator()),
+          builder: (_) => const PopScope(
+            canPop: false,
+            child: Center(child: CircularProgressIndicator()),
           ),
         );
         
@@ -376,7 +367,7 @@ class _EmployeesViewState extends State<EmployeesView> {
                     decoration: InputDecoration(
                       hintText: 'Search employees...',
                       hintStyle: GoogleFonts.poppins(
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                         fontSize: 14,
                       ),
                       border: InputBorder.none,
@@ -453,11 +444,11 @@ class _EmployeesViewState extends State<EmployeesView> {
           color: isPrimary ? primaryColor : (isDark ? const Color(0xFF1E2939) : Colors.white),
           borderRadius: BorderRadius.circular(12),
           border: isPrimary ? null : Border.all(
-            color: isDark ? const Color(0xFF1E2939) : primaryColor.withOpacity(0.1)
+            color: isDark ? const Color(0xFF1E2939) : primaryColor.withValues(alpha: 0.1)
           ),
           boxShadow: isPrimary ? [
             BoxShadow(
-              color: primaryColor.withOpacity(0.3),
+              color: primaryColor.withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             )
@@ -504,7 +495,7 @@ class _EmployeesViewState extends State<EmployeesView> {
         child: SizedBox(
           width: double.infinity,
           child: DataTable(
-            headingRowColor: MaterialStateProperty.all(Colors.transparent),
+            headingRowColor: WidgetStateProperty.all(Colors.transparent),
             columnSpacing: 16, 
             horizontalMargin: 16, 
             dataRowMaxHeight: 85,
@@ -542,7 +533,7 @@ class _EmployeesViewState extends State<EmployeesView> {
           fontWeight: FontWeight.w600,
           fontSize: 11,
           letterSpacing: 0.5,
-          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
+          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
         ),
       ),
     );
@@ -594,7 +585,7 @@ class _EmployeesViewState extends State<EmployeesView> {
                   ),
                   child: CircleAvatar(
                     radius: 20,
-                    backgroundColor: isDark ? const Color(0xFF101828) : Theme.of(context).primaryColor.withOpacity(0.1),
+                    backgroundColor: isDark ? const Color(0xFF101828) : Theme.of(context).primaryColor.withValues(alpha: 0.1),
                     child: Text(
                       nameInitial,
                       style: GoogleFonts.poppins(
@@ -641,114 +632,21 @@ class _EmployeesViewState extends State<EmployeesView> {
   }
 
   Widget _buildActionsMenu(BuildContext context, Employee employee) {
-    return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert, color: Theme.of(context).textTheme.bodySmall?.color),
-      onSelected: (value) {
-        if (value == 'edit') {
-          setState(() {
-            _editingEmployee = employee;
-            _isAddingOrEditing = true;
-          });
-        } else if (value == 'delete') {
-          _deleteEmployee(employee.userId);
-        }
+    return EmployeeActionMenu(
+      onEdit: () {
+        setState(() {
+          _editingEmployee = employee;
+          _isAddingOrEditing = true;
+        });
       },
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: 'edit', child: Text("Edit")),
-        const PopupMenuItem(value: 'delete', child: Text("Delete", style: TextStyle(color: Colors.red))),
-      ],
+      onDeleteConfirmed: () => _deleteEmployee(employee.userId),
     );
   }
 
   void _showEmployeeDetails(BuildContext context, Employee employee) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Reusing the nice dialog from before, but populated with real data
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        child: GlassContainer(
-          width: 450,
-          padding: const EdgeInsets.all(24),
-          borderRadius: 24,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-               Row(
-                children: [
-                   Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
-                    ),
-                    child: CircleAvatar(
-                      radius: 32,
-                      backgroundColor: isDark ? const Color(0xFF101828) : Theme.of(context).primaryColor.withOpacity(0.15),
-                      child: Text(
-                        employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Theme.of(context).primaryColor,
-                          fontSize: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(employee.userName, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
-                      Text(employee.designation ?? 'N/A', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildDetailRow(context, Icons.email_outlined, 'Email', employee.email),
-              const SizedBox(height: 16),
-              _buildDetailRow(context, Icons.phone_outlined, 'Phone', employee.phoneNo ?? 'N/A'),
-              const SizedBox(height: 16),
-              _buildDetailRow(context, Icons.work_outline, 'Department', employee.department ?? 'N/A'),
-              const SizedBox(height: 16),
-              _buildDetailRow(context, Icons.access_time, 'Shift', employee.shift ?? 'N/A'),
-              const SizedBox(height: 24),
-               SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Close', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value) {
-     return Row(
-      children: [
-        Icon(icon, size: 18, color: Theme.of(context).primaryColor),
-        const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
-            Text(value, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
-          ],
-        ),
-      ],
+      builder: (context) => EmployeeDetailDialog(employee: employee),
     );
   }
 

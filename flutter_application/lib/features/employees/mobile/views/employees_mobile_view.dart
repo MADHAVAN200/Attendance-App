@@ -12,6 +12,8 @@ import '../../../../shared/services/auth_service.dart';
 import '../../tablet/views/add_employee_view.dart';
 import '../../widgets/bulk_upload_report_dialog.dart';
 import '../../widgets/glass_confirmation_dialog.dart';
+import '../../widgets/employee_detail_dialog.dart';
+import '../../widgets/employee_action_menu.dart';
 
 class EmployeesMobileView extends StatefulWidget {
   const EmployeesMobileView({super.key});
@@ -38,7 +40,6 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
   Future<void> _fetchEmployees() async {
     setState(() => _isLoading = true);
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
       final employees = await _employeeService.getEmployees();
       if (!mounted) return;
       setState(() {
@@ -117,14 +118,13 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
     showDialog(
       context: context, 
       barrierDismissible: false, 
-      builder: (_) => WillPopScope(
-        onWillPop: () async => false,
-        child: const Center(child: CircularProgressIndicator()),
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(child: CircularProgressIndicator()),
       ),
     );
 
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
       await _employeeService.bulkDeleteEmployees(_selectedIds.toList());
       
       if (!mounted) return;
@@ -141,20 +141,8 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
   }
 
   Future<void> _deleteEmployee(int id) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => GlassConfirmationDialog(
-        title: 'Confirm Delete',
-        content: 'Are you sure you want to delete this employee?',
-        confirmLabel: 'Delete',
-        onConfirm: () => Navigator.pop(context, true),
-      ),
-    );
-
-    if (confirm != true) return;
-
+    // Confirmation handled by EmployeeActionMenu
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
       await _employeeService.deleteEmployee(id);
       _fetchEmployees();
       if (!mounted) return;
@@ -195,7 +183,7 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
 
   Future<void> _handleBulkUpload() async {
     // Request permissions first
-    Map<Permission, PermissionStatus> statuses = await [
+    await [
       Permission.storage,
       // Add other media permissions if needed based on Android version
     ].request();
@@ -219,15 +207,14 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
         }
 
         if (!mounted) return;
-        final dio = Provider.of<AuthService>(context, listen: false).dio;
         
         if (!mounted) return;
         showDialog(
           context: context, 
           barrierDismissible: false, 
-          builder: (_) => WillPopScope(
-            onWillPop: () async => false,
-            child: const Center(child: CircularProgressIndicator()),
+          builder: (_) => const PopScope(
+            canPop: false,
+            child: Center(child: CircularProgressIndicator()),
           ),
         );
         
@@ -400,6 +387,7 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                                       value: isSelected,
                                       onChanged: (_) => _toggleSelection(emp.userId),
                                       activeColor: Theme.of(context).primaryColor,
+                                      side: BorderSide(color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7) ?? Colors.grey),
                                     )
                                   : Container(
                                       decoration: BoxDecoration(
@@ -407,7 +395,7 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                                         border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
                                       ),
                                         child: CircleAvatar(
-                                          backgroundColor: isDark ? const Color(0xFF334155) : Theme.of(context).primaryColor.withOpacity(0.1),
+                                          backgroundColor: isDark ? const Color(0xFF334155) : Theme.of(context).primaryColor.withValues(alpha: 0.1),
                                           child: Text(
                                             emp.userName.isNotEmpty ? emp.userName[0].toUpperCase() : '?',
                                             style: TextStyle(color: isDark ? Colors.white : Theme.of(context).primaryColor),
@@ -424,16 +412,9 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                               ),
                               trailing: (_isSelectionMode || Provider.of<AuthService>(context, listen: false).user!.isEmployee) 
                                   ? null 
-                                  : PopupMenuButton<String>(
-                                      icon: Icon(Icons.more_vert, color: isDark ? Colors.white70 : null),
-                                      onSelected: (val) {
-                                        if (val == 'edit') _navigateToAddEdit(employee: emp);
-                                        if (val == 'delete') _deleteEmployee(emp.userId);
-                                      },
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                                        const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: Colors.red))),
-                                      ],
+                                    : EmployeeActionMenu(
+                                      onEdit: () => _navigateToAddEdit(employee: emp),
+                                      onDeleteConfirmed: () => _deleteEmployee(emp.userId),
                                     ),
                               onTap: () {
                                 if (_isSelectionMode) {
@@ -462,14 +443,14 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                           } else {
                             return Card(
                               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              color: isSelected ? Theme.of(context).primaryColor.withOpacity(0.05) : Colors.white,
+                              color: isSelected ? Theme.of(context).primaryColor.withValues(alpha: 0.05) : Colors.white,
                               elevation: 2,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 side: BorderSide(
                                   color: isSelected 
                                     ? Theme.of(context).primaryColor 
-                                    : Colors.grey.withOpacity(0.2),
+                                    : Colors.grey.withValues(alpha: 0.2),
                                   width: isSelected ? 1.5 : 1,
                                 ),
                               ),
@@ -485,77 +466,11 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
   }
 
   void _showEmployeeDetails(BuildContext context, Employee employee) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent, // Important for GlassContainer
-        insetPadding: const EdgeInsets.all(16),
-        child: isDark 
-          ? GlassContainer(child: _buildDialogContent(context, employee, isDark)) 
-          : Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16)
-              ),
-              child: _buildDialogContent(context, employee, isDark)
-            ),
-      ),
+      builder: (context) => EmployeeDetailDialog(employee: employee),
     );
   }
 
-  Widget _buildDialogContent(BuildContext context, Employee employee, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
-            ),
-            child: CircleAvatar(
-              radius: 40,
-              backgroundColor: isDark ? const Color(0xFF334155) : Theme.of(context).primaryColor.withOpacity(0.1),
-              child: Text(
-                employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?', 
-                style: TextStyle(fontSize: 32, color: isDark ? Colors.white : Theme.of(context).primaryColor),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(employee.userName, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: isDark ? Colors.white : null)),
-          Text(employee.designation ?? 'N/A', style: GoogleFonts.poppins(color: Colors.grey)),
-          Divider(height: 32, color: isDark ? Colors.white24 : null),
-          _buildDetailRow('Email', employee.email, isDark),
-          _buildDetailRow('Phone', employee.phoneNo ?? 'N/A', isDark),
-          _buildDetailRow('Dept', employee.department ?? 'N/A', isDark),
-          _buildDetailRow('Shift', employee.shift ?? 'N/A', isDark),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildDetailRow(String label, String value, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              value, 
-              style: TextStyle(fontWeight: FontWeight.w500, color: isDark ? Colors.white : null),
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.end,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

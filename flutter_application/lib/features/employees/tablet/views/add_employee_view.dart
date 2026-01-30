@@ -64,6 +64,12 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
     _selectedDesgId = emp.designationId;
     _selectedShiftId = emp.shiftId;
     _selectedUserType = emp.userType;
+    if (widget.employeeToEdit != null) {
+      final validUserTypes = ['employee', 'admin'];
+      if (!validUserTypes.contains(_selectedUserType)) {
+        _selectedUserType = 'employee';
+      }
+    }
   }
 
   Future<void> _loadDropdownData() async {
@@ -81,7 +87,7 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
-      print("Error loading dropdowns: $e");
+      debugPrint("Error loading dropdowns: $e");
     }
   }
 
@@ -90,8 +96,6 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
     
     setState(() => _isLoading = true);
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-      
       final Map<String, dynamic> data = {
         'user_name': _nameController.text,
         'email': _emailController.text,
@@ -309,7 +313,7 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
             color: isDark ? const Color(0xFF0F172A) : Colors.white,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!,
+              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[300]!,
             ),
           ),
           child: TextFormField(
@@ -338,6 +342,15 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
   Widget _buildDropdown<T>(BuildContext context, String label, T? value, List<DropdownMenuItem<T>> items, ValueChanged<T?> onChanged) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Safety check: ensure value exists in items
+    T? effectiveValue = value;
+    if (value != null) {
+      final exists = items.any((item) => item.value == value);
+      if (!exists) {
+        effectiveValue = null;
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -357,12 +370,12 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
             color: isDark ? const Color(0xFF0F172A) : Colors.white,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!,
+              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[300]!,
             ),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<T>(
-              value: value,
+              value: effectiveValue,
               isExpanded: true,
               icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
               style: GoogleFonts.poppins(

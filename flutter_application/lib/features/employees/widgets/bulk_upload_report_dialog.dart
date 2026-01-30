@@ -38,7 +38,7 @@ class BulkUploadReportDialog extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check_circle_outline, color: Colors.green, size: 40),
@@ -90,14 +90,14 @@ class BulkUploadReportDialog extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.05),
+                    color: Colors.red.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withOpacity(0.1)),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.1)),
                   ),
                   child: ListView.separated(
                     shrinkWrap: true,
                     itemCount: errors.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (context, index) => const SizedBox(height: 8),
                     itemBuilder: (context, index) {
                       final error = errors[index].toString();
                       return Row(

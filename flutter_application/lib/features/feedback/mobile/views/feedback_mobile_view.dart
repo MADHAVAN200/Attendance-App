@@ -142,7 +142,7 @@ class _FeedbackMobileViewState extends State<FeedbackMobileView> with SingleTick
                      borderRadius: BorderRadius.circular(10),
                      boxShadow: [
                        BoxShadow(
-                         color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                          blurRadius: 4,
                          offset: const Offset(0, 1),
                        ),
@@ -150,7 +150,7 @@ class _FeedbackMobileViewState extends State<FeedbackMobileView> with SingleTick
                    ),
                    indicatorSize: TabBarIndicatorSize.tab,
                    dividerColor: Colors.transparent,
-                   labelColor: isDark ? const Color(0xFF818CF8) : const Color(0x334155),
+                   labelColor: isDark ? const Color(0xFF818CF8) : const Color(0xFF334155),
                    unselectedLabelColor: Colors.grey[600],
                    labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
                    tabs: const [

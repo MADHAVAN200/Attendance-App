@@ -166,7 +166,14 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
                       Expanded(
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: Text("Close", style: GoogleFonts.poppins()),
+                          child: Text(
+                            "Close",
+                            style: GoogleFonts.poppins(
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                  ? Colors.white70 
+                                  : Colors.grey[700],
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -177,11 +184,13 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
                             OpenFilex.open(path);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
+                            backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                                ? const Color(0xFF6366F1) // Brighter Indigo
+                                : Theme.of(context).primaryColor,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                          child: Text("Open File", style: GoogleFonts.poppins()),
+                          child: Text("Open File", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
                         ),
                       ),
                     ],
@@ -406,7 +415,9 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
               ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
+                backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                    ? const Color(0xFF6366F1) // Brighter Indigo for Dark Mode
+                    : Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

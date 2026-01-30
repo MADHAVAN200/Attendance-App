@@ -19,9 +19,12 @@ class _NotificationListState extends State<NotificationList> {
   void initState() {
     super.initState();
     // Fetch notifications when opened
-    Future.microtask(() => 
-      Provider.of<NotificationService>(context, listen: false).fetchNotifications()
-    );
+    // Fetch notifications when opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Provider.of<NotificationService>(context, listen: false).fetchNotifications();
+      }
+    });
   }
 
   @override
@@ -102,7 +105,7 @@ class _NotificationListState extends State<NotificationList> {
 
   Widget _buildNotificationItem(BuildContext context, NotificationModel note, NotificationService service) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = note.isRead ? Colors.transparent : (isDark ? Colors.white.withOpacity(0.05) : Colors.blue.withOpacity(0.05));
+    final bgColor = note.isRead ? Colors.transparent : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.blue.withValues(alpha: 0.05));
     
     return InkWell(
       onTap: () => service.markAsRead(note.id),
@@ -115,7 +118,7 @@ class _NotificationListState extends State<NotificationList> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _getTypeColor(note.type).withOpacity(0.1),
+                color: _getTypeColor(note.type).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(_getTypeIcon(note.type), size: 16, color: _getTypeColor(note.type)),

@@ -21,7 +21,7 @@ class SidebarMobile extends StatelessWidget {
         width: double.infinity,
         height: double.infinity,
         blur: 20, // Blur for Mobile Drawer overlay feel
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         color: Theme.of(context).brightness == Brightness.dark 
             ? const Color(0xFF101828) // Standardized Dark Mode Color (Solid)
             : const Color(0xFFFFFFFF),
@@ -84,7 +84,6 @@ class _SidebarContent extends StatelessWidget {
                             PageType.dashboard,
                             PageType.myAttendance,
                             PageType.leavesAndHolidays,
-                            PageType.dailyActivity,
                             PageType.feedback, // Kept in logic for permission check, but excluded from this loop
                             PageType.profile,
                           ];
@@ -101,19 +100,57 @@ class _SidebarContent extends StatelessWidget {
               ),
             ),
             
-            // Fixed Bottom Item: Feedback
-            if (PageType.values.contains(PageType.feedback)) ...[
-               Padding(
-                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                 child: Divider(color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withOpacity(0.1) : Colors.black12, height: 1),
-               ),
-               _buildMenuItem(
-                 context, 
-                 PageType.feedback, 
-                 currentPage == PageType.feedback
-               ),
-               const SizedBox(height: 16), // Bottom Padding
-            ]
+            // Fixed Bottom Item: Bugs & Feedback (Custom Button)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                       navigateTo(PageType.feedback);
+                       if (onLinkTap != null) {
+                        onLinkTap!();
+                       } else {
+                        Navigator.pop(context);
+                       }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: currentPage == PageType.feedback
+                            ? (Theme.of(context).brightness == Brightness.dark 
+                                ? Colors.white.withValues(alpha: 0.1) 
+                                : const Color(0xFF4338CA).withValues(alpha: 0.1))
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.bug_report_outlined, 
+                            size: 20,
+                            color: currentPage == PageType.feedback
+                                ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
+                                : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[700]),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            "Bugs & Feedback",
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: currentPage == PageType.feedback ? FontWeight.w600 : FontWeight.w500,
+                              color: currentPage == PageType.feedback
+                                  ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
+                                  : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[300] : Colors.grey[800]),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         );
       }
@@ -127,7 +164,7 @@ class _SidebarContent extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       decoration: BoxDecoration(
         color: isActive 
-            ? (isDark ? Colors.white.withOpacity(0.1) : const Color(0xFF4338CA).withOpacity(0.1))
+            ? (isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFF4338CA).withValues(alpha: 0.1))
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),
@@ -156,8 +193,11 @@ class _SidebarContent extends StatelessWidget {
         ),
         onTap: () {
           navigateTo(page);
-          if (onLinkTap != null) onLinkTap!();
-          else Navigator.pop(context); // Auto close
+          if (onLinkTap != null) {
+            onLinkTap!();
+          } else {
+            Navigator.pop(context); // Auto close
+          }
         },
       ),
     );

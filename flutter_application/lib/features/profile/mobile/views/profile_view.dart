@@ -6,13 +6,29 @@ import '../../../../shared/services/auth_service.dart';
 import '../../../auth/login_screen.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/custom_dialog.dart';
-import '../../../../main.dart';
+import '../../widgets/profile_avatar.dart';
 
-class MobileProfileContent extends StatelessWidget {
+class MobileProfileContent extends StatefulWidget {
   const MobileProfileContent({super.key});
 
   @override
+  State<MobileProfileContent> createState() => _MobileProfileContentState();
+}
+
+class _MobileProfileContentState extends State<MobileProfileContent> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch latest profile data when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AuthService>(context, listen: false).fetchUserProfile();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final user = Provider.of<AuthService>(context).user;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -43,29 +59,16 @@ class MobileProfileContent extends StatelessWidget {
       child: Column( // Stacked for Mobile
         children: [
           // Avatar
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: const Color(0xFF5B60F6).withOpacity(0.2),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF5B60F6).withOpacity(0.3), width: 2),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              'M',
-              style: GoogleFonts.poppins(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF5B60F6),
-              ),
-            ),
+          ProfileAvatar(
+            size: 80,
+            user: Provider.of<AuthService>(context).user,
+            canEdit: true,
           ),
           const SizedBox(height: 16),
 
           // Info
           Text(
-            'Mano Admin',
+            context.select<AuthService, String>((s) => s.user?.name ?? 'User'),
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -77,9 +80,9 @@ class MobileProfileContent extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF5B60F6).withOpacity(0.1),
+              color: const Color(0xFF5B60F6).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF5B60F6).withOpacity(0.2)),
+              border: Border.all(color: const Color(0xFF5B60F6).withValues(alpha: 0.2)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -87,7 +90,7 @@ class MobileProfileContent extends StatelessWidget {
                 const Icon(Icons.shield_outlined, size: 14, color: Color(0xFF5B60F6)),
                 const SizedBox(width: 8),
                 Text(
-                  'Admin',
+                  context.select<AuthService, String>((s) => s.user?.role.toUpperCase() ?? 'EMPLOYEE'),
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -125,7 +128,7 @@ class MobileProfileContent extends StatelessWidget {
             context,
             icon: Icons.email_outlined,
             label: 'Email Address',
-            value: 'admin@demo.com',
+            value: context.select<AuthService, String>((s) => s.user?.email ?? 'N/A'),
             valueFontSize: 12,
           ),
           const SizedBox(height: 16),
@@ -133,7 +136,7 @@ class MobileProfileContent extends StatelessWidget {
             context,
             icon: Icons.phone_outlined,
             label: 'Phone Number',
-            value: '+91 98765 43210',
+            value: context.select<AuthService, String>((s) => s.user?.phone ?? 'N/A'),
           ),
         ],
       ),
@@ -163,14 +166,14 @@ class MobileProfileContent extends StatelessWidget {
             context,
             icon: Icons.business_outlined,
             label: 'Department',
-            value: 'Management',
+            value: context.select<AuthService, String>((s) => s.user?.department ?? 'N/A'),
           ),
           const SizedBox(height: 16),
           _buildInfoItem(
             context,
             icon: Icons.badge_outlined,
             label: 'Employee ID',
-            value: 'MS-001',
+            value: context.select<AuthService, String>((s) => s.user?.username ?? 'N/A'),
           ),
         ],
       ),
@@ -237,7 +240,7 @@ class MobileProfileContent extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, size: 20, color: Colors.grey[400]),

@@ -5,6 +5,9 @@ class User {
   final String email;
   final String role;
   final String? profileImage;
+  final String? phone;
+  final String? department;
+  final String? designation;
 
   User({
     required this.id,
@@ -13,20 +16,53 @@ class User {
     required this.email,
     required this.role,
     this.profileImage,
+    this.phone,
+    this.department,
+    this.designation,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id']?.toString() ?? '',
-      name: json['name'] ?? 'User',
-      username: json['username'] ?? '',
+      id: (json['id'] ?? json['user_id'])?.toString() ?? '',
+      name: json['name'] ?? json['user_name'] ?? 'User',
+      username: json['username'] ?? json['user_code'] ?? '',
       email: json['email'] ?? '',
       // Normalize role to lowercase to ensure consistent comparison
       role: (json['role'] ?? json['user_type'] ?? 'employee').toString().toLowerCase(),
-      profileImage: json['profile_image'],
+      profileImage: json['profile_image'] ?? json['profile_image_url'] ?? json['avatar_url'],
+      phone: json['phone'] ?? json['phone_no'],
+      department: json['department'] ?? json['dept_name'],
+      designation: json['designation'] ?? json['desg_name'],
     );
   }
 
   bool get isAdmin => role == 'admin' || role == 'hr';
   bool get isEmployee => role == 'employee';
+  
+  // Alias for clarity as per API docs (user_code = Employee ID)
+  String get employeeId => username;
+
+  User copyWith({
+    String? id,
+    String? name,
+    String? username,
+    String? email,
+    String? role,
+    String? profileImage,
+    String? phone,
+    String? department,
+    String? designation,
+  }) {
+    return User(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      username: username ?? this.username,
+      email: email ?? this.email,
+      role: role ?? this.role,
+      profileImage: profileImage ?? this.profileImage,
+      phone: phone ?? this.phone,
+      department: department ?? this.department,
+      designation: designation ?? this.designation,
+    );
+  }
 }

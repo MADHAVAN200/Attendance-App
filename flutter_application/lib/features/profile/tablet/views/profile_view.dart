@@ -5,13 +5,28 @@ import '../../../../shared/navigation/navigation_controller.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../../auth/login_screen.dart';
 import '../../../../shared/widgets/glass_container.dart';
-import '../../../../main.dart';
+import '../../widgets/profile_avatar.dart';
 
-class ProfileView extends StatelessWidget {
+class ProfileView extends StatefulWidget {
   const ProfileView({super.key});
 
   @override
+  State<ProfileView> createState() => _ProfileViewState();
+}
+
+class _ProfileViewState extends State<ProfileView> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AuthService>(context, listen: false).fetchUserProfile();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+      final user = Provider.of<AuthService>(context).user;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -55,30 +70,15 @@ class ProfileView extends StatelessWidget {
   }
 
   Widget _buildHeroCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return GlassContainer(
       padding: const EdgeInsets.all(40),
       child: Row(
         children: [
           // Avatar
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: const Color(0xFF5B60F6).withOpacity(0.2),
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFF5B60F6).withOpacity(0.3), width: 2),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              'M',
-              style: GoogleFonts.poppins(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF5B60F6),
-              ),
-            ),
+          ProfileAvatar(
+              size: 100,
+              user: Provider.of<AuthService>(context).user,
+              canEdit: true,
           ),
           const SizedBox(width: 32),
 
@@ -88,7 +88,7 @@ class ProfileView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Mano Admin',
+                  context.select<AuthService, String>((s) => s.user?.name ?? 'User'),
                   style: GoogleFonts.poppins(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -101,17 +101,17 @@ class ProfileView extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF5B60F6).withOpacity(0.1),
+                    color: const Color(0xFF5B60F6).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF5B60F6).withOpacity(0.2)),
+                    border: Border.all(color: const Color(0xFF5B60F6).withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.shield_outlined, size: 16, color: Color(0xFF5B60F6)),
                       const SizedBox(width: 8),
-                      Text(
-                        'Admin',
+                        Text(
+                          context.select<AuthService, String>((s) => s.user?.role.toUpperCase() ?? 'EMPLOYEE'),
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -153,7 +153,7 @@ class ProfileView extends StatelessWidget {
                   context,
                   icon: Icons.email_outlined,
                   label: 'Email Address',
-                  value: 'admin@demo.com',
+                  value: context.select<AuthService, String>((s) => s.user?.email ?? 'N/A'),
                   valueFontSize: 12,
                 ),
               ),
@@ -163,7 +163,7 @@ class ProfileView extends StatelessWidget {
                   context,
                   icon: Icons.phone_outlined,
                   label: 'Phone Number',
-                  value: '+91 98765 43210',
+                  value: context.select<AuthService, String>((s) => s.user?.phone ?? 'N/A'),
                 ),
               ),
             ],
@@ -197,7 +197,7 @@ class ProfileView extends StatelessWidget {
                   context,
                   icon: Icons.business_outlined,
                   label: 'Department',
-                  value: 'Management',
+                  value: context.select<AuthService, String>((s) => s.user?.department ?? 'N/A'),
                 ),
               ),
               const SizedBox(width: 24),
@@ -206,7 +206,7 @@ class ProfileView extends StatelessWidget {
                   context,
                   icon: Icons.badge_outlined,
                   label: 'Employee ID',
-                  value: 'MS-001',
+                  value: context.select<AuthService, String>((s) => s.user?.username ?? 'N/A'),
                 ),
               ),
             ],
@@ -281,19 +281,28 @@ class ProfileView extends StatelessWidget {
       child: GlassContainer(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        color: Colors.red.withOpacity(0.1), // Distinctive red tint
-        border: Border.all(color: Colors.red.withOpacity(0.3)),
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFFEF4444) // Solid Red in Dark Mode
+            : Colors.red.withValues(alpha: 0.1), // Tint in Light Mode
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.red.shade700
+              : Colors.red.withValues(alpha: 0.3),
+        ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.logout, color: Colors.red),
+             Icon(
+              Icons.logout, 
+              color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.red
+            ),
             const SizedBox(width: 12),
             Text(
               'Log Out',
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Colors.red,
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.red,
               ),
             ),
           ],

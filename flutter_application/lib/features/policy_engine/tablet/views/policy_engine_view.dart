@@ -5,7 +5,6 @@ import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../models/shift_model.dart';
 import '../../services/shift_service.dart';
-import '../../services/policy_service.dart'; // Added PolicyService import
 import 'add_shift_dialog.dart';
 
 class PolicyEngineView extends StatefulWidget {
@@ -76,7 +75,7 @@ class _PolicyEngineViewState extends State<PolicyEngineView> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.delete_outline, color: Colors.red, size: 32),
@@ -107,7 +106,7 @@ class _PolicyEngineViewState extends State<PolicyEngineView> {
                               onPressed: () => Navigator.pop(ctx),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 14),
-                                side: BorderSide(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
+                                side: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[300]!),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                               child: Text(
@@ -163,12 +162,12 @@ class _PolicyEngineViewState extends State<PolicyEngineView> {
                await _shiftService.createShift(newShift);
              }
              if (mounted) {
-                Navigator.pop(ctx);
+                if (ctx.mounted) Navigator.pop(ctx);
                 _fetchShifts();
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Shift Saved")));
              }
            } catch(e) {
-             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+             if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
            }
         },
       )
@@ -227,8 +226,6 @@ class _PolicyEngineViewState extends State<PolicyEngineView> {
   }
 
   Widget _buildHelperHeader(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return GlassContainer(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
       child: Row(
@@ -282,7 +279,6 @@ class _PolicyEngineViewState extends State<PolicyEngineView> {
   }
 
   Widget _buildShiftCard(BuildContext context, {required Shift shift}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = Colors.indigoAccent;
     final icon = Icons.access_time_filled;
     
@@ -306,7 +302,7 @@ class _PolicyEngineViewState extends State<PolicyEngineView> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: color, size: 20),

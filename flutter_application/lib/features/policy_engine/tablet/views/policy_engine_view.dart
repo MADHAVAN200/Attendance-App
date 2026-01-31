@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/widgets/glass_confirmation_dialog.dart';
+import '../../../../shared/widgets/glass_success_dialog.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../models/shift_model.dart';
 import '../../services/shift_service.dart';
@@ -47,8 +49,16 @@ class _PolicyEngineViewState extends State<PolicyEngineView> {
      try {
        await _shiftService.deleteShift(id);
        if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Shift deleted")));
          _fetchShifts();
+         await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => GlassSuccessDialog(
+              title: "Shift Deleted",
+              message: "The shift has been successfully deleted.",
+              onDismiss: () => Navigator.pop(context),
+            ),
+         );
        }
      } catch (e) {
        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to delete: $e")));
@@ -58,94 +68,16 @@ class _PolicyEngineViewState extends State<PolicyEngineView> {
   void _showDeleteConfirm(int id) {
     showDialog(
       context: context,
-      builder: (ctx) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(16),
-          child: ConstrainedBox(
-             constraints: const BoxConstraints(maxWidth: 400),
-             child: GlassContainer(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                   mainAxisSize: MainAxisSize.min,
-                   children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.delete_outline, color: Colors.red, size: 32),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Delete Shift?",
-                        style: GoogleFonts.poppins(
-                           fontSize: 18,
-                           fontWeight: FontWeight.w600,
-                           color: Theme.of(context).textTheme.bodyLarge?.color,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Are you sure you want to delete this shift? This action cannot be undone.",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                           fontSize: 14,
-                           color: Colors.grey,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                side: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[300]!),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              ),
-                              child: Text(
-                                "Cancel",
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(ctx);
-                                _deleteShift(id);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                elevation: 0,
-                              ),
-                              child: Text(
-                                "Delete",
-                                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                   ],
-                ),
-             ),
-          ),
-        );
-      }
+      builder: (ctx) => GlassConfirmationDialog(
+        title: "Delete Shift?",
+        content: "Are you sure you want to delete this shift? This action cannot be undone.",
+        confirmLabel: "Delete",
+        confirmColor: Colors.red,
+        onConfirm: () {
+          Navigator.pop(ctx);
+          _deleteShift(id);
+        },
+      ),
     );
   }
 
@@ -162,9 +94,21 @@ class _PolicyEngineViewState extends State<PolicyEngineView> {
                await _shiftService.createShift(newShift);
              }
              if (mounted) {
-                if (ctx.mounted) Navigator.pop(ctx);
-                _fetchShifts();
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Shift Saved")));
+                if (ctx.mounted) Navigator.pop(ctx); // Close Form
+                _fetchShifts(); // Refresh Grid
+                
+                // Show Success Dialog
+                await showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => GlassSuccessDialog(
+                    title: shift?.id != null ? "Shift Updated" : "Shift Created",
+                    message: shift?.id != null 
+                        ? "The shift details have been successfully updated." 
+                        : "New shift has been successfully created.",
+                    onDismiss: () => Navigator.pop(context),
+                  ),
+                );
              }
            } catch(e) {
              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));

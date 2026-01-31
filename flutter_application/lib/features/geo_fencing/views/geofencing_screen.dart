@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/widgets/glass_success_dialog.dart';
+import '../../../../shared/widgets/glass_confirmation_dialog.dart';
 import '../models/location_model.dart';
 import '../services/location_service.dart';
 
@@ -15,6 +18,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
   // Locations State
   List<WorkLocation> _locations = [];
   WorkLocation? _selectedLocation;
+  double _currentRadius = 100.0;
   bool _isLoading = true;
 
   // Users State
@@ -56,7 +60,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
   Future<void> _fetchUsers() async {
     try {
       final users = await widget.locationService.getUsersWithLocations();
-      print("Fetched ${users.length} users");
+      debugPrint("Fetched ${users.length} users");
       // Debug first user structure
       if (users.isNotEmpty) {
         print("User 0: ${users.first}");
@@ -78,6 +82,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
   void _selectLocation(WorkLocation loc) {
     setState(() {
       _selectedLocation = loc;
+      _currentRadius = loc.radius.toDouble();
     });
   }
 
@@ -102,20 +107,52 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
       await widget.locationService.updateLocation(_selectedLocation!.id, {"is_active": newStatus ? 1 : 0});
       _fetchLocations();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Update failed: $e")));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Update failed: $e")));
     }
   }
 
 
 
-  Future<void> _toggleUserAssignment(int userId, bool isAssigned) async {
+  Future<void> _toggleUserAssignment(int userId, String userName, bool isAssigned) async {
       if (_selectedLocation == null) return;
       
+      final isAdding = !isAssigned;
+      final action = isAdding ? "assign" : "remove";
+      final preposition = isAdding ? "to" : "from";
+
+      // 1. Confirmation Dialog
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => GlassConfirmationDialog(
+          title: isAdding ? "Confirm Assignment" : "Confirm Removal",
+          content: "Are you sure you want to $action $userName $preposition ${_selectedLocation!.name}?",
+          confirmLabel: isAdding ? "Assign" : "Remove",
+          onConfirm: () => Navigator.pop(context, true),
+        ),
+      );
+
+      if (confirm != true) return;
+
+      // 2. Perform Action
       try {
-        await widget.locationService.assignUser(_selectedLocation!.id, userId, !isAssigned);
-        _fetchUsers(); // Refresh list to confirm green check
+        await widget.locationService.assignUser(_selectedLocation!.id, userId, isAdding);
+        _fetchUsers(); 
+
+        if (!mounted) return;
+
+        // 3. Success Dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => GlassSuccessDialog(
+            title: isAdding ? "User Assigned" : "User Removed",
+            message: "$userName has been successfully ${isAdding ? "assigned to" : "removed from"} ${_selectedLocation!.name}.",
+            onDismiss: () => Navigator.pop(context),
+          ),
+        );
+
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Assignment failed: $e")));
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Assignment failed: $e")));
       }
   }
 
@@ -126,11 +163,23 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
         onSubmit: (data) async {
           try {
             await widget.locationService.createLocation(data);
+            if (!ctx.mounted) return;
             Navigator.pop(ctx);
             _fetchLocations();
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Location Created")));
+            if (!mounted) return;
+            
+            // Success Dialog
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => GlassSuccessDialog(
+                title: "Location Created",
+                message: "New geofence location has been successfully created.",
+                onDismiss: () => Navigator.pop(context),
+              ),
+            );
           } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
           }
         },
       ),
@@ -252,7 +301,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                Switch(
                   value: _selectedLocation!.isActive, 
                   onChanged: (_) => _toggleActiveStatus(),
-                  activeColor: Colors.indigo,
+                   activeTrackColor: Colors.indigo,
                ),
              ],
            ),
@@ -269,24 +318,26 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                        trackHeight: 6,
                        activeTrackColor: Colors.indigo,
                        thumbColor: Colors.indigo,
-                       overlayColor: Colors.indigo.withOpacity(0.2),
+                       overlayColor: Colors.indigo.withValues(alpha: 0.2),
                     ),
-                    child: Slider(
-                      value: _selectedLocation!.radius.toDouble().clamp(0, 1000),
+                     child: Slider(
+                      value: _currentRadius.clamp(0, 2000), 
                       min: 0, 
-                      max: 1000,
-                      onChanged: (val) { },
-                      onChangeEnd: _updateRadius,
+                      max: 2000,
+                      onChanged: (val) {
+                        setState(() => _currentRadius = val);
+                      },
+                      onChangeEnd: (val) => _updateRadius(val),
                    ),
                  ),
                ),
                Container(
                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                  decoration: BoxDecoration(
-                   color: Colors.indigo.withOpacity(0.1),
+                   color: Colors.indigo.withValues(alpha: 0.1),
                    borderRadius: BorderRadius.circular(8)
                  ),
-                 child: Text("${_selectedLocation!.radius} m", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
+                 child: Text("${_currentRadius.toInt()} m", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
                )
              ],
            ),
@@ -374,7 +425,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
      return ListView.separated(
        padding: const EdgeInsets.all(12),
        itemCount: _locations.length,
-       separatorBuilder: (_,__) => const SizedBox(height: 8),
+       separatorBuilder: (context, index) => const SizedBox(height: 8),
        itemBuilder: (context, index) {
          final loc = _locations[index];
          final isSelected = loc.id == _selectedLocation?.id;
@@ -398,10 +449,10 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
              padding: const EdgeInsets.all(12),
              decoration: BoxDecoration(
                color: isSelected && !isMobile
-                  ? (isDark ? Colors.indigo.withOpacity(0.2) : Colors.indigo[50])
+                  ? (isDark ? Colors.indigo.withValues(alpha: 0.2) : Colors.indigo[50])
                   : (isDark ? const Color(0xFF0F172A) : Colors.white),
                borderRadius: BorderRadius.circular(8),
-               border: isSelected && !isMobile ? Border.all(color: Colors.indigo.withOpacity(0.5)) : null,
+               border: isSelected && !isMobile ? Border.all(color: Colors.indigo.withValues(alpha: 0.5)) : null,
              ),
              child: Column(
                crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,7 +537,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
               IconButton(
                 icon: Icon(isAssigned ? Icons.check_circle : Icons.add_circle_outline),
                 color: isAssigned ? Colors.green : Colors.grey,
-                onPressed: () => _toggleUserAssignment(userId, isAssigned),
+                onPressed: () => _toggleUserAssignment(userId, name, isAssigned),
               )
             ],
           ),
@@ -531,11 +582,36 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                    length: 2,
                    child: Column(
                      children: [
-                       const TabBar(
-                         tabs: [
-                           Tab(text: "Settings"),
-                           Tab(text: "Staff"),
-                         ]
+                       Container(
+                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                         height: 48,
+                         padding: const EdgeInsets.all(4),
+                         decoration: BoxDecoration(
+                           color: Theme.of(ctx).brightness == Brightness.dark ? const Color(0xFF1E2939) : const Color(0xFFF1F5F9),
+                           borderRadius: BorderRadius.circular(12),
+                         ),
+                         child: TabBar(
+                           indicator: BoxDecoration(
+                             color: Colors.white,
+                             borderRadius: BorderRadius.circular(10),
+                             boxShadow: [
+                               BoxShadow(
+                                 color: Colors.black.withValues(alpha: 0.05),
+                                 blurRadius: 4,
+                                 offset: const Offset(0, 1),
+                               ),
+                             ],
+                           ),
+                           labelColor: const Color(0xFF1E293B),
+                           unselectedLabelColor: Colors.grey[600],
+                           indicatorSize: TabBarIndicatorSize.tab,
+                           dividerColor: Colors.transparent,
+                           labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+                           tabs: const [
+                             Tab(text: "Settings"),
+                             Tab(text: "Staff"),
+                           ]
+                         ),
                        ),
                        Expanded(
                          child: TabBarView(
@@ -649,12 +725,12 @@ class __LocationFormDialogState extends State<_LocationFormDialog> {
                         activeTrackColor: Colors.indigo,
                         inactiveTrackColor: isDark ? Colors.white24 : Colors.grey[300],
                         thumbColor: Colors.white,
-                        overlayColor: Colors.indigo.withOpacity(0.2),
+                        overlayColor: Colors.indigo.withValues(alpha: 0.2),
                       ),
                       child: Slider(
                         value: _radius, 
                         min: 0, 
-                        max: 1000, 
+                        max: 2000, 
                         onChanged: (v) => setState(() => _radius = v)
                       ),
                     ),

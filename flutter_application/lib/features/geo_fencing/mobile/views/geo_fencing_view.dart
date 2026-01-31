@@ -1,6 +1,4 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../services/location_service.dart';

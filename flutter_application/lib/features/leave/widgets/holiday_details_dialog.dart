@@ -63,7 +63,7 @@ class HolidayDetailsDialog extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
@@ -143,7 +143,7 @@ class HolidayDetailsDialog extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 20, color: Colors.grey[600]),

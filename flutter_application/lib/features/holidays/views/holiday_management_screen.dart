@@ -11,7 +11,8 @@ import '../../../../shared/services/auth_service.dart';
 import 'package:provider/provider.dart';
 import '../services/holiday_service.dart';
 import '../models/holiday_model.dart';
-// Note: Assuming API Config or Service handles Errors properly roughly.
+// Import the new widget
+import '../widgets/holiday_form_dialog.dart';
 
 class HolidayManagementScreen extends StatefulWidget {
   final HolidayService holidayService;
@@ -88,17 +89,18 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
   void _showAddDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => _HolidayFormDialog(
+      builder: (ctx) => HolidayFormDialog(
         onSubmit: (data) async {
           try {
             await widget.holidayService.addHoliday(data);
+            if (!ctx.mounted) return;
             Navigator.pop(ctx);
             _fetchHolidays();
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Holiday Added")));
             }
           } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
           }
         },
       ),
@@ -108,18 +110,19 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
   void _showEditDialog(Holiday holiday) {
     showDialog(
       context: context,
-      builder: (ctx) => _HolidayFormDialog(
+      builder: (ctx) => HolidayFormDialog(
         initialData: holiday,
         onSubmit: (data) async {
           try {
             await widget.holidayService.updateHoliday(holiday.id, data);
+            if (!ctx.mounted) return;
             Navigator.pop(ctx);
             _fetchHolidays();
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Holiday Updated")));
             }
           } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
           }
         },
       ),
@@ -206,7 +209,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
         color: isDark ? const Color(0xFF1E2939) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade300,
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade300,
         ),
       ),
       child: TextField(
@@ -236,7 +239,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
         backgroundColor: isDark ? const Color(0xFF1E2939) : Colors.white,
         shape: RoundedRectangleBorder(
            borderRadius: BorderRadius.circular(12),
-           side: BorderSide(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade300)
+           side: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade300)
         ),
       ),
     );
@@ -291,7 +294,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
           Expanded(
             child: ListView.separated(
               itemCount: _filteredHolidays.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100),
+              separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100),
               itemBuilder: (context, index) {
                 final holiday = _filteredHolidays[index];
                 if (isMobile) {
@@ -444,15 +447,15 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
 
     switch (type.toLowerCase()) {
       case 'public':
-        bgColor = const Color(0xFF6366F1).withOpacity(0.1); // Indigo tint
+        bgColor = const Color(0xFF6366F1).withValues(alpha: 0.1); // Indigo tint
         textColor = const Color(0xFF818CF8);
         break;
       case 'optional':
-        bgColor = const Color(0xFFF59E0B).withOpacity(0.1); // Amber tint
+        bgColor = const Color(0xFFF59E0B).withValues(alpha: 0.1); // Amber tint
         textColor = const Color(0xFFFBBF24);
         break;
       default:
-        bgColor = Colors.grey.withOpacity(0.1);
+        bgColor = Colors.grey.withValues(alpha: 0.1);
         textColor = Colors.grey;
     }
 
@@ -561,160 +564,4 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-}
-
-class _HolidayFormDialog extends StatefulWidget {
-  final Function(Map<String, dynamic>) onSubmit;
-  final Holiday? initialData; // Add support for editing
-
-  const _HolidayFormDialog({required this.onSubmit, this.initialData});
-
-  @override
-  __HolidayFormDialogState createState() => __HolidayFormDialogState();
-}
-
-class __HolidayFormDialogState extends State<_HolidayFormDialog> {
-  late TextEditingController _nameCtrl; // Late init
-  late DateTime _selectedDate;
-  late String _type;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameCtrl = TextEditingController(text: widget.initialData?.name ?? '');
-    _selectedDate = widget.initialData != null 
-        ? DateTime.parse(widget.initialData!.date) 
-        : DateTime.now();
-    _type = widget.initialData?.type ?? "Public";
-  }
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Dialog(
-       backgroundColor: Colors.transparent,
-       child: isDark 
-          ? GlassContainer(
-              padding: const EdgeInsets.all(24),
-              color: const Color(0xFF1E2939),
-              child: _buildContent(isDark),
-            )
-          : Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: _buildContent(isDark),
-            ),
-    );
-  }
-
-  Widget _buildContent(bool isDark) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Add Holiday",
-          style: GoogleFonts.poppins(
-            fontSize: 18, 
-            fontWeight: FontWeight.w600, 
-            color: isDark ? Colors.white : Colors.black87
-          ),
-        ),
-        const SizedBox(height: 24),
-        TextField(
-          controller: _nameCtrl,
-          style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87),
-          decoration: InputDecoration(
-            labelText: "Holiday Name",
-            labelStyle: TextStyle(color: isDark ? Colors.grey : Colors.grey[700]),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.grey)),
-            focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF6366F1))),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Text(
-              "Date: ${DateFormat('yyyy-MM-dd').format(_selectedDate)}",
-              style: GoogleFonts.poppins(color: isDark ? Colors.grey[300] : Colors.black87),
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _selectedDate,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime(2030),
-                  builder: (ctx, child) {
-                    return Theme(
-                      data: isDark ? ThemeData.dark() : ThemeData.light(),
-                      child: child!,
-                    );
-                  }
-                );
-                if (picked != null) setState(() => _selectedDate = picked);
-              },
-              child: const Text("Pick Date"),
-            )
-          ],
-        ),
-        const SizedBox(height: 16),
-        DropdownButtonFormField<String>(
-          value: _type,
-          dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-          style: GoogleFonts.poppins(color: isDark ? Colors.white : Colors.black87),
-          items: ["Public", "Optional", "Observance"].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-          onChanged: (val) => setState(() => _type = val!),
-          decoration: InputDecoration(
-            labelText: "Type",
-            labelStyle: TextStyle(color: isDark ? Colors.grey : Colors.grey[700]),
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.grey)),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(
-              onPressed: () => Navigator.pop(context), 
-              child: Text("Cancel", style: GoogleFonts.poppins(color: Colors.grey))
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6366F1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: () {
-                if (_nameCtrl.text.isEmpty) return;
-                widget.onSubmit({
-                  "holiday_name": _nameCtrl.text,
-                  "holiday_date": DateFormat('yyyy-MM-dd').format(_selectedDate),
-                  "holiday_type": _type,
-                  // "applicable_json": ["All Locations"]
-                });
-              },
-              child: Text(
-                widget.initialData == null ? "Add" : "Update", 
-                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.white)
-              ),
-            )
-          ],
-        )
-      ],
-    );
-  }
-
-
 }

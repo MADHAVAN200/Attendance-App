@@ -14,6 +14,7 @@ import '../../widgets/bulk_upload_report_dialog.dart';
 import '../../widgets/glass_confirmation_dialog.dart';
 import '../../widgets/employee_detail_dialog.dart';
 import '../../widgets/employee_action_menu.dart';
+import '../../widgets/employee_action_sheet.dart'; // Add correct import
 
 class EmployeesMobileView extends StatefulWidget {
   const EmployeesMobileView({super.key});
@@ -412,10 +413,7 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                               ),
                               trailing: (_isSelectionMode || Provider.of<AuthService>(context, listen: false).user!.isEmployee) 
                                   ? null 
-                                    : EmployeeActionMenu(
-                                      onEdit: () => _navigateToAddEdit(employee: emp),
-                                      onDeleteConfirmed: () => _deleteEmployee(emp.userId),
-                                    ),
+                                    : null,
                               onTap: () {
                                 if (_isSelectionMode) {
                                   _toggleSelection(emp.userId);
@@ -425,10 +423,7 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
                               },
                               onLongPress: () {
                                 if (!_isSelectionMode && !Provider.of<AuthService>(context, listen: false).user!.isEmployee) {
-                                  setState(() {
-                                    _isSelectionMode = true;
-                                    _toggleSelection(emp.userId);
-                                  });
+                                   _showActionSheet(context, emp);
                                 }
                               },
                             );
@@ -471,6 +466,31 @@ class _EmployeesMobileViewState extends State<EmployeesMobileView> {
       builder: (context) => EmployeeDetailDialog(employee: employee),
     );
   }
+
+  void _showActionSheet(BuildContext context, Employee employee) {
+    EmployeeActionSheet.show(
+      context,
+      employeeName: employee.userName,
+      onEdit: () => _navigateToAddEdit(employee: employee),
+      onDelete: () async {
+         // Confirm delete
+         final confirm = await showDialog<bool>(
+           context: context,
+           builder: (context) => GlassConfirmationDialog(
+             title: 'Confirm Delete',
+             content: 'Are you sure you want to delete ${employee.userName}? This action cannot be undone.',
+             confirmLabel: 'Delete',
+             onConfirm: () => Navigator.pop(context, true),
+           ),
+         );
+
+         if (confirm == true) {
+           _deleteEmployee(employee.userId);
+         }
+      },
+    );
+  }
+
 
 
 }

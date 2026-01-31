@@ -14,6 +14,7 @@ import '../../widgets/bulk_upload_report_dialog.dart';
 import '../../widgets/glass_confirmation_dialog.dart';
 import '../../widgets/employee_detail_dialog.dart';
 import '../../widgets/employee_action_menu.dart';
+import '../../widgets/employee_action_sheet.dart';
 
 class EmployeesView extends StatefulWidget {
   const EmployeesView({super.key});
@@ -515,8 +516,6 @@ class _EmployeesViewState extends State<EmployeesView> {
               _buildDataColumn(context, 'ROLE & DEPT'),
               _buildDataColumn(context, 'PHONE'),
               _buildDataColumn(context, 'SHIFT'),
-              if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee)
-                 const DataColumn(label: Expanded(child: Text('ACTIONS', textAlign: TextAlign.right))), 
             ],
             rows: _filteredEmployees.map((e) => _buildDataRow(context, e)).toList(),
           ),
@@ -548,10 +547,7 @@ class _EmployeesViewState extends State<EmployeesView> {
     return DataRow(
       onLongPress: () {
         if (!_isSelectionMode && !Provider.of<AuthService>(context, listen: false).user!.isEmployee) {
-          setState(() {
-            _isSelectionMode = true;
-            _toggleSelection(data.userId);
-          });
+           _showActionSheet(context, data);
         }
       },
       onSelectChanged: (_) {
@@ -624,22 +620,36 @@ class _EmployeesViewState extends State<EmployeesView> {
         DataCell(Text(data.phoneNo ?? 'N/A', style: GoogleFonts.poppins(fontSize: 13, color: subTextColor))),
         // Shift
         DataCell(Text(data.shift ?? 'N/A', style: GoogleFonts.poppins(fontSize: 13, color: subTextColor))),
-        // Actions
-        if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee)
-          DataCell(Align(alignment: Alignment.centerRight, child: _buildActionsMenu(context, data))),
       ],
     );
   }
 
-  Widget _buildActionsMenu(BuildContext context, Employee employee) {
-    return EmployeeActionMenu(
+  void _showActionSheet(BuildContext context, Employee employee) {
+    EmployeeActionSheet.show(
+      context,
+      employeeName: employee.userName,
       onEdit: () {
-        setState(() {
-          _editingEmployee = employee;
-          _isAddingOrEditing = true;
-        });
+         setState(() {
+           _editingEmployee = employee;
+           _isAddingOrEditing = true;
+         });
       },
-      onDeleteConfirmed: () => _deleteEmployee(employee.userId),
+      onDelete: () async {
+         // Confirm delete
+         final confirm = await showDialog<bool>(
+           context: context,
+           builder: (context) => GlassConfirmationDialog(
+             title: 'Confirm Delete',
+             content: 'Are you sure you want to delete ${employee.userName}? This action cannot be undone.',
+             confirmLabel: 'Delete',
+             onConfirm: () => Navigator.pop(context, true),
+           ),
+         );
+
+         if (confirm == true) {
+           _deleteEmployee(employee.userId);
+         }
+      },
     );
   }
 

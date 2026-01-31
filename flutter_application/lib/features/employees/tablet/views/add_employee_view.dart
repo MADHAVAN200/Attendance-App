@@ -5,6 +5,8 @@ import '../../../../shared/widgets/glass_container.dart';
 import '../../models/employee_model.dart';
 import '../../services/employee_service.dart';
 import '../../../../shared/services/auth_service.dart';
+import '../../widgets/glass_confirmation_dialog.dart'; // Ensure this is imported if not already, or typically it might be in views
+import '../../widgets/employee_success_dialog.dart';
 
 class AddEmployeeView extends StatefulWidget {
   final VoidCallback onCancel;
@@ -65,7 +67,7 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
     _selectedShiftId = emp.shiftId;
     _selectedUserType = emp.userType;
     if (widget.employeeToEdit != null) {
-      final validUserTypes = ['employee', 'admin'];
+      final validUserTypes = ['employee', 'admin', 'hr']; // Added 'hr'
       if (!validUserTypes.contains(_selectedUserType)) {
         _selectedUserType = 'employee';
       }
@@ -94,44 +96,80 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
   Future<void> _saveEmployee() async {
     if (!_formKey.currentState!.validate()) return;
     
+    // Confirmation for Edit Mode
+    if (widget.employeeToEdit != null) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => GlassConfirmationDialog(
+          title: 'Confirm Update',
+          content: 'Are you sure you want to save changes for ${_nameController.text}?',
+          confirmLabel: 'Update',
+          onConfirm: () => Navigator.pop(context, true),
+        ),
+      );
+      if (confirm != true) return;
+    }
+
     setState(() => _isLoading = true);
     try {
       final Map<String, dynamic> data = {
         'user_name': _nameController.text,
-        'email': _emailController.text,
         'phone_no': _phoneController.text,
         'dept_id': _selectedDeptId,
         'desg_id': _selectedDesgId,
         'shift_id': _selectedShiftId,
         'user_type': _selectedUserType,
       };
+      
+      // Handle Email: Send only if new or changed (to avoid unique constraint issues if backend is strict)
+      if (widget.employeeToEdit == null || _emailController.text != widget.employeeToEdit!.email) {
+        data['email'] = _emailController.text;
+      }
 
       if (widget.employeeToEdit == null) {
-        // Create Mode - Password Required
+        // Create Mode
         if (_passwordController.text.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password is required for new users')));
           setState(() => _isLoading = false);
           return;
         }
         data['user_password'] = _passwordController.text;
+        // Email is mandatory for create
+        data['email'] = _emailController.text; 
+        
         await _employeeService.createEmployee(data);
       } else {
         // Update Mode
         if (_passwordController.text.isNotEmpty) {
            data['user_password'] = _passwordController.text;
         }
+        
         await _employeeService.updateEmployee(widget.employeeToEdit!.userId, data);
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(widget.employeeToEdit == null ? 'Employee Created' : 'Employee Updated')
-        ));
-        widget.onSuccess?.call();
+        // Show Success Dialog
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => EmployeeSuccessDialog(
+            title: widget.employeeToEdit == null ? "Employee Added" : "Update Successful",
+            message: widget.employeeToEdit == null 
+                ? "New employee has been successfully added to the system." 
+                : "Employee details have been successfully updated.",
+            onDismiss: () {
+               Navigator.pop(context); // Close dialog
+               widget.onSuccess?.call(); // Close page / Refresh
+            },
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        // extract message if possible
+        String msg = e.toString();
+        if (msg.contains("Exception:")) msg = msg.replaceAll("Exception:", "").trim();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $msg'), backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -259,6 +297,7 @@ class _AddEmployeeViewState extends State<AddEmployeeView> {
                           const [
                             DropdownMenuItem(value: 'employee', child: Text('Employee')),
                             DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                            DropdownMenuItem(value: 'hr', child: Text('HR')),
                           ],
                           (val) => setState(() => _selectedUserType = val!),
                         )),

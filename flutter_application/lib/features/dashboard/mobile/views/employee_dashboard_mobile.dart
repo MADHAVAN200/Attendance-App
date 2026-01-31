@@ -78,12 +78,12 @@ class MobileEmployeeDashboardContent extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Theme.of(context).brightness == Brightness.dark 
-                        ? Colors.white.withOpacity(0.05) 
+                        ? Colors.white.withValues(alpha: 0.05) 
                         : Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: Theme.of(context).brightness == Brightness.dark 
-                          ? Colors.white.withOpacity(0.1) 
+                          ? Colors.white.withValues(alpha: 0.1) 
                           : Colors.grey[300]!,
                     ),
                   ),

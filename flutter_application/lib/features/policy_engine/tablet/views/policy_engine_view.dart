@@ -8,6 +8,8 @@ import '../../../../shared/services/auth_service.dart';
 import '../../models/shift_model.dart';
 import '../../services/shift_service.dart';
 import 'add_shift_dialog.dart';
+import 'shift_detail_dialog.dart';
+import '../../widgets/shift_action_sheet.dart';
 
 class PolicyEngineView extends StatefulWidget {
   const PolicyEngineView({super.key});
@@ -226,88 +228,98 @@ class _PolicyEngineViewState extends State<PolicyEngineView> {
     final color = Colors.indigoAccent;
     final icon = Icons.access_time_filled;
     
-    // Calculate duration (simple approximation if needed, or pass from backend)
     // Display shift data
     final title = shift.name;
-    final type = "Shift"; // Backend doesn't seem to have type yet, or maybe 'shift_name' implies it?
+    final type = "Shift"; 
     final timing = "${shift.startTime} - ${shift.endTime}";
     final gracePeriod = "${shift.gracePeriodMins} Mins";
     final overtime = shift.isOvertimeEnabled ? "On (> ${shift.overtimeThresholdHours}h)" : "Off";
     
-    
-    return GlassContainer(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Card Header
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+    return GestureDetector(
+      onLongPress: () => _showShiftOptions(shift),
+      onTap: () => _viewShiftDetails(shift),
+      child: GlassContainer(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Card Header
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
                 ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      type,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey,
-                        letterSpacing: 0.5,
+                      const SizedBox(height: 2),
+                      Text(
+                        type,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              IconButton(
-                onPressed: () => _openShiftDialog(shift: shift), 
-                icon: const Icon(Icons.edit_outlined, size: 18, color: Colors.grey)
-              ),
-              IconButton(
-                onPressed: () {
-                   if (shift.id != null) _showDeleteConfirm(shift.id!);
-                }, 
-                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.grey)
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const Divider(height: 1, thickness: 1, color: Colors.white10),
-          const SizedBox(height: 16),
+                // No IconButtons here anymore
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Divider(height: 1, thickness: 1, color: Colors.white10),
+            const SizedBox(height: 16),
 
-          // Details List
-          _buildDetailRow(context, 'Timing', timing, isBold: true),
-          const SizedBox(height: 12),
-          // _buildDetailRow(context, 'Duration', duration), // Duration omitted for simplicity or calculated
-          // const SizedBox(height: 16),
-          // const Divider(height: 1, thickness: 1, color: Colors.white10),
-          // const SizedBox(height: 16),
-          _buildDetailRow(context, 'Grace Period', gracePeriod, icon: Icons.warning_amber_rounded, iconColor: Colors.amber),
-          const SizedBox(height: 12),
-          _buildDetailRow(context, 'Overtime', overtime, icon: Icons.bolt, iconColor: const Color(0xFF5B60F6)),
-        ],
+            // Details List
+            _buildDetailRow(context, 'Timing', timing, isBold: true),
+            const SizedBox(height: 12),
+            _buildDetailRow(context, 'Grace Period', gracePeriod, icon: Icons.warning_amber_rounded, iconColor: Colors.amber),
+            const SizedBox(height: 12),
+            _buildDetailRow(context, 'Overtime', overtime, icon: Icons.bolt, iconColor: const Color(0xFF5B60F6)),
+          ],
+        ),
       ),
     );
   }
+
+  void _viewShiftDetails(Shift shift) {
+    showDialog(
+      context: context,
+      builder: (ctx) => ShiftDetailDialog(shift: shift),
+    );
+  }
+
+  void _showShiftOptions(Shift shift) {
+    ShiftActionSheet.show(
+      context,
+      shiftName: shift.name,
+      onEdit: () {
+         _openShiftDialog(shift: shift);
+      },
+      onDelete: () {
+         if (shift.id != null) _showDeleteConfirm(shift.id!);
+      },
+    );
+  }
+
 
   Widget _buildDetailRow(BuildContext context, String label, String value, {bool isBold = false, IconData? icon, Color? iconColor}) {
     return Row(

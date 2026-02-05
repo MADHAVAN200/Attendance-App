@@ -9,6 +9,7 @@ class VerifyOtpTabletPortrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500),
@@ -74,7 +75,7 @@ class VerifyOtpTabletPortrait extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      backgroundColor: Theme.of(context).primaryColor,
+                      backgroundColor: isDark ? const Color(0xFF4F46E5) : Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                     ),
                     child: controller.isLoading

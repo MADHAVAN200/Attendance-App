@@ -82,7 +82,7 @@ class ResetPasswordScreenState extends State<ResetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF101828), // Black Mode
+      // backgroundColor: const Color(0xFF101828), // Removed hardcoded color
       body: LayoutBuilder(
         builder: (context, constraints) {
            if (constraints.maxWidth < 600) {

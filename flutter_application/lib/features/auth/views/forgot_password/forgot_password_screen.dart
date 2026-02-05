@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../verify_otp/verify_otp_screen.dart';
@@ -36,6 +35,8 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       if (!mounted) return;
 
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('OTP sent successfully. Please check your email.')),
       );
@@ -47,6 +48,7 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
@@ -63,7 +65,7 @@ class ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     // Lock orientation handling not needed here as LayoutBuilder handles it, 
     // but SystemUI mode can be set if needed.
     return Scaffold(
-      backgroundColor: const Color(0xFF101828), // Black Mode Background
+      // backgroundColor: const Color(0xFF101828), // Removed hardcoded color
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth < 600) {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../reset_password/reset_password_screen.dart';
@@ -75,7 +74,7 @@ class VerifyOtpScreenState extends State<VerifyOtpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF101828), // Black Mode
+      // backgroundColor: const Color(0xFF101828), // Removed hardcoded color
       body: LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth < 600) {

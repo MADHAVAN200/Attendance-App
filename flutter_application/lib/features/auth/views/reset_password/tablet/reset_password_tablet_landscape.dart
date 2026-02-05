@@ -8,6 +8,7 @@ class ResetPasswordTabletLandscape extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 550),
@@ -72,12 +73,12 @@ class ResetPasswordTabletLandscape extends StatelessWidget {
                   TextFormField(
                     controller: controller.confirmPasswordController,
                     obscureText: !controller.isConfirmPasswordVisible,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: isDark ? Colors.white : Colors.black),
                     decoration: InputDecoration(
                       labelText: 'Confirm Password',
                       labelStyle: const TextStyle(color: Colors.grey),
                       filled: true,
-                      fillColor: const Color(0xFF101828),
+                      fillColor: isDark ? const Color(0xFF101828) : Colors.grey[50],
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                         borderSide: BorderSide.none,
@@ -106,7 +107,7 @@ class ResetPasswordTabletLandscape extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      backgroundColor: Theme.of(context).primaryColor,
+                      backgroundColor: isDark ? const Color(0xFF4F46E5) : Theme.of(context).primaryColor,
                       foregroundColor: Colors.white,
                     ),
                     child: controller.isLoading

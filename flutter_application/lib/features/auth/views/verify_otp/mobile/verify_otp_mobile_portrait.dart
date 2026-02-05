@@ -9,6 +9,8 @@ class VerifyOtpMobilePortrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -23,7 +25,7 @@ class VerifyOtpMobilePortrait extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
               ),
               const SizedBox(height: 8),
@@ -31,13 +33,13 @@ class VerifyOtpMobilePortrait extends StatelessWidget {
                 'Enter the OTP sent to ${controller.widget.email}',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[400],
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
                     ),
               ),
               const SizedBox(height: 32),
               TextFormField(
                 controller: controller.otpController,
-                style: const TextStyle(color: Colors.white, letterSpacing: 4, fontWeight: FontWeight.bold),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black, letterSpacing: 4, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
                 keyboardType: TextInputType.number,
                 inputFormatters: [
@@ -48,7 +50,7 @@ class VerifyOtpMobilePortrait extends StatelessWidget {
                   hintText: '000000',
                   hintStyle: const TextStyle(color: Colors.grey, letterSpacing: 4),
                   filled: true,
-                  fillColor: const Color(0xFF1E2939),
+                  fillColor: isDark ? const Color(0xFF1E2939) : Colors.grey[100],
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
@@ -68,7 +70,7 @@ class VerifyOtpMobilePortrait extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  backgroundColor: Theme.of(context).primaryColor,
+                  backgroundColor: isDark ? const Color(0xFF4F46E5) : Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
                 ),
                 child: controller.isLoading

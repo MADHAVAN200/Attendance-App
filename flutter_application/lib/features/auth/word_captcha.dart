@@ -54,7 +54,7 @@ class _WordCaptchaState extends State<WordCaptcha> {
            decodedSvg = rawSvg;
         }
       } catch (e) {
-        print("SVG Decoding Error: $e");
+        debugPrint("SVG Decoding Error: $e");
         decodedSvg = null;
       }
 
@@ -69,7 +69,7 @@ class _WordCaptchaState extends State<WordCaptcha> {
         });
       }
     } catch (e) {
-      print("Captcha Fetch Error: $e");
+      debugPrint("Captcha Fetch Error: $e");
       if (mounted) {
         setState(() {
            _isLoading = false;

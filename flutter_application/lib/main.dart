@@ -11,6 +11,7 @@ import 'shared/services/auth_service.dart';
 import 'shared/services/notification_service.dart';
 import 'shared/services/dashboard_provider.dart'; 
 import 'features/attendance/providers/attendance_provider.dart'; // Import AttendanceProvider
+import 'features/leave/services/leave_service.dart'; // Import LeaveService
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,9 @@ void main() async {
         ChangeNotifierProvider<NotificationService>.value(value: notificationService),
         ChangeNotifierProvider<DashboardProvider>(create: (_) => DashboardProvider(authService)),
         ChangeNotifierProvider<AttendanceProvider>(create: (_) => AttendanceProvider(authService)),
+        ProxyProvider<AuthService, LeaveService>(
+          update: (_, auth, __) => LeaveService(auth.dio),
+        ),
       ],
       child: const AttendanceApp(),
     ),

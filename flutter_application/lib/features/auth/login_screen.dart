@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'word_captcha.dart'; // Import WordCaptcha
 import 'mobile/views/login_mobile_portrait.dart';

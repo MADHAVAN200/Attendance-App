@@ -19,6 +19,7 @@ import '../../../../shared/widgets/attendance_success_dialog.dart';
 import '../../widgets/attendance_history_tab.dart';
 import '../../widgets/attendance_analytics_tab.dart';
 import '../../providers/attendance_provider.dart'; // Import Provider
+import '../../widgets/correction_request_form.dart';
 
 class MyAttendanceView extends StatefulWidget {
   const MyAttendanceView({super.key});
@@ -31,6 +32,8 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
   late AttendanceService _attendanceService;
   final ImagePicker _picker = ImagePicker();
   DateTime _selectedDate = DateTime.now();
+
+
 
   @override
   void initState() {
@@ -70,7 +73,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
       return null;
     }
 
-    return await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
+    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
   }
 
   Future<void> _handleAttendanceAction(bool isTimeIn) async {
@@ -185,8 +188,6 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
             time: timeStr
           );
 
-          if (!mounted) return;
-
           Provider.of<AttendanceProvider>(context, listen: false).invalidateCache(DateTime.now());
           _fetchRecords(); // Refresh list
         }
@@ -216,10 +217,10 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
         }
 
         return DefaultTabController(
-          length: 2,
+          length: 2, // Reduced to 2
           child: Column(
             children: [
-              // Tab Bar (Unchanged)
+              // Tab Bar
                Container(
                 margin: const EdgeInsets.fromLTRB(24, 24, 24, 16),
                 padding: const EdgeInsets.all(4),
@@ -230,7 +231,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: Theme.of(context).brightness == Brightness.dark 
-                        ? Colors.white.withValues(alpha: 0.1) 
+                        ? Colors.white.withOpacity(0.1) 
                         : Colors.grey[300]!
                   ),
                 ),
@@ -243,7 +244,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
+                        color: Colors.black.withOpacity(0.05),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),
@@ -293,7 +294,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                           const SizedBox(height: 32),
                           _buildDateSelector(context),
                           const SizedBox(height: 16),
-                          _buildHistoryList(context, _records, _isLoading), // No Expanded
+                          _buildHistoryList(context, _records, _isLoading),
                         ],
                       ),
                     ),
@@ -361,12 +362,12 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: isActive ? color.withValues(alpha: 0.2) : color.withValues(alpha: 0.1),
+                  color: isActive ? color.withOpacity(0.2) : color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   icon,
-                  color: isActive ? color : color.withValues(alpha: 0.7),
+                  color: isActive ? color : color.withOpacity(0.7),
                   size: 28,
                 ),
               ),
@@ -380,7 +381,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                     style: GoogleFonts.poppins(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: isActive ? 1.0 : 0.5),
+                      color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(isActive ? 1.0 : 0.5),
                     ),
                   ),
                   Text(
@@ -532,7 +533,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
             Container(
               width: 40,
               decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.1),
+                color: statusColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -580,7 +581,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                      child: Column(
                        mainAxisAlignment: MainAxisAlignment.center,
                        children: [
-                         Icon(Icons.arrow_forward, size: 16, color: Colors.grey.withValues(alpha: 0.5)),
+                         Icon(Icons.arrow_forward, size: 16, color: Colors.grey.withOpacity(0.5)),
                          const SizedBox(height: 4),
                          Text(
                            "View", 
@@ -649,7 +650,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
         decoration: BoxDecoration(
           color: isDark ? const Color(0xFF1E2939) : Colors.white, // Use White instead of grey[100] for cleaner look
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: accentColor.withValues(alpha: 0.3)), // Increased from 0.1
+          border: Border.all(color: accentColor.withOpacity(0.3)), // Increased from 0.1
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -658,7 +659,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
               children: [
                 Container(
                   padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(color: accentColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+                  decoration: BoxDecoration(color: accentColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
                   child: Icon(icon, size: 12, color: accentColor),
                 ),
                 const SizedBox(width: 6),
@@ -709,18 +710,20 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                     width: 40,
                     height: 40,
                     clipBehavior: Clip.antiAlias,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       color: Colors.black, // Dark background for photos
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
                     ),
                     child: imageUrl != null && imageUrl.isNotEmpty
                         ? CachedNetworkImage(
                             imageUrl: imageUrl,
-                            fit: BoxFit.cover, 
-                            placeholder: (context, url) => const Center(child: SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))),
-                            errorWidget: (context, url, error) => const Icon(Icons.person, size: 20, color: Colors.white),
+                            fit: BoxFit.contain, // best for no cropping
+                            placeholder: (context, url) => const Icon(Icons.person, size: 20, color: Colors.grey),
+                            errorWidget: (context, url, error) => const Icon(Icons.person_off, size: 20, color: Colors.grey),
                           )
-                        : const Icon(Icons.person, size: 24, color: Colors.white),
+                        : Icon(Icons.person, size: 24, color: Colors.white.withOpacity(0.8)),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -793,7 +796,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                    Container(
                      padding: const EdgeInsets.all(8),
                      decoration: BoxDecoration(
-                       color: accentColor.withValues(alpha: 0.1),
+                       color: accentColor.withOpacity(0.1),
                        borderRadius: BorderRadius.circular(12),
                      ),
                      child: Icon(icon, color: accentColor),
@@ -823,7 +826,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                    border: Border.all(color: Colors.white.withOpacity(0.1)),
                     image: DecorationImage(
                       image: NetworkImage(imageUrl),
                       fit: BoxFit.cover,
@@ -835,7 +838,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                   height: 100,
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).disabledColor.withValues(alpha: 0.1),
+                    color: Theme.of(context).disabledColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(Icons.image_not_supported, size: 40, color: Theme.of(context).disabledColor),
@@ -969,11 +972,11 @@ class DottedBorderContainer extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.3), style: BorderStyle.none), 
+        border: Border.all(color: Colors.grey.withOpacity(0.3), style: BorderStyle.none), 
       ),
       child: Container(
          decoration: BoxDecoration(
-           border: Border.all(color: Colors.grey.withValues(alpha: 0.3), width: 1), 
+           border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1), 
            borderRadius: BorderRadius.circular(12),
          ),
          child: child,

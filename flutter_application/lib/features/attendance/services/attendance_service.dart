@@ -118,12 +118,12 @@ class AttendanceService {
   }
 
   // Fetch All Requests
-  Future<List<CorrectionRequest>> getCorrectionRequests() async {
+  Future<List<AttendanceCorrectionRequest>> getCorrectionRequests() async {
     try {
       final response = await _dio.get(ApiConstants.attendanceCorrectionRequests);
       if (response.statusCode == 200 && response.data['success']) {
          final List<dynamic> list = response.data['requests'] ?? [];
-         return list.map((json) => CorrectionRequest.fromJson(json)).toList();
+         return list.map((json) => AttendanceCorrectionRequest.fromJson(json)).toList();
       }
       return [];
     } catch (e) {
@@ -132,7 +132,7 @@ class AttendanceService {
   }
   
   // Get Request Detail
-  Future<Map<String, dynamic>> getCorrectionRequestDetail(int id) async {
+  Future<Map<String, dynamic>> getCorrectionRequestDetail(String id) async {
     try {
       final response = await _dio.get('${ApiConstants.attendanceCorrectionRequest}/$id');
       if (response.statusCode == 200 && response.data['success']) {
@@ -145,7 +145,7 @@ class AttendanceService {
   }
 
   // Update Request Status
-  Future<void> updateCorrectionRequestStatus(int id, String status, String comments) async {
+  Future<void> updateCorrectionRequestStatus(String id, String status, String comments) async {
     try {
       await _dio.patch('${ApiConstants.attendanceCorrectRequestUpdate}/$id', data: {
         "status": status,

@@ -59,7 +59,7 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
     
     if (permission == LocationPermission.deniedForever) return null;
 
-    return await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
+    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
   }
 
   Future<void> _handleAttendanceAction(bool isTimeIn) async {
@@ -275,17 +275,17 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: isActive ? color.withValues(alpha: 0.2) : color.withValues(alpha: 0.1),
+                  color: isActive ? color.withOpacity(0.2) : color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(icon, color: isActive ? color : color.withValues(alpha: 0.7), size: 28),
+                child: Icon(icon, color: isActive ? color : color.withOpacity(0.7), size: 28),
               ),
               const SizedBox(width: 20),
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color?.withValues(alpha: isActive ? 1.0 : 0.5))),
+                  Text(label, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(isActive ? 1.0 : 0.5))),
                   Text(subLabel, style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color)),
                 ],
               ),
@@ -403,7 +403,7 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
             Column(
               children: [
                 Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
-                Expanded(child: Container(width: 2, color: Colors.grey.withValues(alpha: 0.3), margin: const EdgeInsets.symmetric(vertical: 4))),
+                Expanded(child: Container(width: 2, color: Colors.grey.withOpacity(0.3), margin: const EdgeInsets.symmetric(vertical: 4))),
                 Container(width: 12, height: 12, decoration: BoxDecoration(color: record.timeOut != null ? Colors.red : Colors.grey, shape: BoxShape.circle)),
               ],
             ),
@@ -465,9 +465,10 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
         return Container(
           width: 40,
           height: 40,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.black,
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
           ),
           child: const Icon(Icons.person, size: 24, color: Colors.white),
         );
@@ -479,15 +480,16 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
           width: 40,
           height: 40,
           clipBehavior: Clip.antiAlias,
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Colors.black,
-            shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
           ),
           child: CachedNetworkImage(
             imageUrl: imageUrl, 
-            fit: BoxFit.cover,
-            errorWidget: (context, url, error) => const Icon(Icons.person, color: Colors.white),
-            placeholder: (context, url) => const Center(child: SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))),
+            fit: BoxFit.cover, // Fixed: Use cover to fill the box (portrait look)
+            errorWidget: (_,__,___) => const Icon(Icons.person, color: Colors.white),
+            placeholder: (_,__) => const Center(child: SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))),
           ),
         ),
       );

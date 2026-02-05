@@ -5,6 +5,9 @@ import '../../providers/attendance_provider.dart';
 import '../widgets/mark_attendance_mobile.dart';
 import '../widgets/attendance_history_mobile.dart';
 import '../widgets/attendance_analytics_mobile.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../../../../shared/widgets/glass_container.dart';
+import '../../widgets/correction_request_form.dart';
 
 class MobileMyAttendanceContent extends StatefulWidget {
   const MobileMyAttendanceContent({super.key});
@@ -23,55 +26,63 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
         return Container(
           color: Theme.of(context).brightness == Brightness.dark 
               ? Colors.transparent 
-              : const Color(0xFFF8F9FA), // Off-white for light mode
+              : const Color(0xFFF8F9FA),
           child: DefaultTabController(
-            length: 2,
+            length: 2, // Reduced to 2
             child: Column(
               children: [
-              // Main Tab Bar
+              // Header Row: TabBar + Correction Button
               Container(
                  margin: const EdgeInsets.fromLTRB(20, 12, 20, 10),
-                 height: 40,
-                 padding: const EdgeInsets.all(4), 
-                 decoration: BoxDecoration(
-                   color: Theme.of(context).brightness == Brightness.dark 
-                       ? const Color(0xFF1E293B)
-                       : const Color(0xFFF1F5F9), 
-                   borderRadius: BorderRadius.circular(12),
+                 child: Row(
+                   children: [
+                     Expanded(
+                       child: Container(
+                         height: 40,
+                         padding: const EdgeInsets.all(4), 
+                         decoration: BoxDecoration(
+                           color: Theme.of(context).brightness == Brightness.dark 
+                               ? const Color(0xFF1E293B)
+                               : const Color(0xFFF1F5F9), 
+                           borderRadius: BorderRadius.circular(12),
+                         ),
+                          child: TabBar(
+                            indicatorSize: TabBarIndicatorSize.tab,
+                            indicator: BoxDecoration(
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                  ? const Color(0xFF334155) 
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            dividerColor: Colors.transparent,
+                            labelColor: Theme.of(context).brightness == Brightness.dark 
+                                ? const Color(0xFF818CF8) 
+                                : const Color(0xFF4338CA),
+                            unselectedLabelColor: Colors.grey[600],
+                            labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                            tabs: const [
+                              Tab(text: "Mark Attendance"),
+                              Tab(text: "My Attendance"),
+                            ],
+                          ),
+                       ),
+                      ),
+                   ],
                  ),
-                  child: TabBar(
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    indicator: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                          ? const Color(0xFF334155) 
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    dividerColor: Colors.transparent,
-                    labelColor: Theme.of(context).brightness == Brightness.dark 
-                        ? const Color(0xFF818CF8) 
-                        : const Color(0xFF4338CA),
-                    unselectedLabelColor: Colors.grey[600],
-                    labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
-                    tabs: const [
-                      Tab(text: "Mark Attendance"),
-                      Tab(text: "My Attendance"),
-                    ],
-                  ),
               ),
 
               // Tab View
               Expanded(
                 child: TabBarView(
                   children: [
-                    // Tab 1: Mark Attendance (Separated)
+                    // Tab 1: Mark Attendance
                     const MarkAttendanceMobile(),
 
                     // Tab 2: My Attendance (Sub-tabs: History / Analytics)

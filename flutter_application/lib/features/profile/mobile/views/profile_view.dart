@@ -19,7 +19,6 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
   @override
   void initState() {
     super.initState();
-    // Fetch latest profile data when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<AuthService>(context, listen: false).fetchUserProfile();
     });
@@ -27,32 +26,39 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
 
   @override
   Widget build(BuildContext context) {
-    final user = Provider.of<AuthService>(context).user;
+    return Consumer<AuthService>(
+      builder: (context, auth, _) {
+        final user = auth.user;
+        if (user == null) return const Center(child: CircularProgressIndicator());
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Hero Profile Card
-          _buildHeroCard(context),
-          const SizedBox(height: 16),
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Hero Profile Card
+              _buildHeroCard(context, user),
+              const SizedBox(height: 16),
 
-          // Contact Info Card
-          _buildContactInfoCard(context),
-          const SizedBox(height: 16),
+              // Contact Info Card
+              _buildContactInfoCard(context, user),
+              const SizedBox(height: 16),
 
-          // Employment Details Card
-          _buildEmploymentDetailsCard(context),
-          const SizedBox(height: 16),
+              // Employment Details Card
+              _buildEmploymentDetailsCard(context, user),
+              const SizedBox(height: 16),
 
-          // Logout Card
-          _buildLogoutCard(context),
-        ],
-      ),
+              // Logout Card
+              _buildLogoutCard(context),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeroCard(BuildContext context) {
+  Widget _buildHeroCard(BuildContext context, dynamic user) { // dynamic to avoid import issues if not clean, but better be User type
+     // final User user = user; // strict typing
+     // Using user properties directly
     return GlassContainer(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -61,14 +67,14 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
           // Avatar
           ProfileAvatar(
             size: 80,
-            user: Provider.of<AuthService>(context).user,
+            user: user,
             canEdit: true,
           ),
           const SizedBox(height: 16),
 
           // Info
           Text(
-            context.select<AuthService, String>((s) => s.user?.name ?? 'User'),
+            user.name.isNotEmpty ? user.name : 'Unknown User',
             style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -80,9 +86,9 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF5B60F6).withValues(alpha: 0.1),
+              color: const Color(0xFF5B60F6).withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF5B60F6).withValues(alpha: 0.2)),
+              border: Border.all(color: const Color(0xFF5B60F6).withOpacity(0.2)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -90,7 +96,7 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
                 const Icon(Icons.shield_outlined, size: 14, color: Color(0xFF5B60F6)),
                 const SizedBox(width: 8),
                 Text(
-                  context.select<AuthService, String>((s) => s.user?.role.toUpperCase() ?? 'EMPLOYEE'),
+                  user.role.toUpperCase(),
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -105,7 +111,7 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
     );
   }
 
-  Widget _buildContactInfoCard(BuildContext context) {
+  Widget _buildContactInfoCard(BuildContext context, dynamic user) {
     return GlassContainer(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -128,7 +134,7 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
             context,
             icon: Icons.email_outlined,
             label: 'Email Address',
-            value: context.select<AuthService, String>((s) => s.user?.email ?? 'N/A'),
+            value: user.email.isNotEmpty ? user.email : 'N/A',
             valueFontSize: 12,
           ),
           const SizedBox(height: 16),
@@ -136,14 +142,14 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
             context,
             icon: Icons.phone_outlined,
             label: 'Phone Number',
-            value: context.select<AuthService, String>((s) => s.user?.phone ?? 'N/A'),
+            value: user.phone ?? 'N/A',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildEmploymentDetailsCard(BuildContext context) {
+  Widget _buildEmploymentDetailsCard(BuildContext context, dynamic user) {
     return GlassContainer(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -166,15 +172,18 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
             context,
             icon: Icons.business_outlined,
             label: 'Department',
-            value: context.select<AuthService, String>((s) => s.user?.department ?? 'N/A'),
+            value: user.department ?? 'N/A',
           ),
-          const SizedBox(height: 16),
-          _buildInfoItem(
-            context,
-            icon: Icons.badge_outlined,
-            label: 'Employee ID',
-            value: context.select<AuthService, String>((s) => s.user?.username ?? 'N/A'),
-          ),
+
+          if (user.designation != null) ...[
+             const SizedBox(height: 16),
+             _buildInfoItem(
+               context,
+               icon: Icons.work_outline,
+               label: 'Designation',
+               value: user.designation!,
+             ),
+          ],
         ],
       ),
     );
@@ -240,7 +249,7 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
+            color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, size: 20, color: Colors.grey[400]),

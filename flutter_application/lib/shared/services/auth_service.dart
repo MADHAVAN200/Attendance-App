@@ -24,6 +24,7 @@ class AuthService extends ChangeNotifier {
 
   bool get isAuthenticated => _accessToken != null;
   User? get user => _currentUser;
+  String? get token => _accessToken;
 
   // Initialize AuthService
   Future<void> init() async {
@@ -410,6 +411,39 @@ class AuthService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint("HTTP Upload Error: $e");
+      rethrow;
+    }
+  }
+
+  // Delete Profile Picture
+  Future<void> deleteProfilePicture() async {
+    try {
+      final uri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.profile}');
+      debugPrint('Deleting profile pic at $uri');
+
+      final response = await http.delete(
+        uri,
+        headers: {
+          'Accept': 'application/json',
+          if (_accessToken != null) 'Authorization': 'Bearer $_accessToken',
+        },
+      );
+
+      debugPrint('Delete Response: ${response.statusCode} - ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201 || response.statusCode == 204) {
+         // Immediate Local Update
+         if (_currentUser != null) {
+           _currentUser = _currentUser!.copyWith(profileImage: null); // Clear image
+           notifyListeners();
+         } else {
+           await getMe();
+         }
+      } else {
+        throw Exception('Failed to delete profile picture: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint("HTTP Delete Error: $e");
       rethrow;
     }
   }

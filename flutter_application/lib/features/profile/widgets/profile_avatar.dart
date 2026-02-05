@@ -7,6 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/constants/api_constants.dart';
+import '../../../../shared/widgets/custom_dialog.dart';
 
 class ProfileAvatar extends StatefulWidget {
   final double size;
@@ -27,6 +28,7 @@ class ProfileAvatar extends StatefulWidget {
 class _ProfileAvatarState extends State<ProfileAvatar> {
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
+  int _cacheBuster = DateTime.now().millisecondsSinceEpoch; // Initialize
 
   Future<void> _pickImage(ImageSource source) async {
     if (!widget.canEdit) return;
@@ -39,8 +41,12 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       final int sizeInBytes = await image.length();
       if (sizeInBytes > 5 * 1024 * 1024) {
          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Image is too large (Max 5MB)'), backgroundColor: Colors.red),
+            CustomDialog.show(
+              context: context,
+              title: "File Too Large",
+              message: "The selected image is larger than 5MB. Please choose a smaller image.",
+              positiveButtonText: "OK",
+              onPositivePressed: () => Navigator.pop(context),
             );
          }
          return;
@@ -53,21 +59,35 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       await authService.updateProfilePicture(File(image.path));
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile picture updated successfully')),
+        setState(() {
+           _cacheBuster = DateTime.now().millisecondsSinceEpoch; // Update on success
+        });
+        
+        CustomDialog.show(
+          context: context,
+          title: "Success",
+          message: "Profile picture updated successfully!",
+          positiveButtonText: "OK",
+          onPositivePressed: () => Navigator.pop(context),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update profile picture: $e'), backgroundColor: Colors.red),
-        );
+         CustomDialog.show(
+              context: context,
+              title: "Update Failed",
+              message: "Could not update profile picture. Please try again.\n\nError: $e",
+              positiveButtonText: "OK",
+              onPositivePressed: () => Navigator.pop(context),
+              isDestructive: true,
+         );
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
   }
-
+  
+  // This method will be called when the edit button is tapped
   void _showEditOptions() {
     if (!widget.canEdit) return;
 
@@ -108,6 +128,16 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
                     _pickImage(ImageSource.gallery);
                   }
                 ),
+                if (widget.user?.profileImage != null)
+                  _buildOptionItem(
+                    icon: Icons.delete_outline, 
+                    label: "Remove", 
+                    onTap: () {
+                      Navigator.pop(context); // Close bottom sheet
+                      _confirmRemoveImage();
+                    },
+                    isDestructive: true,
+                  ),
               ],
             ),
             const SizedBox(height: 16),
@@ -117,60 +147,94 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     );
   }
 
-  Widget _buildOptionItem({required IconData icon, required String label, required VoidCallback onTap}) {
+  Future<void> _confirmRemoveImage() async {
+    CustomDialog.show(
+      context: context,
+      title: "Remove Photo",
+      message: "Are you sure you want to remove your profile photo?",
+      positiveButtonText: "Remove",
+      isDestructive: true,
+      onPositivePressed: () {
+         Navigator.pop(context); // Close dialog
+         _removeImage();
+      },
+      negativeButtonText: "Cancel",
+      onNegativePressed: () => Navigator.pop(context),
+    );
+  }
+
+  Future<void> _removeImage() async {
+      setState(() => _isUploading = true);
+
+      try {
+        if (!mounted) return;
+        final authService = Provider.of<AuthService>(context, listen: false);
+        await authService.deleteProfilePicture();
+
+        if (mounted) {
+          setState(() {
+             _cacheBuster = DateTime.now().millisecondsSinceEpoch;
+          });
+          
+          CustomDialog.show(
+            context: context,
+            title: "Success",
+            message: "Profile photo removed successfully!",
+            positiveButtonText: "OK",
+            onPositivePressed: () => Navigator.pop(context),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+           CustomDialog.show(
+                context: context,
+                title: "Remove Failed",
+                message: "Could not remove profile photo. Please try again.\n\nError: $e",
+                positiveButtonText: "OK",
+                onPositivePressed: () => Navigator.pop(context),
+                isDestructive: true,
+           );
+        }
+      } finally {
+        if (mounted) setState(() => _isUploading = false);
+      }
+  }
+
+  Widget _buildOptionItem({required IconData icon, required String label, required VoidCallback onTap, bool isDestructive = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = isDestructive ? const Color(0xFFEF4444) : (isDark ? Colors.white : Theme.of(context).primaryColor);
+    
     return GestureDetector(
       onTap: onTap,
       child: Column(
+        mainAxisSize: MainAxisSize.min, // Ensure min size
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[100],
+              color: isDestructive 
+                  ? const Color(0xFFEF4444).withValues(alpha: 0.1) 
+                  : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.grey[100]),
               shape: BoxShape.circle,
-              border: Border.all(color: isDark ? Colors.white24 : (Colors.grey[300] ?? Colors.grey)),
+              border: Border.all(
+                color: isDestructive 
+                    ? const Color(0xFFEF4444).withValues(alpha: 0.3)
+                    : (isDark ? Colors.white24 : (Colors.grey[300] ?? Colors.grey)),
+              ),
             ),
             child: Icon(
               icon, 
               size: 28, 
-              color: isDark ? Colors.white : Theme.of(context).primaryColor,
+              color: color,
             ),
           ),
           const SizedBox(height: 8),
-          Text(label, style: GoogleFonts.poppins(fontSize: 14)),
-        ],
-      ),
-    );
-  }
-
-  void _openViewer() {
-    if (widget.user?.profileImage == null) return;
-    
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.9), // Dark overlay
-      builder: (context) => Stack(
-        children: [
-          Center(
-            child: InteractiveViewer(
-              child: CachedNetworkImage(
-                imageUrl: widget.user!.profileImage!.startsWith('http') 
-                    ? widget.user!.profileImage! 
-                    : '${ApiConstants.baseUrl}/${widget.user!.profileImage!}',
-                placeholder: (context, url) => const CircularProgressIndicator(),
-                errorWidget: (context, url, err) => const Icon(Icons.error, color: Colors.white),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 40,
-            right: 20,
-            child: Material(
-              color: Colors.transparent,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                onPressed: () => Navigator.pop(context),
-              ),
+          Text(
+            label, 
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: isDestructive ? const Color(0xFFEF4444) : null,
+              fontWeight: isDestructive ? FontWeight.w500 : null,
             ),
           ),
         ],
@@ -182,13 +246,24 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
   Widget build(BuildContext context) {
     final user = widget.user;
     final initials = user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : '?';
-    final imageUrl = user?.profileImage;
+    String? imageUrl = user?.profileImage;
+    
+    // Add cache buster
+    if (imageUrl != null) {
+       if (!imageUrl.startsWith('http')) {
+          imageUrl = '${ApiConstants.baseUrl}/$imageUrl';
+       }
+       imageUrl = '$imageUrl?t=$_cacheBuster';
+    }
+
+    debugPrint("Building ProfileAvatar: canEdit=${widget.canEdit}, size=${widget.size}");
 
     return Stack(
+      clipBehavior: Clip.none, // Allow badge to overlap slightly if needed
       children: [
         GestureDetector(
-          onTap: imageUrl != null ? _openViewer : null,
-          child: Hero( // Hero animation for smooth transition
+          onTap: imageUrl != null ? () => _openViewer(imageUrl!) : null, // Pass resolved URL
+          child: Hero(
             tag: 'profile-avatar-${user?.id ?? "me"}',
             child: Container(
               width: widget.size,
@@ -200,10 +275,10 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
               ),
               child: _isUploading
                   ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
-                  : imageUrl != null && imageUrl.isNotEmpty
+                  : imageUrl != null
                       ? ClipOval(
                           child: CachedNetworkImage(
-                            imageUrl: imageUrl.startsWith('http') ? imageUrl : '${ApiConstants.baseUrl}/$imageUrl',
+                            imageUrl: imageUrl,
                             fit: BoxFit.cover,
                             placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
                             errorWidget: (context, url, error) => _buildInitials(initials),
@@ -215,27 +290,58 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
         ),
         if (widget.canEdit && !_isUploading)
           Positioned(
-            bottom: 0,
-            right: 0,
+            bottom: -5, // Slight negative to push it out a bit for better visibility
+            right: -5,
             child: GestureDetector(
               onTap: _showEditOptions,
               child: Container(
-                padding: const EdgeInsets.all(8), // Larger touch target
+                padding: const EdgeInsets.all(10), // Increased padding
                 decoration: BoxDecoration(
                   color: const Color(0xFF5B60F6),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 2), // Match bg
+                  border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 3),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4),
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 3)),
                   ],
                 ),
-                child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                child: const Icon(Icons.camera_alt, color: Colors.white, size: 20), // Increased icon size
               ),
             ),
           ),
       ],
     );
   }
+
+  void _openViewer(String imageUrl) { // Accept resolved URL
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (context) => Stack(
+        children: [
+          Center(
+            child: InteractiveViewer(
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                placeholder: (context, url) => const CircularProgressIndicator(),
+                errorWidget: (context, url, err) => const Icon(Icons.error, color: Colors.white),
+              ),
+            ),
+          ),
+          Positioned(
+             top: 40, right: 20,
+             child: Material(
+               color: Colors.transparent,
+               child: IconButton(
+                 icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                 onPressed: () => Navigator.pop(context),
+               ),
+             ),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Widget _buildInitials(String initials) {
     return Center(

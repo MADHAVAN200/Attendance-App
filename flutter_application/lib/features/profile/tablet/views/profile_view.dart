@@ -25,60 +25,64 @@ class _ProfileViewState extends State<ProfileView> {
 
   @override
   Widget build(BuildContext context) {
-      final user = Provider.of<AuthService>(context).user;
+    return Consumer<AuthService>(
+      builder: (context, auth, _) {
+        final user = auth.user;
+        if (user == null) return const Center(child: CircularProgressIndicator());
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        children: [
-          // Hero Profile Card
-          _buildHeroCard(context),
-          const SizedBox(height: 24),
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            children: [
+              // Hero Profile Card
+              _buildHeroCard(context, user),
+              const SizedBox(height: 24),
 
-          // Details Row
-          LayoutBuilder(
-            builder: (context, constraints) {
-               // Threshold for Tablet Portrait (e.g., < 900 or even < 600 depending on content)
-               // Using 900 to match previous logic for consistency
-               final isPortrait = constraints.maxWidth < 900;
+              // Details Row
+              LayoutBuilder(
+                builder: (context, constraints) {
+                   // Threshold for Tablet Portrait
+                   final isPortrait = constraints.maxWidth < 900;
 
-               if (isPortrait) {
-                 return Column(
-                   children: [
-                     _buildContactInfoCard(context),
-                     const SizedBox(height: 24),
-                     _buildEmploymentDetailsCard(context),
-                   ],
-                 );
-               }
+                   if (isPortrait) {
+                     return Column(
+                       children: [
+                         _buildContactInfoCard(context, user),
+                         const SizedBox(height: 24),
+                         _buildEmploymentDetailsCard(context, user),
+                       ],
+                     );
+                   }
 
-               return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(child: _buildContactInfoCard(context)),
-                  const SizedBox(width: 24),
-                  Expanded(child: _buildEmploymentDetailsCard(context)),
-                ],
-              );
-            },
+                   return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildContactInfoCard(context, user)),
+                      const SizedBox(width: 24),
+                      Expanded(child: _buildEmploymentDetailsCard(context, user)),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              _buildLogoutCard(context),
+            ],
           ),
-          const SizedBox(height: 24),
-          _buildLogoutCard(context),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildHeroCard(BuildContext context) {
+  Widget _buildHeroCard(BuildContext context, dynamic user) {
     return GlassContainer(
       padding: const EdgeInsets.all(40),
       child: Row(
         children: [
           // Avatar
           ProfileAvatar(
-              size: 100,
-              user: Provider.of<AuthService>(context).user,
-              canEdit: true,
+            size: 100,
+            user: user,
+            canEdit: true,
           ),
           const SizedBox(width: 32),
 
@@ -88,7 +92,7 @@ class _ProfileViewState extends State<ProfileView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  context.select<AuthService, String>((s) => s.user?.name ?? 'User'),
+                  user.name.isNotEmpty ? user.name : 'Unknown User',
                   style: GoogleFonts.poppins(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -101,17 +105,17 @@ class _ProfileViewState extends State<ProfileView> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF5B60F6).withValues(alpha: 0.1),
+                    color: const Color(0xFF5B60F6).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF5B60F6).withValues(alpha: 0.2)),
+                    border: Border.all(color: const Color(0xFF5B60F6).withOpacity(0.2)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.shield_outlined, size: 16, color: Color(0xFF5B60F6)),
                       const SizedBox(width: 8),
-                        Text(
-                          context.select<AuthService, String>((s) => s.user?.role.toUpperCase() ?? 'EMPLOYEE'),
+                      Text(
+                        user.role.toUpperCase(),
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -129,7 +133,7 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  Widget _buildContactInfoCard(BuildContext context) {
+  Widget _buildContactInfoCard(BuildContext context, dynamic user) {
     return GlassContainer(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -153,7 +157,7 @@ class _ProfileViewState extends State<ProfileView> {
                   context,
                   icon: Icons.email_outlined,
                   label: 'Email Address',
-                  value: context.select<AuthService, String>((s) => s.user?.email ?? 'N/A'),
+                  value: user.email.isNotEmpty ? user.email : 'N/A',
                   valueFontSize: 12,
                 ),
               ),
@@ -163,7 +167,7 @@ class _ProfileViewState extends State<ProfileView> {
                   context,
                   icon: Icons.phone_outlined,
                   label: 'Phone Number',
-                  value: context.select<AuthService, String>((s) => s.user?.phone ?? 'N/A'),
+                  value: user.phone ?? 'N/A',
                 ),
               ),
             ],
@@ -173,7 +177,7 @@ class _ProfileViewState extends State<ProfileView> {
     );
   }
 
-  Widget _buildEmploymentDetailsCard(BuildContext context) {
+  Widget _buildEmploymentDetailsCard(BuildContext context, dynamic user) {
     return GlassContainer(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -197,18 +201,21 @@ class _ProfileViewState extends State<ProfileView> {
                   context,
                   icon: Icons.business_outlined,
                   label: 'Department',
-                  value: context.select<AuthService, String>((s) => s.user?.department ?? 'N/A'),
+                  value: user.department ?? 'N/A',
                 ),
               ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: _buildInfoItem(
-                  context,
-                  icon: Icons.badge_outlined,
-                  label: 'Employee ID',
-                  value: context.select<AuthService, String>((s) => s.user?.username ?? 'N/A'),
-                ),
-              ),
+
+              if (user.designation != null) ...[
+                 const SizedBox(width: 24),
+                 Expanded(
+                   child: _buildInfoItem(
+                     context,
+                     icon: Icons.work_outline,
+                     label: 'Designation',
+                     value: user.designation!,
+                   ),
+                 ),
+              ],
             ],
           ),
         ],
@@ -271,7 +278,7 @@ class _ProfileViewState extends State<ProfileView> {
             if (context.mounted) {
                // Reset internal navigation state
                navigationNotifier.value = PageType.dashboard;
-
+ 
               Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (route) => false,
@@ -281,28 +288,19 @@ class _ProfileViewState extends State<ProfileView> {
       child: GlassContainer(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFFEF4444) // Solid Red in Dark Mode
-            : Colors.red.withValues(alpha: 0.1), // Tint in Light Mode
-        border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.red.shade700
-              : Colors.red.withValues(alpha: 0.3),
-        ),
+        color: Colors.red.withOpacity(0.1), // Distinctive red tint
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-             Icon(
-              Icons.logout, 
-              color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.red
-            ),
+            const Icon(Icons.logout, color: Colors.red),
             const SizedBox(width: 12),
             Text(
               'Log Out',
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.red,
+                color: Colors.red,
               ),
             ),
           ],

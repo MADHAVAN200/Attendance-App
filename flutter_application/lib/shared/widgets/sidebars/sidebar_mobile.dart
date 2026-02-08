@@ -41,117 +41,119 @@ class _SidebarContent extends StatelessWidget {
     return ValueListenableBuilder<PageType>(
       valueListenable: navigationNotifier,
       builder: (context, currentPage, _) {
-        return Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
+        return SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Sidebar Header
+                      Container(
+                        height: 80, // Taller header for mobile drawer
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        alignment: Alignment.bottomLeft,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          children: [
+                            Image.asset(
+                              'assets/mano.png', 
+                              height: 40,
+                              errorBuilder: (context, error, stackTrace) => Icon(Icons.change_history, color: Theme.of(context).primaryColor, size: 28),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'MANO',
+                              style: GoogleFonts.poppins(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).brightness == Brightness.dark 
+                                    ? Colors.white 
+                                    : Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Menu Items (Excluding Feedback)
+                      ...PageType.values.where((p) {
+                        if (p == PageType.feedback) return false; // Handled separately at bottom
+                        final user = context.read<AuthService>().user;
+                        if (user != null && user.isEmployee) {
+                            final allowed = [
+                              PageType.dashboard,
+                              PageType.myAttendance,
+                              PageType.leavesAndHolidays,
+                              PageType.feedback, // Kept in logic for permission check, but excluded from this loop
+                              PageType.profile,
+                            ];
+                            if (!allowed.contains(p)) return false;
+                        }
+                        return true; 
+                      }).map((page) => _buildMenuItem(
+                        context, 
+                        page,
+                        currentPage == page,
+                      )),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Fixed Bottom Item: Bugs & Feedback (Custom Button)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                 child: Column(
                   children: [
-                    // Sidebar Header
-                    Container(
-                      height: 80, // Taller header for mobile drawer
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      alignment: Alignment.bottomLeft,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.change_history, 
-                            color: Theme.of(context).primaryColor,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            'MANO',
-                            style: GoogleFonts.poppins(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).brightness == Brightness.dark 
-                                  ? Colors.white 
-                                  : Theme.of(context).primaryColor,
+                    GestureDetector(
+                      onTap: () {
+                         navigateTo(PageType.feedback);
+                         if (onLinkTap != null) {
+                          onLinkTap!();
+                         } else {
+                          Navigator.pop(context);
+                         }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: currentPage == PageType.feedback
+                              ? (Theme.of(context).brightness == Brightness.dark 
+                                  ? Colors.white.withValues(alpha: 0.1) 
+                                  : const Color(0xFF4338CA).withValues(alpha: 0.1))
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.bug_report_outlined, 
+                              size: 20,
+                              color: currentPage == PageType.feedback
+                                  ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
+                                  : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[700]),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Text(
+                              "Bugs & Feedback",
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: currentPage == PageType.feedback ? FontWeight.w600 : FontWeight.w500,
+                                color: currentPage == PageType.feedback
+                                    ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
+                                    : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[300] : Colors.grey[800]),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    
-                    // Menu Items (Excluding Feedback)
-                    ...PageType.values.where((p) {
-                      if (p == PageType.feedback) return false; // Handled separately at bottom
-                      final user = context.read<AuthService>().user;
-                      if (user != null && user.isEmployee) {
-                          final allowed = [
-                            PageType.dashboard,
-                            PageType.myAttendance,
-                            PageType.leavesAndHolidays,
-                            PageType.feedback, // Kept in logic for permission check, but excluded from this loop
-                            PageType.profile,
-                          ];
-                          if (!allowed.contains(p)) return false;
-                      }
-                      return true; 
-                    }).map((page) => _buildMenuItem(
-                      context, 
-                      page,
-                      currentPage == page,
-                    )),
                   ],
                 ),
               ),
-            ),
-            
-            // Fixed Bottom Item: Bugs & Feedback (Custom Button)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                       navigateTo(PageType.feedback);
-                       if (onLinkTap != null) {
-                        onLinkTap!();
-                       } else {
-                        Navigator.pop(context);
-                       }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: currentPage == PageType.feedback
-                            ? (Theme.of(context).brightness == Brightness.dark 
-                                ? Colors.white.withValues(alpha: 0.1) 
-                                : const Color(0xFF4338CA).withValues(alpha: 0.1))
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.bug_report_outlined, 
-                            size: 20,
-                            color: currentPage == PageType.feedback
-                                ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
-                                : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[700]),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            "Bugs & Feedback",
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: currentPage == PageType.feedback ? FontWeight.w600 : FontWeight.w500,
-                              color: currentPage == PageType.feedback
-                                  ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
-                                  : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[300] : Colors.grey[800]),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         );
       }
     );

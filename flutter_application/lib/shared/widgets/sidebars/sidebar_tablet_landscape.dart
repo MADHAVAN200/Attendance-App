@@ -35,12 +35,11 @@ class _SidebarContent extends StatelessWidget {
     return ValueListenableBuilder<PageType>(
       valueListenable: navigationNotifier,
       builder: (context, currentPage, _) {
-        return Column(
-          children: [
-            // Fixed Sidebar Header (Aligned with AppBar)
-            SafeArea(
-              bottom: false,
-              child: Container(
+        return SafeArea(
+          child: Column(
+            children: [
+              // Fixed Sidebar Header (Aligned with AppBar)
+              Container(
                 height: 60,
                 decoration: BoxDecoration(
                   border: Border(
@@ -57,13 +56,14 @@ class _SidebarContent extends StatelessWidget {
                 child: Row(
                   children: [
                      // Logo Icon (Using similar style to provided image if possible, or keeping existing)
-                     Container(
-                       padding: const EdgeInsets.all(8),
-                       decoration: BoxDecoration(
-                         color: const Color(0xFF5B60F6).withValues(alpha: 0.1),
-                         borderRadius: BorderRadius.circular(8),
+                     Image.asset(
+                       'assets/mano.png', 
+                       height: 48,
+                       errorBuilder: (context, error, stackTrace) => Container(
+                         padding: const EdgeInsets.all(8),
+                         decoration: BoxDecoration(color: const Color(0xFF5B60F6).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                         child: const Icon(Icons.change_history, color: Color(0xFF5B60F6), size: 24),
                        ),
-                       child: const Icon(Icons.change_history, color: Color(0xFF5B60F6), size: 24),
                      ),
                      const SizedBox(width: 12),
                      Text(
@@ -78,87 +78,87 @@ class _SidebarContent extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-            
-            // Scrollable Menu Items
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 24),
+              
+              // Scrollable Menu Items
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Column(
+                    children: [
+                      ...PageType.values.where((p) {
+                         final user = context.read<AuthService>().user;
+                         if (user != null && user.isEmployee) {
+                             final allowed = [
+                               PageType.dashboard,
+                               PageType.myAttendance,
+                               PageType.leavesAndHolidays,
+                               PageType.feedback,
+                               PageType.profile,
+                             ];
+                             if (!allowed.contains(p)) return false;
+                         }
+                         if (p == PageType.profile) return false;
+                         if (p == PageType.feedback) return false; // Hide feedback from list
+                         return true;
+                      }).map((page) => _buildMenuItem(
+                        context, 
+                        page,
+                        currentPage == page,
+                      )),
+                    ],
+                  ),
+                ),
+              ),
+              
+              // Fixed Bottom: Bugs & Feedback
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 child: Column(
                   children: [
-                    ...PageType.values.where((p) {
-                       final user = context.read<AuthService>().user;
-                       if (user != null && user.isEmployee) {
-                           final allowed = [
-                             PageType.dashboard,
-                             PageType.myAttendance,
-                             PageType.leavesAndHolidays,
-                             PageType.feedback,
-                             PageType.profile,
-                           ];
-                           if (!allowed.contains(p)) return false;
-                       }
-                       if (p == PageType.profile) return false;
-                       if (p == PageType.feedback) return false; // Hide feedback from list
-                       return true;
-                    }).map((page) => _buildMenuItem(
-                      context, 
-                      page,
-                      currentPage == page,
-                    )),
+                    GestureDetector(
+                      onTap: () {
+                         navigateTo(PageType.feedback);
+                         if (onLinkTap != null) onLinkTap!();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: currentPage == PageType.feedback
+                              ? (Theme.of(context).brightness == Brightness.dark 
+                                  ? Colors.white.withValues(alpha: 0.1) 
+                                  : const Color(0xFF4338CA).withValues(alpha: 0.1))
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.bug_report_outlined, 
+                              size: 20,
+                              color: currentPage == PageType.feedback
+                                  ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
+                                  : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[700]),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              "Bugs & Feedback",
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: currentPage == PageType.feedback ? FontWeight.w600 : FontWeight.w500,
+                                color: currentPage == PageType.feedback
+                                    ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
+                                    : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[300] : Colors.grey[800]),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ),
-            
-            // Fixed Bottom: Bugs & Feedback
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                       navigateTo(PageType.feedback);
-                       if (onLinkTap != null) onLinkTap!();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                      decoration: BoxDecoration(
-                        color: currentPage == PageType.feedback
-                            ? (Theme.of(context).brightness == Brightness.dark 
-                                ? Colors.white.withValues(alpha: 0.1) 
-                                : const Color(0xFF4338CA).withValues(alpha: 0.1))
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.bug_report_outlined, 
-                            size: 20,
-                            color: currentPage == PageType.feedback
-                                ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
-                                : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[700]),
-                          ),
-                          const SizedBox(width: 12),
-                          Text(
-                            "Bugs & Feedback",
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: currentPage == PageType.feedback ? FontWeight.w600 : FontWeight.w500,
-                              color: currentPage == PageType.feedback
-                                  ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
-                                  : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[300] : Colors.grey[800]),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         );
       }
     );
@@ -168,7 +168,7 @@ class _SidebarContent extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       decoration: BoxDecoration(
         color: isActive 
             ? (isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFF4338CA).withValues(alpha: 0.1))
@@ -176,6 +176,8 @@ class _SidebarContent extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: ListTile(
+        dense: true,
+        visualDensity: const VisualDensity(vertical: -2),
         horizontalTitleGap: 8,
         minLeadingWidth: 20,
         leading: Icon(

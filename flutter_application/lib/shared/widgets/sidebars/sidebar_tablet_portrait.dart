@@ -41,58 +41,118 @@ class _SidebarContent extends StatelessWidget {
     return ValueListenableBuilder<PageType>(
       valueListenable: navigationNotifier,
       builder: (context, currentPage, _) {
-        return SingleChildScrollView(
+        return SafeArea(
           child: Column(
             children: [
-            // Sidebar Header
-            Container(
-              height: 80,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.1))),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.change_history, color: Theme.of(context).primaryColor, size: 28),
-                  const SizedBox(width: 12),
-                  Text(
-                    'MANO',
-                    style: GoogleFonts.poppins(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).brightness == Brightness.dark 
-                          ? Colors.white 
-                          : Theme.of(context).primaryColor,
+               // Sidebar Header
+              Container(
+                height: 80,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                alignment: Alignment.centerLeft,
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+                ),
+                child: Row(
+                  children: [
+                    Image.asset(
+                      'assets/mano.png',
+                      height: 48,
+                      errorBuilder: (context, error, stackTrace) => Icon(Icons.change_history, color: Theme.of(context).primaryColor, size: 28),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Text(
+                      'MANO',
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).brightness == Brightness.dark 
+                            ? Colors.white 
+                            : Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            
-            const SizedBox(height: 32),
-            
-            // Menu Items
-            ...PageType.values.where((p) {
-              final user = context.read<AuthService>().user;
-              if (user != null && user.isEmployee) {
-                  final allowed = [
-                    PageType.dashboard,
-                    PageType.myAttendance,
-                    PageType.leavesAndHolidays,
-                    PageType.dailyActivity,
-                    PageType.feedback,
-                    PageType.profile,
-                  ];
-                  if (!allowed.contains(p)) return false;
-              }
-              return p != PageType.profile; // Hide profile in sidebar on tablet
-            }).map((page) => _buildMenuItem(
-              context, 
-              page,
-              currentPage == page,
-            )),
-          ],
+              
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Column(
+                    children: [
+                      // Menu Items
+                      ...PageType.values.where((p) {
+                        final user = context.read<AuthService>().user;
+                        if (user != null && user.isEmployee) {
+                            final allowed = [
+                              PageType.dashboard,
+                              PageType.myAttendance,
+                              PageType.leavesAndHolidays,
+                              PageType.feedback,
+                              PageType.profile,
+                            ];
+                            if (!allowed.contains(p)) return false;
+                        }
+                         if (p == PageType.profile) return false;
+                         if (p == PageType.feedback) return false; // Hide feedback from list
+                        return true;
+                      }).map((page) => _buildMenuItem(
+                        context, 
+                        page,
+                        currentPage == page,
+                      )),
+                    ],
+                  ),
+                ),
+              ),
+  
+               // Fixed Bottom: Bugs & Feedback
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                         navigateTo(PageType.feedback);
+                         if (onLinkTap != null) onLinkTap!();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: currentPage == PageType.feedback
+                              ? (Theme.of(context).brightness == Brightness.dark 
+                                  ? Colors.white.withValues(alpha: 0.1) 
+                                  : const Color(0xFF4338CA).withValues(alpha: 0.1))
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.bug_report_outlined, 
+                              size: 20,
+                              color: currentPage == PageType.feedback
+                                  ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
+                                  : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[400] : Colors.grey[700]),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              "Bugs & Feedback",
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: currentPage == PageType.feedback ? FontWeight.w600 : FontWeight.w500,
+                                color: currentPage == PageType.feedback
+                                    ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
+                                    : (Theme.of(context).brightness == Brightness.dark ? Colors.grey[300] : Colors.grey[800]),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         );
       }
@@ -106,7 +166,7 @@ class _SidebarContent extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: isActive 
-            ? (isDark ? Colors.white.withOpacity(0.1) : const Color(0xFF4338CA).withOpacity(0.1))
+            ? (isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFF4338CA).withValues(alpha: 0.1))
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),

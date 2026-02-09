@@ -14,14 +14,17 @@ class ShiftDetailDialog extends StatelessWidget {
     final textColor = isDark ? Colors.white : Colors.black87;
     final subTextColor = isDark ? Colors.white70 : Colors.black54;
 
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
+      insetPadding: EdgeInsets.symmetric(horizontal: isMobile ? 16.0 : 40.0, vertical: 24.0),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 450),
         child: GlassContainer(
           borderRadius: 20,
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(isMobile ? 16.0 : 24.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -34,7 +37,7 @@ class ShiftDetailDialog extends StatelessWidget {
                     child: Text(
                       shift.name,
                       style: GoogleFonts.poppins(
-                        fontSize: 20,
+                        fontSize: isMobile ? 18 : 20,
                         fontWeight: FontWeight.bold,
                         color: textColor,
                       ),
@@ -51,13 +54,13 @@ class ShiftDetailDialog extends StatelessWidget {
                 "Shift Details",
                 style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.indigoAccent),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: isMobile ? 16 : 24),
               const Divider(height: 1, color: Colors.white10),
-              const SizedBox(height: 24),
+              SizedBox(height: isMobile ? 16 : 24),
 
               // Timing Section
               _buildSectionTitle("Timing & Schedule", textColor),
-              const SizedBox(height: 12),
+              SizedBox(height: isMobile ? 8 : 12),
               Row(
                 children: [
                   Expanded(child: _buildInfoItem(context, "Start Time", shift.startTime, Icons.wb_sunny_outlined)),
@@ -65,14 +68,14 @@ class ShiftDetailDialog extends StatelessWidget {
                   Expanded(child: _buildInfoItem(context, "End Time", shift.endTime, Icons.nights_stay_outlined)),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isMobile ? 12 : 16),
               _buildInfoItem(context, "Grace Period", "${shift.gracePeriodMins} Minutes", Icons.hourglass_empty),
 
-              const SizedBox(height: 24),
+              SizedBox(height: isMobile ? 16 : 24),
 
               // Overtime Section
               _buildSectionTitle("Overtime Configuration", textColor),
-              const SizedBox(height: 12),
+              SizedBox(height: isMobile ? 8 : 12),
               Row(
                 children: [
                   Expanded(
@@ -98,11 +101,11 @@ class ShiftDetailDialog extends StatelessWidget {
                 ],
               ),
               
-              const SizedBox(height: 24),
+              SizedBox(height: isMobile ? 16 : 24),
 
               // Attendance Validation
               _buildSectionTitle("Attendance Validation", textColor),
-              const SizedBox(height: 12),
+              SizedBox(height: isMobile ? 8 : 12),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -141,7 +144,7 @@ class ShiftDetailDialog extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 32),
+              SizedBox(height: isMobile ? 24 : 32),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

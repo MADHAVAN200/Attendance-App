@@ -118,12 +118,17 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // Dark Theme Colors based on screenshot
-    const bgColor = Color(0xFF1E2939); // Dark modal bg
-    const inputColor = Color(0xFF2D3748); // Slightly lighter input
-    const borderColor = Color(0xFF4A5568);
-    const textColor = Colors.white;
-    const labelColor = Colors.white70;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Dynamic Colors
+    final bgColor = isDark ? const Color(0xFF1E2939) : Colors.white;
+    final inputColor = isDark ? const Color(0xFF2D3748) : const Color(0xFFF3F4F6);
+    final borderColor = isDark ? const Color(0xFF4A5568) : const Color(0xFFE5E7EB);
+    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
+    final labelColor = isDark ? Colors.white70 : const Color(0xFF4B5563);
+    final hintColor = isDark ? Colors.grey[600]! : Colors.grey[400]!;
+
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -135,9 +140,9 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
           decoration: BoxDecoration(
             color: bgColor, 
             borderRadius: BorderRadius.circular(16),
-            boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 20)],
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 20)],
           ),
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,15 +161,15 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: Colors.grey, size: 20),
+                    icon: Icon(Icons.close, color: isDark ? Colors.grey : Colors.grey[600], size: 20),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              const Divider(height: 1, color: Colors.white10),
-              const SizedBox(height: 24),
+              SizedBox(height: isMobile ? 16 : 24),
+              Divider(height: 1, color: isDark ? Colors.white10 : Colors.grey[200]),
+              SizedBox(height: isMobile ? 16 : 24),
 
               // Scrollable Content
               Flexible(
@@ -179,7 +184,8 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                         hint: 'e.g. Morning Shift A', 
                         fillColor: inputColor, 
                         borderColor: borderColor,
-                        textColor: textColor
+                        textColor: textColor,
+                        hintColor: hintColor,
                       ),
                       const SizedBox(height: 16),
 
@@ -218,6 +224,7 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                         fillColor: inputColor, 
                         borderColor: borderColor,
                         textColor: textColor,
+                        hintColor: hintColor,
                         isNumeric: true
                       ),
                       const SizedBox(height: 4),
@@ -225,7 +232,7 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                         'Time allowed after start time before marking as "Late".',
                         style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500]),
                       ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: isMobile ? 16 : 24),
 
                       // Overtime Toggle
                       Row(
@@ -248,8 +255,11 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                           Switch(
                             value: _isOvertimeEnabled,
                             onChanged: (v) => setState(() => _isOvertimeEnabled = v),
-                            activeTrackColor: Colors.indigoAccent,
+                            activeTrackColor: const Color(0xFF6366F1), // Indigo
                             activeColor: Colors.white,
+                            trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                            inactiveThumbColor: isDark ? Colors.grey[400] : Colors.white,
+                            inactiveTrackColor: isDark ? Colors.grey[700] : Colors.grey[300],
                           ),
                         ],
                       ),
@@ -268,7 +278,7 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                            isNumeric: true
                          ),
                       ],
-                      const SizedBox(height: 24),
+                      SizedBox(height: isMobile ? 16 : 24),
 
                       // Attendance Validation Section
                       Container(
@@ -276,14 +286,14 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                         decoration: BoxDecoration(
                           border: Border.all(color: borderColor),
                           borderRadius: BorderRadius.circular(12),
-                          color: inputColor.withValues(alpha: 0.3),
+                          color: inputColor, // Use solid input color for box
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
                               children: [
-                                Icon(Icons.location_on_outlined, size: 16, color: Colors.indigo[200]),
+                                Icon(Icons.location_on_outlined, size: 16, color: isDark ? Colors.indigo[200] : const Color(0xFF6366F1)),
                                 const SizedBox(width: 8),
                                 Text(
                                   'Attendance Validation',
@@ -299,11 +309,11 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('CHECK-IN', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                                      Text('CHECK-IN', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[500])),
                                       const SizedBox(height: 8),
-                                      _buildCheckbox('GPS Required', _checkInGps, (v) => setState(() => _checkInGps = v!), textColor),
+                                      _buildCheckbox('GPS Required', _checkInGps, (v) => setState(() => _checkInGps = v!), textColor, isDark),
                                       const SizedBox(height: 8),
-                                      _buildCheckbox('Selfie Required', _checkInSelfie, (v) => setState(() => _checkInSelfie = v!), textColor),
+                                      _buildCheckbox('Selfie Required', _checkInSelfie, (v) => setState(() => _checkInSelfie = v!), textColor, isDark),
                                     ],
                                   ),
                                 ),
@@ -312,11 +322,11 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('CHECK-OUT', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                                      Text('CHECK-OUT', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[500])),
                                       const SizedBox(height: 8),
-                                      _buildCheckbox('GPS Required', _checkOutGps, (v) => setState(() => _checkOutGps = v!), textColor),
+                                      _buildCheckbox('GPS Required', _checkOutGps, (v) => setState(() => _checkOutGps = v!), textColor, isDark),
                                       const SizedBox(height: 8),
-                                      _buildCheckbox('Selfie Required', _checkOutSelfie, (v) => setState(() => _checkOutSelfie = v!), textColor),
+                                      _buildCheckbox('Selfie Required', _checkOutSelfie, (v) => setState(() => _checkOutSelfie = v!), textColor, isDark),
                                     ],
                                   ),
                                 ),
@@ -329,7 +339,7 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: isMobile ? 16 : 24),
 
               // Actions
               Row(
@@ -338,9 +348,10 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF374151), // Dark button
-                        foregroundColor: Colors.white,
+                        backgroundColor: isDark ? const Color(0xFF374151) : Colors.grey[200],
+                        foregroundColor: isDark ? Colors.white : Colors.black87,
                         padding: const EdgeInsets.symmetric(vertical: 16),
+                        elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       child: Text('Cancel', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
@@ -375,33 +386,6 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
     );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller, 
-    required String hint, 
-    String? suffix,
-    required Color fillColor,
-    required Color borderColor,
-    required Color textColor,
-    bool isNumeric = false
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
-      style: GoogleFonts.poppins(color: textColor, fontSize: 14),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 14),
-        suffixText: suffix,
-        suffixStyle: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 13),
-        filled: true,
-        fillColor: fillColor,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF6366F1))),
-      ),
-    );
-  }
-
   Widget _buildTimeBox(BuildContext context, String value, VoidCallback onTap, Color fillColor, Color borderColor, Color textColor) {
     return InkWell(
       onTap: onTap,
@@ -423,7 +407,35 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
     );
   }
 
-  Widget _buildCheckbox(String label, bool value, Function(bool?) onChanged, Color textColor) {
+  Widget _buildTextField({
+    required TextEditingController controller, 
+    required String hint, 
+    String? suffix,
+    required Color fillColor,
+    required Color borderColor,
+    required Color textColor,
+    Color? hintColor,
+    bool isNumeric = false
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: isNumeric ? TextInputType.number : TextInputType.text,
+      style: GoogleFonts.poppins(color: textColor, fontSize: 14),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.poppins(color: hintColor ?? Colors.grey[500], fontSize: 14),
+        suffixText: suffix,
+        suffixStyle: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 13),
+        filled: true,
+        fillColor: fillColor,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: borderColor)),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF6366F1))),
+      ),
+    );
+  }
+
+  Widget _buildCheckbox(String label, bool value, Function(bool?) onChanged, Color textColor, bool isDark) {
     return Row(
       children: [
         SizedBox(
@@ -432,8 +444,9 @@ class _AddShiftDialogState extends State<AddShiftDialog> {
             value: value,
             onChanged: onChanged,
             activeColor: const Color(0xFF6366F1),
-            side: BorderSide(color: Colors.grey[600]!, width: 2),
+            side: BorderSide(color: isDark ? Colors.grey[600]! : Colors.grey[400]!, width: 2),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            checkColor: Colors.white,
           ),
         ),
         const SizedBox(width: 8),

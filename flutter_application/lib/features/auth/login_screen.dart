@@ -66,10 +66,8 @@ class LoginScreenState extends State<LoginScreen> {
       );
 
       if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const AttendanceApp()),
-      );
+      // Removed manual Navigator.pushReplacement. 
+      // AuthWrapper in main.dart handles the transition reactively.
     } catch (e) {
       _showError(e.toString());
       // Refresh captcha on error? Ideally yes, but WordCaptcha handles its own refresh.
@@ -98,8 +96,6 @@ class LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
     return Scaffold(
       resizeToAvoidBottomInset: true,
       body: LayoutBuilder(

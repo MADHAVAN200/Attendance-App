@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../../../shared/constants/api_constants.dart';
 import '../models/location_model.dart';
-import '../../../../shared/services/auth_service.dart';
 
 class LocationService {
   final Dio _dio;

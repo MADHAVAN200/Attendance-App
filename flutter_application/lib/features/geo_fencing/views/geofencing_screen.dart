@@ -192,9 +192,9 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth > 900) {
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          if (orientation == Orientation.landscape) {
             return _buildDesktopLayout();
           }
           return _buildMobileLayout();
@@ -384,14 +384,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
   }
 
   Widget _buildMobileLayout() {
-     return Column(
-       children: [
-         _buildListHeader(),
-         Expanded(
-           child: _buildLocationList(isMobile: true),
-         ),
-       ],
-     );
+     return _buildLocationList(isMobile: true);
   }
 
   // --- SUB-WIDGETS ---
@@ -450,7 +443,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
              decoration: BoxDecoration(
                color: isSelected && !isMobile
                   ? (isDark ? Colors.indigo.withValues(alpha: 0.2) : Colors.indigo[50])
-                  : (isDark ? const Color(0xFF0F172A) : Colors.white),
+                  : (isDark ? const Color(0xFF1E2939) : Colors.white),
                borderRadius: BorderRadius.circular(8),
                border: isSelected && !isMobile ? Border.all(color: Colors.indigo.withValues(alpha: 0.5)) : null,
              ),
@@ -472,16 +465,6 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                  ),
                  const SizedBox(height: 4),
                  Text(loc.address, style: const TextStyle(fontSize: 11, color: Colors.grey), maxLines: 1),
-                 const SizedBox(height: 8),
-                 Row(
-                   children: [
-                      Icon(Icons.gps_fixed, size: 12, color: Colors.grey[400]),
-                      Text(" ${loc.radius}m", style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                      const SizedBox(width: 12),
-                      Icon(Icons.people, size: 12, color: Colors.grey[400]),
-                      Text(" $activeUsers Active", style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                   ],
-                 ),
                ],
              ),
            ),
@@ -565,12 +548,14 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                  child: Row(
                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                    children: [
-                     Column(
-                       crossAxisAlignment: CrossAxisAlignment.start,
-                       children: [
-                         Text(loc.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                         Text(loc.address, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                       ],
+                     Expanded(
+                       child: Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           Text(loc.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                           Text("Assign Staff", style: TextStyle(fontSize: 13, color: Colors.indigo.withValues(alpha: 0.8), fontWeight: FontWeight.w600)),
+                         ],
+                       ),
                      ),
                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx))
                    ],
@@ -578,57 +563,7 @@ class _GeofencingScreenState extends State<GeofencingScreen> {
                ),
                const Divider(),
                Expanded(
-                 child: DefaultTabController(
-                   length: 2,
-                   child: Column(
-                     children: [
-                       Container(
-                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                         height: 48,
-                         padding: const EdgeInsets.all(4),
-                         decoration: BoxDecoration(
-                           color: Theme.of(ctx).brightness == Brightness.dark ? const Color(0xFF1E2939) : const Color(0xFFF1F5F9),
-                           borderRadius: BorderRadius.circular(12),
-                         ),
-                         child: TabBar(
-                           indicator: BoxDecoration(
-                             color: Colors.white,
-                             borderRadius: BorderRadius.circular(10),
-                             boxShadow: [
-                               BoxShadow(
-                                 color: Colors.black.withValues(alpha: 0.05),
-                                 blurRadius: 4,
-                                 offset: const Offset(0, 1),
-                               ),
-                             ],
-                           ),
-                           labelColor: const Color(0xFF1E293B),
-                           unselectedLabelColor: Colors.grey[600],
-                           indicatorSize: TabBarIndicatorSize.tab,
-                           dividerColor: Colors.transparent,
-                           labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
-                           tabs: const [
-                             Tab(text: "Settings"),
-                             Tab(text: "Staff"),
-                           ]
-                         ),
-                       ),
-                       Expanded(
-                         child: TabBarView(
-                           children: [
-                             // Settings Tab
-                             SingleChildScrollView(
-                               padding: const EdgeInsets.all(16),
-                               child: _buildLocationSettingsPanel(Theme.of(context).brightness == Brightness.dark),
-                             ),
-                             // Staff Tab
-                             _buildStaffList(location: loc),
-                           ],
-                         ),
-                       )
-                     ],
-                   ),
-                 ),
+                 child: _buildStaffList(location: loc),
                )
             ],
           ),

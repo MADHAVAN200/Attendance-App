@@ -9,7 +9,13 @@ class ApiConstants {
   static const String refresh = '/auth/refresh';
   static const String logout = '/auth/logout';
   static const String me = '/auth/me';
+  static const String profile = '/profile'; // POST to update avatar
+  static const String profileMe = '/profile/me';
   static const String captchaGenerate = '/auth/captcha/generate';
+  static const String forgotPassword = '/auth/forgot-password';
+  static const String verifyOtp = '/auth/verify-otp';
+  static const String resetPassword = '/auth/reset-password';
+
 
   // Admin - Users
   static const String users = '/admin/users';
@@ -36,6 +42,7 @@ class ApiConstants {
   static const String adminAttendanceRecords = '/attendance/records/admin';
   static const String attendanceCorrectionRequest = '/attendance/correction-request'; // GET /:id, POST
   static const String attendanceCorrectionRequests = '/attendance/correction-requests'; // GET All
+  static const String attendanceRecordExport = '/attendance/records/export';
   static const String attendanceCorrectRequestUpdate = '/attendance/correct-request'; // PATCH /:id
   
   // Attendance Simulation (Dev Only)

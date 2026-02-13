@@ -1,5 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
+import 'package:path/path.dart' as p;
+import 'package:flutter/foundation.dart';
 import '../../../../shared/constants/api_constants.dart';
 import '../models/attendance_record.dart';
 import '../models/correction_request.dart';
@@ -10,11 +15,13 @@ class AttendanceService {
   AttendanceService(this._dio);
 
   // 1. Get My Records
-  Future<List<AttendanceRecord>> getMyRecords({String? fromDate, String? toDate}) async {
+  Future<List<AttendanceRecord>> getMyRecords({String? fromDate, String? toDate, String? userId, int? limit}) async {
     try {
       final response = await _dio.get(ApiConstants.attendanceRecords, queryParameters: {
         'date_from': fromDate,
         'date_to': toDate,
+        if (userId != null) 'user_id': userId,
+        if (limit != null) 'limit': limit,
       });
 
       if (response.statusCode == 200 && response.data['ok']) {
@@ -55,17 +62,25 @@ class AttendanceService {
     String? lateReason,
   }) async {
     try {
-      String fileName = imageFile.path.split('/').last;
+      String fileName = p.basename(imageFile.path);
+      final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
+      final mimeSplit = mimeType.split('/');
       
       FormData formData = FormData.fromMap({
-        "latitude": latitude.toString(),
-        "longitude": longitude.toString(),
-        "accuracy": accuracy.toString(),
+        "latitude": latitude.toStringAsFixed(4),
+        "longitude": longitude.toStringAsFixed(4), 
+        "accuracy": accuracy.toStringAsFixed(2), // Re-added
         if (lateReason != null) "late_reason": lateReason,
-        "image": await MultipartFile.fromFile(imageFile.path, filename: fileName),
+        "image": await MultipartFile.fromFile(
+          imageFile.path, 
+          filename: fileName,
+        ),
       });
 
+      debugPrint("AttService: TimeIn Request Data: ${formData.fields.map((e) => "${e.key}: ${e.value}")}");
+
       final response = await _dio.post(ApiConstants.attendanceTimeIn, data: formData);
+      debugPrint("AttService: TimeIn Success Response Data: ${response.data}"); 
       return response.data;
     } catch (e) {
       throw _parseError(e);
@@ -80,14 +95,21 @@ class AttendanceService {
     required File imageFile,
   }) async {
     try {
-      String fileName = imageFile.path.split('/').last;
+      String fileName = p.basename(imageFile.path);
+      final mimeType = lookupMimeType(imageFile.path) ?? 'image/jpeg';
+      final mimeSplit = mimeType.split('/');
       
       FormData formData = FormData.fromMap({
-        "latitude": latitude.toString(),
-        "longitude": longitude.toString(),
-        "accuracy": accuracy.toString(),
-        "image": await MultipartFile.fromFile(imageFile.path, filename: fileName),
+        "latitude": latitude.toStringAsFixed(4),
+        "longitude": longitude.toStringAsFixed(4),
+        "accuracy": accuracy.toStringAsFixed(2), // Re-added
+        "image": await MultipartFile.fromFile(
+          imageFile.path, 
+          filename: fileName,
+        ),
       });
+
+      debugPrint("AttService: TimeOut Request Data: ${formData.fields}");
 
       final response = await _dio.post(ApiConstants.attendanceTimeOut, data: formData);
       return response.data;
@@ -98,32 +120,101 @@ class AttendanceService {
   
   // 4. Correction Requests (New)
 
-  // Create Request
-  Future<void> createCorrectionRequest({
-    int? attendanceId, // OPTIONAL
-    required String correctionType, // 'missed_punch', 'late_entry', 'early_exit'
+  // Submit Request (Employee)
+  Future<void> submitCorrectionRequest({
     required String requestDate, // YYYY-MM-DD
+    required String correctionType, // missed_punch, incorrect_time, regularization
+    required String correctionMethod, // add_session, reset
     required String reason,
+    required Map<String, dynamic> correctionData,
+    double? latitude,
+    double? longitude,
+    List<dynamic>? attachments, // PlatformFile or File
   }) async {
     try {
-      await _dio.post(ApiConstants.attendanceCorrectionRequest, data: {
-        "attendance_id": attendanceId,
-        "correction_type": correctionType,
+      final Map<String, dynamic> dataMap = {
         "request_date": requestDate,
+        "correction_type": correctionType,
+        "correction_method": correctionMethod,
         "reason": reason,
-      });
+        if (latitude != null) "latitude": latitude,
+        if (longitude != null) "longitude": longitude,
+        ...correctionData,
+      };
+
+      dynamic data = dataMap;
+
+      // Handle Attachments
+      if (attachments != null && attachments.isNotEmpty) {
+        final formData = FormData.fromMap(dataMap.map((key, value) {
+          // Flatten lists/maps for FormData if needed, or send as JSON string if API expects it.
+          // Dio FormData handles primitive types well. Complex nested objects might need JSON encoding.
+          if (value is List || value is Map) {
+            return MapEntry(key, value); // Dio might not serialize this automatically for FormData
+            // If API expects 'sessions' as JSON string inside FormData:
+            // return MapEntry(key, jsonEncode(value));
+            // Assuming Dio handles it or backend handles array indices correction_data[sessions][0]...
+          }
+          return MapEntry(key, value);
+        }));
+
+        // Manually handle complex correctionData for FormData if strictly required by Dio/Backend
+        // For now, attempting standard Dio FormData structure. 
+        // Note: Dio's FormData.fromMap might NOT recursively process nested Lists/Maps into array syntax.
+        // If correctionData contains 'sessions', we might need to be careful.
+        // Safe bet: If using FormData, ensure complex fields are handled correctly.
+        
+        // Add files
+        for (var i = 0; i < attachments.length; i++) {
+          final attachment = attachments[i];
+          // Check if it's PlatformFile (from file_picker)
+           if (attachment.path != null) {
+            final filename = attachment.name;
+            formData.files.add(MapEntry(
+              'attachments[]', // Array syntax common for multiple files
+              await MultipartFile.fromFile(attachment.path!, filename: filename),
+            ));
+          }
+        }
+        data = formData;
+      }
+
+      await _dio.post(ApiConstants.attendanceCorrectionRequest, data: data);
     } catch (e) {
       throw _parseError(e);
     }
   }
 
   // Fetch All Requests
-  Future<List<AttendanceCorrectionRequest>> getCorrectionRequests() async {
+  Future<List<AttendanceCorrectionRequest>> getCorrectionRequests({
+    String? status, 
+    String? userId, 
+    String? date,
+    int? month,
+    int? year,
+    int? page,
+    int? limit,
+    String? dateFrom, // Kept for backward compatibility if needed by other views
+    String? dateTo,
+  }) async {
     try {
-      final response = await _dio.get(ApiConstants.attendanceCorrectionRequests);
-      if (response.statusCode == 200 && response.data['success']) {
-         final List<dynamic> list = response.data['requests'] ?? [];
-         return list.map((json) => AttendanceCorrectionRequest.fromJson(json)).toList();
+      final response = await _dio.get(ApiConstants.attendanceCorrectionRequests, queryParameters: {
+        if (status != null) 'status': status,
+        if (userId != null) 'user_id': userId,
+        if (date != null) 'date': date,
+        if (month != null) 'month': month,
+        if (year != null) 'year': year,
+        if (page != null) 'page': page,
+        if (limit != null) 'limit': limit,
+        if (dateFrom != null) 'date_from': dateFrom,
+        if (dateTo != null) 'date_to': dateTo,
+      });
+      
+      if (response.statusCode == 200 && response.data != null && response.data is Map) {
+         final dynamic data = response.data['data'];
+         if (data is List) {
+           return data.map((json) => AttendanceCorrectionRequest.fromJson(json as Map<String, dynamic>)).toList();
+         }
       }
       return [];
     } catch (e) {
@@ -132,25 +223,44 @@ class AttendanceService {
   }
   
   // Get Request Detail
-  Future<Map<String, dynamic>> getCorrectionRequestDetail(String id) async {
+  Future<AttendanceCorrectionRequest> getCorrectionRequestDetail(String id) async {
     try {
       final response = await _dio.get('${ApiConstants.attendanceCorrectionRequest}/$id');
-      if (response.statusCode == 200 && response.data['success']) {
-        return response.data['request'];
+      if (response.statusCode == 200 && response.data != null && response.data is Map) {
+        // Handle both wrapped {data: {...}} and unwrapped {...} responses
+        final dynamic data = response.data['data'] ?? response.data;
+        if (data is Map) {
+          return AttendanceCorrectionRequest.fromJson(Map<String, dynamic>.from(data));
+        }
       }
-      throw Exception('Request not found');
+      throw Exception('Correction request not found or invalid response');
     } catch (e) {
       throw _parseError(e);
     }
   }
 
-  // Update Request Status
-  Future<void> updateCorrectionRequestStatus(String id, String status, String comments) async {
+  // Process Request (Admin Only)
+  Future<void> processCorrectionRequest(String id, {
+    required String status, // approved, rejected
+    String? reviewComments,
+    String? overrideMethod,
+    String? requestDate,
+    List<Map<String, String>>? sessions, // for add_session
+    String? resetTimeIn, // for reset
+    String? resetTimeOut, // for reset
+  }) async {
     try {
-      await _dio.patch('${ApiConstants.attendanceCorrectRequestUpdate}/$id', data: {
+      final payload = {
         "status": status,
-        "review_comments": comments
-      });
+        if (reviewComments != null) "review_comments": reviewComments,
+        if (overrideMethod != null) "correction_method": overrideMethod,
+        if (requestDate != null) "request_date": requestDate,
+        if (sessions != null) "sessions": sessions,
+        if (resetTimeIn != null) "reset_time_in": resetTimeIn,
+        if (resetTimeOut != null) "reset_time_out": resetTimeOut,
+      };
+
+      await _dio.patch('${ApiConstants.attendanceCorrectRequestUpdate}/$id', data: payload);
     } catch (e) {
       throw _parseError(e);
     }
@@ -165,10 +275,28 @@ class AttendanceService {
       await _dio.post(ApiConstants.simulateTimeOut, data: FormData.fromMap(data));
   }
 
+  // 6. Export My Report
+  Future<Uint8List> exportMyReport(String month) async {
+    try {
+      final response = await _dio.get(
+        ApiConstants.attendanceRecordExport,
+        queryParameters: {'month': month},
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return Uint8List.fromList(response.data);
+    } catch (e) {
+      throw _parseError(e);
+    }
+  }
+
   Exception _parseError(dynamic e) {
-    if (e is DioException && e.response?.data != null) {
-      final msg = e.response?.data['message'] ?? e.message;
-      return Exception(msg);
+    if (e is DioException) {
+      debugPrint("AttService Error: ${e.response?.statusCode} - ${e.response?.data}");
+      if (e.response?.data != null && e.response!.data is Map) {
+        final msg = e.response?.data['message'] ?? e.message;
+        return Exception(msg);
+      }
+      return Exception(e.message ?? e.toString());
     }
     return Exception(e.toString());
   }

@@ -3,22 +3,24 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/glass_dropdown.dart';
 import '../../models/correction_request.dart';
-import '../../services/attendance_correction_service.dart';
+import '../../services/attendance_service.dart';
 import '../widgets/correction_detail_dialog.dart';
 
 class AdminCorrectionRequests extends StatefulWidget {
-  const AdminCorrectionRequests({super.key});
+  final String? userId;
+  const AdminCorrectionRequests({super.key, this.userId});
 
   @override
   State<AdminCorrectionRequests> createState() => _AdminCorrectionRequestsState();
 }
 
 class _AdminCorrectionRequestsState extends State<AdminCorrectionRequests> {
-  late AttendanceCorrectionService _service;
+  late AttendanceService _service;
   bool _isLoading = true;
   List<AttendanceCorrectionRequest> _requests = [];
   String _filterStatus = 'Pending'; // 'Pending' or 'History'
@@ -27,18 +29,25 @@ class _AdminCorrectionRequestsState extends State<AdminCorrectionRequests> {
   void initState() {
     super.initState();
     final authService = Provider.of<AuthService>(context, listen: false);
-    _service = AttendanceCorrectionService(authService);
+    _service = AttendanceService(authService.dio);
     _fetchRequests();
   }
 
   Future<void> _fetchRequests() async {
     setState(() => _isLoading = true);
     try {
-      // In a real API, we'd pass the status filter
-      // For now, fetching all and filtering locally or assuming service handles it
-      final allRequests = await _service.getCorrectionRequests(status: _filterStatus.toLowerCase());
+      final status = _filterStatus.toLowerCase();
+      final allRequests = await _service.getCorrectionRequests(
+        status: status == 'pending' ? 'pending' : null, 
+        userId: widget.userId,
+      );
+      
       setState(() {
-        _requests = allRequests;
+        if (status == 'history') {
+          _requests = allRequests.where((r) => r.status != RequestStatus.pending).toList();
+        } else {
+          _requests = allRequests.where((r) => r.status == RequestStatus.pending).toList();
+        }
         _isLoading = false;
       });
     } catch (e) {
@@ -49,12 +58,10 @@ class _AdminCorrectionRequestsState extends State<AdminCorrectionRequests> {
   }
 
   void _showDetail(AttendanceCorrectionRequest request) {
-    showDialog(
-      context: context,
-      builder: (context) => CorrectionDetailDialog(
-        request: request,
-        onStatusChanged: _fetchRequests,
-      ),
+    CorrectionDetailDialog.show(
+      context,
+      request: request,
+      onStatusChanged: _fetchRequests,
     );
   }
 
@@ -63,14 +70,17 @@ class _AdminCorrectionRequestsState extends State<AdminCorrectionRequests> {
     // 1. Filter / Toggle
     return Column(
       children: [
-        Row(
-          children: [
-            _buildTabButton('Pending', _filterStatus == 'Pending'),
-            const SizedBox(width: 12),
-            _buildTabButton('History', _filterStatus == 'History'),
-           ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(0, 16, 0, 8),
+          child: Row(
+            children: [
+              _buildTabButton('Pending', _filterStatus == 'Pending'),
+              const SizedBox(width: 12),
+              _buildTabButton('History', _filterStatus == 'History'),
+             ],
+          ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
         
         // 2. List
         Expanded(
@@ -79,6 +89,7 @@ class _AdminCorrectionRequestsState extends State<AdminCorrectionRequests> {
               : _requests.isEmpty 
                   ? Center(child: Text('No requests found', style: GoogleFonts.poppins(color: Colors.grey)))
                   : ListView.builder(
+                      padding: EdgeInsets.zero,
                       itemCount: _requests.length,
                       itemBuilder: (context, index) {
                         final req = _requests[index];
@@ -133,9 +144,43 @@ class _AdminCorrectionRequestsState extends State<AdminCorrectionRequests> {
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-              child: Text(req.userName.isNotEmpty ? req.userName[0] : '?', 
-                  style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+              radius: 20,
+              backgroundColor: isDark ? const Color(0xFF5B60F6) : Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: req.userAvatar != null && req.userAvatar!.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: req.userAvatar!,
+                        fit: BoxFit.cover,
+                        width: 40,
+                        height: 40,
+                        placeholder: (context, url) => Center(
+                          child: Text(
+                            req.userName.isNotEmpty ? req.userName[0] : '?',
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Theme.of(context).primaryColor, 
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Center(
+                          child: Text(
+                            req.userName.isNotEmpty ? req.userName[0] : '?',
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Theme.of(context).primaryColor, 
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                        ),
+                      )
+                    : Text(
+                        req.userName.isNotEmpty ? req.userName[0] : '?',
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Theme.of(context).primaryColor, 
+                          fontWeight: FontWeight.bold
+                        ),
+                      ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -143,7 +188,7 @@ class _AdminCorrectionRequestsState extends State<AdminCorrectionRequests> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(req.userName, style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-                  Text('${req.type.toString().split('.').last.toUpperCase()} • ${DateFormat('MMM dd').format(req.requestDate)}',
+                  Text('${req.typeLabel} • ${DateFormat('MMM dd').format(req.requestDate)}',
                       style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
                 ],
               ),

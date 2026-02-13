@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:io';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../providers/attendance_provider.dart';
+import '../services/attendance_service.dart';
+import '../models/attendance_record.dart';
 import 'attendance_common_widgets.dart';
 
-class AttendanceHistoryTab extends StatelessWidget {
+class AttendanceHistoryTab extends StatefulWidget {
   final bool shrinkWrap;
   final ScrollPhysics? physics;
   final EdgeInsetsGeometry? padding;
@@ -16,50 +25,196 @@ class AttendanceHistoryTab extends StatelessWidget {
   });
 
   @override
+  State<AttendanceHistoryTab> createState() => _AttendanceHistoryTabState();
+}
+
+class _AttendanceHistoryTabState extends State<AttendanceHistoryTab> {
+  DateTime _selectedMonth = DateTime.now();
+  List<AttendanceRecord> _records = [];
+  bool _isLoading = false;
+  bool _isExporting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _fetchMonthRecords();
+    });
+  }
+
+  Future<void> _fetchMonthRecords() async {
+    setState(() => _isLoading = true);
+    try {
+      final firstDay = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
+      final lastDay = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
+      
+      final provider = Provider.of<AttendanceProvider>(context, listen: false);
+      final data = await provider.fetchRange(firstDay, lastDay);
+      
+      if (mounted) {
+        setState(() {
+          _records = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleExport() async {
+    final monthStr = DateFormat('yyyy-MM').format(_selectedMonth);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final attendanceService = AttendanceService(authService.dio);
+
+    setState(() => _isExporting = true);
+
+    try {
+      final bytes = await attendanceService.exportMyReport(monthStr);
+      final directory = await getApplicationDocumentsDirectory();
+      final String fileName = 'Attendance_${monthStr}_${authService.user?.name ?? "User"}.xlsx';
+      final String filePath = '${directory.path}/$fileName';
+      final File file = File(filePath);
+      await file.writeAsBytes(bytes);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Report saved: $fileName'),
+            action: SnackBarAction(
+              label: 'OPEN',
+              onPressed: () => OpenFilex.open(filePath),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExporting = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Group records by week
+    final Map<int, List<AttendanceRecord>> groupedRecords = {};
+    for (var record in _records) {
+      if (record.timeIn != null) {
+        final date = DateTime.parse(record.timeIn!);
+        // Calculate week number or just group by 7-day windows?
+        // Let's group by "Week of [Month] [Day]"
+        final weekOfMonth = ((date.day - 1) / 7).floor() + 1;
+        groupedRecords.putIfAbsent(weekOfMonth, () => []).add(record);
+      }
+    }
+
+    // Sort weeks descending
+    final sortedWeeks = groupedRecords.keys.toList()..sort((a, b) => b.compareTo(a));
+
     return ListView(
-      shrinkWrap: shrinkWrap,
-      physics: physics,
-      padding: padding ?? const EdgeInsets.all(24),
+      shrinkWrap: widget.shrinkWrap,
+      physics: widget.physics,
+      padding: widget.padding ?? const EdgeInsets.all(24),
       children: [
         // 1. Report Header
         MonthlyReportHeader(
-          selectedMonth: DateTime.now(),
-          onMonthChanged: (d) {},
+          selectedMonth: _selectedMonth,
+          onMonthChanged: (newDate) {
+            setState(() {
+              _selectedMonth = newDate;
+            });
+            _fetchMonthRecords();
+          },
+          onDownload: _handleExport,
+          isDownloading: _isExporting,
         ),
         const SizedBox(height: 32),
 
-        // 2. Week 3 Section (Mock)
-        _buildWeekSection(context, 'Week 3', [
-           _buildHistoryCard(context, 15, 'Thursday, Jan 15', 'LATE', 'Simulated Office Location', '01:30 PM', '05:02 PM', '-'),
-        ]),
-        const SizedBox(height: 24),
-
-        // 3. Week 4 Section (Mock)
-        _buildWeekSection(context, 'Week 4', [
-           _buildHistoryCard(context, 23, 'Friday, Jan 23', 'LATE', 'Simulated Office Location', '09:55 AM', '06:32 PM', '-'),
-            _buildHistoryCard(context, 22, 'Thursday, Jan 22', 'LATE', 'Simulated Office Location', '09:50 AM', '07:04 PM', '-'),
-             _buildHistoryCard(context, 21, 'Wednesday, Jan 21', 'LATE', 'Simulated Office Location', '09:41 AM', '06:42 PM', '-'),
-        ]),
+        if (_records.isEmpty)
+          Center(
+            child: Column(
+              children: [
+                Icon(Icons.history_outlined, size: 48, color: Colors.grey[400]),
+                const SizedBox(height: 16),
+                Text(
+                  "No records found for this month",
+                  style: GoogleFonts.poppins(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          )
+        else
+          ...sortedWeeks.map((week) {
+            final weekRecords = groupedRecords[week]!;
+            // Sort records in week descending by date
+            weekRecords.sort((a, b) => b.timeIn!.compareTo(a.timeIn!));
+            
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: _buildWeekSection(context, 'Week $week', weekRecords),
+            );
+          }),
       ],
     );
   }
 
-  Widget _buildWeekSection(BuildContext context, String title, List<Widget> children) {
+  Widget _buildWeekSection(BuildContext context, String title, List<AttendanceRecord> records) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[600])),
         const SizedBox(height: 16),
-        ...children.map((c) => Padding(padding: const EdgeInsets.only(bottom: 12), child: c)),
+        ...records.map((record) => Padding(
+          padding: const EdgeInsets.only(bottom: 12), 
+          child: _buildHistoryCard(record),
+        )),
       ],
     );
   }
 
-  Widget _buildHistoryCard(BuildContext context, int day, String date, String status, String location, String timeIn, String timeOut, String hrs) {
+  Widget _buildHistoryCard(AttendanceRecord record) {
+    final timeIn = DateTime.parse(record.timeIn!);
+    final day = timeIn.day;
+    final dateStr = DateFormat('EEEE, MMM d').format(timeIn);
+    
+    final status = record.status.toUpperCase();
     final isLate = status == 'LATE';
-    final statusColor = isLate ? Colors.orange : Colors.green[100];
-    final statusText = isLate ? Colors.orange[800] : Colors.green[800];
+    final isAbsent = status == 'ABSENT';
+    
+    final statusColor = isLate ? Colors.orange : (isAbsent ? Colors.red : Colors.green[100]);
+    final statusText = isLate ? Colors.orange[800] : (isAbsent ? Colors.red[800] : Colors.green[800]);
+
+    String displayIn = DateFormat('hh:mm a').format(timeIn);
+    String displayOut = '-';
+    String hrs = '-';
+
+    if (record.timeOut != null) {
+      final timeOut = DateTime.parse(record.timeOut!);
+      displayOut = DateFormat('hh:mm a').format(timeOut);
+      
+      final diff = timeOut.difference(timeIn);
+      final hours = diff.inHours;
+      final minutes = diff.inMinutes % 60;
+      hrs = '${hours}h ${minutes}m';
+    }
+
+    final location = record.timeInAddress ?? 'Unknown Location';
 
     return GlassContainer(
       padding: const EdgeInsets.all(16),
@@ -86,7 +241,13 @@ class AttendanceHistoryTab extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(date, style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14)),
+                    Expanded(
+                      child: Text(
+                        dateStr, 
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     const SizedBox(width: 8),
                   ],
                 ),
@@ -115,13 +276,15 @@ class AttendanceHistoryTab extends StatelessWidget {
           // Times
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildTimeColumn('IN', timeIn),
-                  const SizedBox(width: 16),
-                  _buildTimeColumn('OUT', timeOut),
-                  const SizedBox(width: 16),
+                  _buildTimeColumn('IN', displayIn),
+                  const SizedBox(width: 8),
+                  _buildTimeColumn('OUT', displayOut),
+                  const SizedBox(width: 8),
                   _buildTimeColumn('HRS', hrs),
                 ],
               )

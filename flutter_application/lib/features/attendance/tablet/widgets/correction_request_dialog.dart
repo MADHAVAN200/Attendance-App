@@ -30,7 +30,7 @@ class CorrectionRequestDialog extends StatefulWidget {
           iconColor: const Color(0xFF10B981),
           positiveButtonText: "Done",
           positiveButtonColor: const Color(0xFF10B981),
-          onPositivePressed: () => Navigator.pop(context),
+          onPositivePressed: () {}, // Handled by CustomDialog internally
        );
     }
   }
@@ -51,53 +51,13 @@ class _CorrectionRequestDialogState extends State<CorrectionRequestDialog> {
       backgroundColor: Colors.transparent, // Transparent for Glass effect
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400), // Slimmer width
-        child: GlassContainer(
-          borderRadius: 24,
-          padding: const EdgeInsets.all(0), // Padding handled by form/header internally
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Request Correction',
-                      style: GoogleFonts.poppins(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close, color: Theme.of(context).disabledColor),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 8),
-
-              // Use the Shared Form Component
-              // Constrained height or just standard? Form is Scrollable.
-              // Since it's in a Dialog + Column, we need Flexible if we want it to scroll inside dialog if too tall.
-              Flexible(
-                child: CorrectionRequestForm(
-                  initialDate: widget.initialDate,
-                  onSuccess: () {
-                     Navigator.pop(context, true); // Success
-                  },
-                ),
-              ),
-            ],
-          ),
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: CorrectionRequestForm(
+          initialDate: widget.initialDate,
+          onClose: () => Navigator.pop(context),
+          onSuccess: () {
+            Navigator.pop(context, true);
+          },
         ),
       ),
     );

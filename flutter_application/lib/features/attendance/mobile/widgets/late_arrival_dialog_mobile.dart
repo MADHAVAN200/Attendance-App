@@ -37,7 +37,7 @@ class _LateArrivalDialogMobileState extends State<LateArrivalDialogMobile> {
       surfaceTintColor: Colors.transparent,
       insetPadding: const EdgeInsets.all(16), // Reduced inset
       child: GlassContainer(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24), // Reduced internal padding
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32), // Unified padding
         borderRadius: 24,
         child: SingleChildScrollView( // Prevent overflow
           child: Form(
@@ -45,13 +45,20 @@ class _LateArrivalDialogMobileState extends State<LateArrivalDialogMobile> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // 1. Icon Header (Smaller)
+                // 1. Icon Header (Consistent with Tablet)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                     border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.1),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      )
+                    ],
                   ),
                   child: Icon(Icons.access_time_filled_rounded, color: color, size: 32),
                 ),
@@ -71,7 +78,7 @@ class _LateArrivalDialogMobileState extends State<LateArrivalDialogMobile> {
                   "You are marking attendance after the scheduled time. Please strictly provide a valid reason.",
                   textAlign: TextAlign.center,
                   style: GoogleFonts.poppins(
-                    fontSize: 12, // Smaller font
+                    fontSize: 12, // Smaller font for mobile
                     color: isDark ? Colors.white60 : Colors.black54,
                     height: 1.4,
                   ),
@@ -82,7 +89,7 @@ class _LateArrivalDialogMobileState extends State<LateArrivalDialogMobile> {
                 Container(
                    decoration: BoxDecoration(
                      color: isDark ? const Color(0xFF1E293B).withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
-                     borderRadius: BorderRadius.circular(12),
+                     borderRadius: BorderRadius.circular(16), // Consistent rounded corners
                      border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
                    ),
                    child: TextFormField(
@@ -93,7 +100,7 @@ class _LateArrivalDialogMobileState extends State<LateArrivalDialogMobile> {
                       hintText: "Enter your reason here...",
                       hintStyle: GoogleFonts.poppins(color: Colors.grey, fontSize: 13),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(12),
+                      contentPadding: const EdgeInsets.all(16),
                     ),
                     maxLines: 3,
                     minLines: 2,
@@ -108,7 +115,7 @@ class _LateArrivalDialogMobileState extends State<LateArrivalDialogMobile> {
                       child: TextButton(
                         onPressed: () => Navigator.pop(context),
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           foregroundColor: Colors.grey,
                         ),
                         child: Text("Cancel", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
@@ -126,7 +133,7 @@ class _LateArrivalDialogMobileState extends State<LateArrivalDialogMobile> {
                           backgroundColor: color,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           elevation: 0,
                           shadowColor: color.withValues(alpha: 0.4),
                         ),

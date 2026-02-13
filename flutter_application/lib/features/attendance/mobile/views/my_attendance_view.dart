@@ -1,13 +1,19 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import '../../services/attendance_service.dart';
 import '../../providers/attendance_provider.dart';
 import '../widgets/mark_attendance_mobile.dart';
-import '../widgets/attendance_history_mobile.dart';
-import '../widgets/attendance_analytics_mobile.dart';
+import '../../widgets/attendance_history_tab.dart';
+import '../../widgets/attendance_analytics_tab.dart';
+import 'package:flutter_application/features/attendance/admin/views/admin_correction_requests.dart';
+import '../../widgets/correction_request_form.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/widgets/glass_container.dart';
-import '../../widgets/correction_request_form.dart';
 
 class MobileMyAttendanceContent extends StatefulWidget {
   const MobileMyAttendanceContent({super.key});
@@ -24,74 +30,93 @@ class _MobileMyAttendanceContentState extends State<MobileMyAttendanceContent> {
     return Consumer<AttendanceProvider>(
       builder: (context, provider, child) {
         return Container(
-          color: Theme.of(context).brightness == Brightness.dark 
-              ? Colors.transparent 
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.transparent
               : const Color(0xFFF8F9FA),
           child: DefaultTabController(
             length: 2, // Reduced to 2
-            child: Column(
-              children: [
-              // Header Row: TabBar + Correction Button
-              Container(
-                 margin: const EdgeInsets.fromLTRB(20, 12, 20, 10),
-                 child: Row(
-                   children: [
-                     Expanded(
-                       child: Container(
-                         height: 40,
-                         padding: const EdgeInsets.all(4), 
-                         decoration: BoxDecoration(
-                           color: Theme.of(context).brightness == Brightness.dark 
-                               ? const Color(0xFF1E293B)
-                               : const Color(0xFFF1F5F9), 
-                           borderRadius: BorderRadius.circular(12),
-                         ),
-                          child: TabBar(
-                            indicatorSize: TabBarIndicatorSize.tab,
-                            indicator: BoxDecoration(
-                              color: Theme.of(context).brightness == Brightness.dark 
-                                  ? const Color(0xFF334155) 
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 1),
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  SliverToBoxAdapter(
+                    child: Container(
+                       margin: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                       child: Row(
+                         children: [
+                           Expanded(
+                             child: Container(
+                               height: 48,
+                               padding: const EdgeInsets.all(4),
+                               decoration: BoxDecoration(
+                                 color: Theme.of(context).brightness == Brightness.dark
+                                     ? const Color(0xFF1E293B)
+                                     : const Color(0xFFF1F5F9),
+                                 borderRadius: BorderRadius.circular(12),
+                               ),
+                                child: TabBar(
+                                  indicatorSize: TabBarIndicatorSize.tab,
+                                  indicator: BoxDecoration(
+                                    color: Theme.of(context).brightness == Brightness.dark
+                                        ? const Color(0xFF334155)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
+                                  dividerColor: Colors.transparent,
+                                  labelColor: Theme.of(context).brightness == Brightness.dark
+                                      ? const Color(0xFF818CF8)
+                                      : const Color(0xFF4338CA),
+                                  unselectedLabelColor: Colors.grey[600],
+                                  labelStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+                                  tabs: const [
+                                    Tab(
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.touch_app_outlined, size: 16),
+                                          SizedBox(width: 4),
+                                          Flexible(child: Text("Attendance", overflow: TextOverflow.ellipsis)),
+                                        ],
+                                      ),
+                                    ),
+                                    Tab(
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.history, size: 16),
+                                          SizedBox(width: 4),
+                                          Flexible(child: Text("My Attendance", overflow: TextOverflow.ellipsis)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                             ),
                             ),
-                            dividerColor: Colors.transparent,
-                            labelColor: Theme.of(context).brightness == Brightness.dark 
-                                ? const Color(0xFF818CF8) 
-                                : const Color(0xFF4338CA),
-                            unselectedLabelColor: Colors.grey[600],
-                            labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
-                            tabs: const [
-                              Tab(text: "Mark Attendance"),
-                              Tab(text: "My Attendance"),
-                            ],
-                          ),
+                         ],
                        ),
-                      ),
-                   ],
-                 ),
-              ),
+                    ),
+                  ),
+                ];
+              },
+              body: TabBarView(
+                children: [
+                  // Tab 1: Mark Attendance
+                  const MarkAttendanceMobile(),
 
-              // Tab View
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    // Tab 1: Mark Attendance
-                    const MarkAttendanceMobile(),
-
-                    // Tab 2: My Attendance (Sub-tabs: History / Analytics)
-                    _MyAttendanceReportsTab(),
-                  ],
-                ),
+                  // Tab 2: My Attendance (Sub-tabs: History / Analytics)
+                  _MyAttendanceReportsTab(),
+                ],
               ),
-            ],
-          ),
+            ),
         ),
       );
     },
@@ -105,33 +130,49 @@ class _MyAttendanceReportsTab extends StatefulWidget {
 }
 
 class _MyAttendanceReportsTabState extends State<_MyAttendanceReportsTab> {
-  int _selectedIndex = 0; // 0: History, 1: Analytics
+  int _selectedIndex = 0; // 0: History, 1: Analytics, 2: Corrections
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Sub-tabs
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Row(
-            children: [
-              _buildSubTab('History', 0, Icons.history),
-              const SizedBox(width: 24),
-              _buildSubTab('Analytics', 1, Icons.analytics_outlined),
-            ],
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Column(
+        children: [
+          // Sub-tabs
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildSubTab('History', 0, Icons.history),
+                  const SizedBox(width: 24),
+                  _buildSubTab('Analytics', 1, Icons.analytics_outlined),
+                  const SizedBox(width: 24),
+                  _buildSubTab('Corrections', 2, Icons.edit_calendar_outlined),
+                ],
+              ),
+            ),
           ),
-        ),
-        
-        // Content
-        Expanded(
-          child: _selectedIndex == 0 
-            ? const AttendanceHistoryMobile() 
-            : const AttendanceAnalyticsMobile(),
-        ),
-      ],
+          
+          
+          Expanded(
+            child: _selectedIndex == 0 
+              ? const AttendanceHistoryTab() 
+              : _selectedIndex == 1
+                ? const AttendanceAnalyticsTab()
+                : Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: AdminCorrectionRequests(
+                      userId: Provider.of<AuthService>(context, listen: false).user?.employeeId,
+                    ),
+                  ),
+          ),
+        ],
+      ),
     );
   }
+
 
   Widget _buildSubTab(String label, int index, IconData icon) {
     final isSelected = _selectedIndex == index;

@@ -1,10 +1,19 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'dart:io';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/services/auth_service.dart';
+import '../providers/attendance_provider.dart';
+import '../services/attendance_service.dart';
+import '../models/attendance_record.dart';
 import 'attendance_common_widgets.dart';
 
-class AttendanceAnalyticsTab extends StatelessWidget {
+class AttendanceAnalyticsTab extends StatefulWidget {
   final bool shrinkWrap;
   final ScrollPhysics? physics;
 
@@ -15,46 +24,161 @@ class AttendanceAnalyticsTab extends StatelessWidget {
   });
 
   @override
+  State<AttendanceAnalyticsTab> createState() => _AttendanceAnalyticsTabState();
+}
+
+class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
+  DateTime _selectedMonth = DateTime.now();
+  List<AttendanceRecord> _records = [];
+  bool _isLoading = false;
+  bool _isExporting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMonthRecords();
+  }
+
+  Future<void> _fetchMonthRecords() async {
+    setState(() => _isLoading = true);
+    try {
+      final firstDay = DateTime(_selectedMonth.year, _selectedMonth.month, 1);
+      final lastDay = DateTime(_selectedMonth.year, _selectedMonth.month + 1, 0);
+      
+      final provider = Provider.of<AttendanceProvider>(context, listen: false);
+      final data = await provider.fetchRange(firstDay, lastDay);
+      
+      if (mounted) {
+        setState(() {
+          _records = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleExport() async {
+    final monthStr = DateFormat('yyyy-MM').format(_selectedMonth);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final attendanceService = AttendanceService(authService.dio);
+
+    setState(() => _isExporting = true);
+
+    try {
+      final bytes = await attendanceService.exportMyReport(monthStr);
+      final directory = await getApplicationDocumentsDirectory();
+      final String fileName = 'Attendance_${monthStr}_${authService.user?.name ?? "User"}.xlsx';
+      final String filePath = '${directory.path}/$fileName';
+      final File file = File(filePath);
+      await file.writeAsBytes(bytes);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Report saved: $fileName'),
+            action: SnackBarAction(
+              label: 'OPEN',
+              onPressed: () => OpenFilex.open(filePath),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isExporting = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     final isDesktop = MediaQuery.of(context).size.width > 900;
     final isTablet = MediaQuery.of(context).size.width > 600 && !isDesktop;
 
+    // Analytics Calculations
+    final totalDays = _records.length;
+    final onTimeCount = _records.where((r) => r.status.toUpperCase() == 'PRESENT').length;
+    final lateCount = _records.where((r) => r.status.toUpperCase() == 'LATE').length;
+    final absentCount = _records.where((r) => r.status.toUpperCase() == 'ABSENT').length;
+    
+    final presentCount = onTimeCount + lateCount;
+    final presentPercent = totalDays > 0 ? (presentCount / totalDays * 100).toStringAsFixed(0) : '0';
+    final latePercent = presentCount > 0 ? (lateCount / presentCount * 100).toStringAsFixed(0) : '0';
+
+    double totalHours = 0;
+    int recordsWithHours = 0;
+    for (var r in _records) {
+      if (r.timeIn != null && r.timeOut != null) {
+        final duration = DateTime.parse(r.timeOut!).difference(DateTime.parse(r.timeIn!));
+        totalHours += duration.inMinutes / 60;
+        recordsWithHours++;
+      }
+    }
+    final avgHours = recordsWithHours > 0 ? (totalHours / recordsWithHours).toStringAsFixed(1) : '0.0';
+
     return ListView(
-      shrinkWrap: shrinkWrap,
-      physics: physics,
+      shrinkWrap: widget.shrinkWrap,
+      physics: widget.physics,
       padding: const EdgeInsets.all(24),
       children: [
-        MonthlyReportHeader(selectedMonth: DateTime.now(), onMonthChanged: (d){}),
+        MonthlyReportHeader(
+          selectedMonth: _selectedMonth, 
+          onMonthChanged: (newDate) {
+            setState(() {
+              _selectedMonth = newDate;
+            });
+            _fetchMonthRecords();
+          },
+          onDownload: _handleExport,
+          isDownloading: _isExporting,
+        ),
         const SizedBox(height: 24),
         
         // 1. Summary Cards
         isDesktop || isTablet
           ? Row(
               children: [
-                Expanded(child: AttendanceSummaryCard(title: 'Total Days', value: '10', icon: Icons.calendar_today, color: Colors.blue)),
-                SizedBox(width: 16),
-                Expanded(child: AttendanceSummaryCard(title: 'Present', value: '100%', percentage: '100%')),
-                SizedBox(width: 16),
-                Expanded(child: AttendanceSummaryCard(title: 'Late', value: '70%', percentage: '70%')),
-                SizedBox(width: 16),
-                Expanded(child: AttendanceSummaryCard(title: 'Avg Hours', value: '0.0', icon: Icons.access_time, color: Colors.blue)),
+                Expanded(child: AttendanceSummaryCard(title: 'Total Records', value: '$totalDays', icon: Icons.calendar_today, color: Colors.blue)),
+                const SizedBox(width: 16),
+                Expanded(child: AttendanceSummaryCard(title: 'Present', value: '$presentPercent%', percentage: '$presentPercent%')),
+                const SizedBox(width: 16),
+                Expanded(child: AttendanceSummaryCard(title: 'Late', value: '$latePercent%', percentage: '$latePercent%')),
+                const SizedBox(width: 16),
+                Expanded(child: AttendanceSummaryCard(title: 'Avg Hours', value: avgHours, icon: Icons.access_time, color: Colors.blue)),
               ],
             )
           : Column(
               children: [
-                AttendanceSummaryCard(title: 'Total Days', value: '10', icon: Icons.calendar_today, color: Colors.blue),
-                SizedBox(height: 12),
-                AttendanceSummaryCard(title: 'Present', value: '100%', percentage: '100%'),
-                SizedBox(height: 12),
-                AttendanceSummaryCard(title: 'Late', value: '70%', percentage: '70%'),
-                SizedBox(height: 12),
-                AttendanceSummaryCard(title: 'Avg Hours', value: '0.0', icon: Icons.access_time, color: Colors.blue),
+                AttendanceSummaryCard(title: 'Total Records', value: '$totalDays', icon: Icons.calendar_today, color: Colors.blue),
+                const SizedBox(height: 12),
+                AttendanceSummaryCard(title: 'Present', value: '$presentPercent%', percentage: '$presentPercent%'),
+                const SizedBox(height: 12),
+                AttendanceSummaryCard(title: 'Late', value: '$latePercent%', percentage: '$latePercent%'),
+                const SizedBox(height: 12),
+                AttendanceSummaryCard(title: 'Avg Hours', value: avgHours, icon: Icons.access_time, color: Colors.blue),
               ],
             ),
         
         const SizedBox(height: 24),
 
-        // 2. Total Attendance Report Chart (Line Chart)
+        // 2. Total Attendance Report Chart (Line Chart) - Kept Mock for now as it needs daily series
         GlassContainer(
           padding: const EdgeInsets.all(24),
           borderRadius: 24,
@@ -65,11 +189,11 @@ class AttendanceAnalyticsTab extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Total Attendance Report', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-                  Icon(Icons.more_vert, size: 20, color: Colors.grey),
+                  const Icon(Icons.more_vert, size: 20, color: Colors.grey),
                 ],
               ),
               const SizedBox(height: 32),
-              SizedBox(
+              const SizedBox(
                 height: 300,
                 child: _LineChartWidget(),
               ),
@@ -84,14 +208,14 @@ class AttendanceAnalyticsTab extends StatelessWidget {
           ? Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _buildAttendanceStatusCard(context)),
+                Expanded(child: _buildAttendanceStatusCard(context, onTimeCount, lateCount)),
                 const SizedBox(width: 24),
                 Expanded(child: _buildWeeklyActivityCard(context)),
               ],
             )
           : Column(
               children: [
-                _buildAttendanceStatusCard(context),
+                _buildAttendanceStatusCard(context, onTimeCount, lateCount),
                 const SizedBox(height: 24),
                 _buildWeeklyActivityCard(context),
               ],
@@ -100,7 +224,8 @@ class AttendanceAnalyticsTab extends StatelessWidget {
     );
   }
 
-  Widget _buildAttendanceStatusCard(BuildContext context) {
+  Widget _buildAttendanceStatusCard(BuildContext context, int onTime, int late) {
+    final total = onTime + late;
     return GlassContainer(
       padding: const EdgeInsets.all(24),
       borderRadius: 24,
@@ -122,15 +247,15 @@ class AttendanceAnalyticsTab extends StatelessWidget {
                           sectionsSpace: 0,
                           centerSpaceRadius: 60,
                           sections: [
-                            PieChartSectionData(color: const Color(0xFF10B981), value: 3, radius: 25, showTitle: false), // On Time
-                            PieChartSectionData(color: const Color(0xFFF59E0B), value: 7, radius: 25, showTitle: false), // Late
+                            PieChartSectionData(color: const Color(0xFF10B981), value: onTime.toDouble(), radius: 25, showTitle: false), // On Time
+                            PieChartSectionData(color: const Color(0xFFF59E0B), value: late.toDouble(), radius: 25, showTitle: false), // Late
                           ],
                         ),
                       ),
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('10', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold)),
+                          Text('$total', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold)),
                           Text('TOTAL', style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey)),
                         ],
                       ),
@@ -156,10 +281,11 @@ class AttendanceAnalyticsTab extends StatelessWidget {
 
   Widget _buildLegendItem(Color color, String text) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 8),
-        Text(text, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+        Flexible(child: Text(text, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey), overflow: TextOverflow.ellipsis)),
       ],
     );
   }
@@ -218,6 +344,8 @@ class AttendanceAnalyticsTab extends StatelessWidget {
 }
 
 class _LineChartWidget extends StatelessWidget {
+  const _LineChartWidget();
+
   @override
   Widget build(BuildContext context) {
     return LineChart(
@@ -233,8 +361,8 @@ class _LineChartWidget extends StatelessWidget {
         ),
         titlesData: FlTitlesData(
           show: true,
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,

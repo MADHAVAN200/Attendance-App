@@ -28,6 +28,7 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
   late AttendanceService _attendanceService;
   final ImagePicker _picker = ImagePicker();
   DateTime _selectedDate = DateTime.now();
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -63,16 +64,19 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
   }
 
   Future<void> _handleAttendanceAction(bool isTimeIn) async {
-    final position = await _getCurrentLocation();
-    if (position == null) return;
-
-    var status = await Permission.camera.status;
-    if (!status.isGranted) {
-      status = await Permission.camera.request();
-      if (!status.isGranted) return;
-    }
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
 
     try {
+      final position = await _getCurrentLocation();
+      if (position == null) return;
+
+      var status = await Permission.camera.status;
+      if (!status.isGranted) {
+        status = await Permission.camera.request();
+        if (!status.isGranted) return;
+      }
+
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera, 
         preferredCameraDevice: CameraDevice.front,
@@ -94,9 +98,9 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
       }
 
       // Helper to perform API call
-      Future<void> performApiCall(String? lateReason) async {
+      Future<Map<String, dynamic>> performApiCall(String? lateReason) async {
         if (isTimeIn) {
-          await _attendanceService.timeIn(
+          return await _attendanceService.timeIn(
             latitude: position.latitude,
             longitude: position.longitude,
             accuracy: position.accuracy,
@@ -104,7 +108,7 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
             lateReason: lateReason,
           );
         } else {
-          await _attendanceService.timeOut(
+          return await _attendanceService.timeOut(
             latitude: position.latitude,
             longitude: position.longitude,
             accuracy: position.accuracy,
@@ -117,14 +121,31 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
       showLoading();
       bool success = false;
       String? caughtReasonError;
+      Map<String, dynamic>? firstResponse;
 
       try {
-        await performApiCall(null);
+        firstResponse = await performApiCall(null);
         success = true;
+        
+        // Debug: Check if success response still indicates lateness
+        debugPrint("MarkAttMobile: First attempt success. Response: $firstResponse");
+        
+        if (isTimeIn && (firstResponse['is_late'] == true || firstResponse['status'] == 'LATE') && firstResponse['late_reason_required'] == true) {
+           debugPrint("MarkAttMobile: Lateness detected in flags. Triggering reason dialog.");
+           success = false;
+           caughtReasonError = "late_reason_required_flag";
+        }
       } catch (e) {
         // Check for specific "reason" error
         final msg = e.toString().toLowerCase();
-        if (isTimeIn && msg.contains("reason")) {
+        debugPrint("MarkAttMobile: First attempt failed. Error: $msg"); // Added logging
+        
+        // Broaden matching for more reliable detection
+        if (isTimeIn && (
+            msg.contains("reason") || 
+            msg.contains("late") || 
+            msg.contains("required")
+          )) {
            caughtReasonError = msg;
         } else {
            if (mounted) {
@@ -150,8 +171,12 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
         // Show Reason Dialog
         if (!mounted) return;
         final reason = await LateArrivalDialogMobile.show(context);
+        debugPrint("MarkAttMobile: User provided late reason: $reason");
         
-        if (reason == null || reason.isEmpty) return; // User cancelled
+        if (reason == null || reason.isEmpty) {
+          debugPrint("MarkAttMobile: Late reason dialog cancelled or empty.");
+          return; // User cancelled
+        }
 
         // 3. Second Attempt with Reason
         if (!mounted) return;
@@ -174,6 +199,8 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
 
     } catch (e) {
        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Camera/Location Error: $e")));
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
@@ -203,30 +230,80 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
            isCheckedIn = records.any((r) => r.timeOut == null);
         }
 
-        return ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          physics: const BouncingScrollPhysics(),
-          children: [
-            _buildActionButtons(context, isCheckedIn),
-            const SizedBox(height: 32),
-            _buildDateSelector(context, records),
-            const SizedBox(height: 16),
-            if (isLoading)
-               const Center(child: CircularProgressIndicator())
-            else if (records.isEmpty)
-               Center(child: Text("No records for this date", style: GoogleFonts.poppins(color: Colors.grey)))
-            else
-               ...records.map((record) => Padding(
-                 padding: const EdgeInsets.only(bottom: 12),
-                 child: _buildSessionCard(context, record),
-               )),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = constraints.maxWidth;
+            
+            return Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: maxWidth,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _buildActionButtons(context, isCheckedIn),
+                    const SizedBox(height: 32),
+                    _buildDateSelector(context, records),
+                    const SizedBox(height: 16),
+                    if (isLoading)
+                      const Center(child: Padding(
+                        padding: EdgeInsets.all(20.0),
+                        child: CircularProgressIndicator(),
+                      ))
+                    else if (records.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(40.0),
+                        child: Center(child: Text("No records for this date", style: GoogleFonts.poppins(color: Colors.grey))),
+                      )
+                    else
+                      ...records.map((record) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildSessionCard(context, record),
+                      )),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );
   }
 
   Widget _buildActionButtons(BuildContext context, bool isCheckedIn) {
+    bool isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
+    if (isLandscape) {
+      return Row(
+        children: [
+          Expanded(
+            child: _buildLargeActionButton(
+              context,
+              label: 'Time In',
+              subLabel: isCheckedIn ? 'Checked In' : 'Start Shift',
+              icon: Icons.login,
+              color: const Color(0xFF10B981),
+              isActive: !isCheckedIn,
+              onTap: () => _handleAttendanceAction(true),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _buildLargeActionButton(
+              context,
+              label: 'Time Out',
+              subLabel: isCheckedIn ? 'End Shift' : 'Logged Out',
+              icon: Icons.logout,
+              color: const Color(0xFFEF4444),
+              isActive: isCheckedIn,
+              onTap: () => _handleAttendanceAction(false),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       children: [
         _buildLargeActionButton(
@@ -359,7 +436,11 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.calendar_today, size: 16, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).primaryColor),
+                      Icon(
+                        Icons.calendar_today, 
+                        size: 16, 
+                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Theme.of(context).primaryColor
+                      ),
                       const SizedBox(width: 8),
                       // Flexible Date Text
                       Flexible(
@@ -391,53 +472,51 @@ class _MarkAttendanceMobileState extends State<MarkAttendanceMobile> {
   }
 
   Widget _buildSessionCard(BuildContext context, AttendanceRecord record) {
-     // Reusing session card logic but ensured generic
-
     return GlassContainer(
       padding: const EdgeInsets.all(20),
       borderRadius: 24,
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Timeline Column
+          Column(
+            children: [
+              Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
+              Container(width: 2, height: 32, color: Colors.grey.withOpacity(0.3), margin: const EdgeInsets.symmetric(vertical: 4)),
+              Container(width: 12, height: 12, decoration: BoxDecoration(color: record.timeOut != null ? Colors.red : Colors.grey, shape: BoxShape.circle)),
+            ],
+          ),
+          const SizedBox(width: 16),
+          // Info Columns
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(width: 12, height: 12, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle)),
-                Expanded(child: Container(width: 2, color: Colors.grey.withOpacity(0.3), margin: const EdgeInsets.symmetric(vertical: 4))),
-                Container(width: 12, height: 12, decoration: BoxDecoration(color: record.timeOut != null ? Colors.red : Colors.grey, shape: BoxShape.circle)),
+                _buildTimeInfo(context, time: _formatTime(record.timeIn), location: record.timeInAddress ?? 'Unknown'),
+                const SizedBox(height: 16),
+                record.timeOut != null 
+                  ? _buildTimeInfo(context, time: _formatTime(record.timeOut), location: record.timeOutAddress ?? 'Unknown')
+                  : Text(
+                      'Currently Active', 
+                      style: GoogleFonts.poppins(
+                        fontSize: 13, 
+                        fontWeight: FontWeight.w600, 
+                        color: const Color(0xFF10B981)
+                      )
+                    ),
               ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildTimeInfo(context, time: _formatTime(record.timeIn), location: record.timeInAddress ?? 'Unknown'),
-                  const SizedBox(height: 24),
-                  record.timeOut != null 
-                    ? _buildTimeInfo(context, time: _formatTime(record.timeOut), location: record.timeOutAddress ?? 'Unknown')
-                    : Text(
-                        'Currently Active', 
-                        style: GoogleFonts.poppins(
-                          fontSize: 13, 
-                          fontWeight: FontWeight.w600, 
-                          color: const Color(0xFF10B981)
-                        )
-                      ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildAvatar(context, record.timeInImage),
-                if (record.timeOut != null) _buildAvatar(context, record.timeOutImage),
-              ],
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 12),
+          // Avatars
+          Column(
+            children: [
+              _buildAvatar(context, record.timeInImage),
+              const SizedBox(height: 16),
+              if (record.timeOut != null) _buildAvatar(context, record.timeOutImage),
+            ],
+          ),
+        ],
       ),
     );
   }

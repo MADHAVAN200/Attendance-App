@@ -6,11 +6,15 @@ import '../../../../shared/widgets/glass_container.dart';
 class MonthlyReportHeaderMobile extends StatelessWidget {
   final DateTime selectedMonth;
   final ValueChanged<DateTime> onMonthChanged;
+  final VoidCallback? onDownload;
+  final bool isDownloading;
 
   const MonthlyReportHeaderMobile({
     super.key,
     required this.selectedMonth,
     required this.onMonthChanged,
+    this.onDownload,
+    this.isDownloading = false,
   });
 
   @override
@@ -59,14 +63,14 @@ class MonthlyReportHeaderMobile extends StatelessWidget {
           const SizedBox(height: 16),
           
           // Row 2: Controls
-          Row(
+           Row(
             children: [
-               Expanded(child: _buildDropdown(context, DateFormat('MMMM').format(selectedMonth))),
+               Expanded(child: _buildMonthDropdown(context)),
                const SizedBox(width: 8),
-               Expanded(child: _buildDropdown(context, DateFormat('yyyy').format(selectedMonth))),
+               Expanded(child: _buildYearDropdown(context)),
                const SizedBox(width: 8),
                ElevatedButton(
-                 onPressed: () {},
+                 onPressed: isDownloading ? null : onDownload,
                  style: ElevatedButton.styleFrom(
                    backgroundColor: const Color(0xFF5B60F6),
                    foregroundColor: Colors.white,
@@ -74,7 +78,9 @@ class MonthlyReportHeaderMobile extends StatelessWidget {
                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                    minimumSize: const Size(40, 40), // Ensure touch target
                  ),
-                 child: const Icon(Icons.download, size: 20),
+                 child: isDownloading 
+                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                   : const Icon(Icons.download, size: 20),
                ),
             ],
           ),
@@ -83,30 +89,73 @@ class MonthlyReportHeaderMobile extends StatelessWidget {
     );
   }
 
-  Widget _buildDropdown(BuildContext context, String text) {
+  Widget _buildMonthDropdown(BuildContext context) {
+    final months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    return _buildDropdownWrapper(
+      context: context,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: selectedMonth.month,
+          isDense: true,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey),
+          style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color),
+          items: List.generate(12, (index) {
+            return DropdownMenuItem(
+              value: index + 1,
+              child: Text(months[index], overflow: TextOverflow.ellipsis),
+            );
+          }),
+          onChanged: (value) {
+            if (value != null) {
+              onMonthChanged(DateTime(selectedMonth.year, value));
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildYearDropdown(BuildContext context) {
+    return _buildDropdownWrapper(
+      context: context,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: selectedMonth.year,
+          isDense: true,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey),
+          style: GoogleFonts.poppins(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color),
+          items: List.generate(2100 - 2024 + 1, (index) {
+            final year = 2024 + index;
+            return DropdownMenuItem(
+              value: year,
+              child: Text('$year'),
+            );
+          }),
+          onChanged: (value) {
+            if (value != null) {
+              onMonthChanged(DateTime(value, selectedMonth.month));
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdownWrapper({required BuildContext context, required Widget child}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Expanded(
-            child: Text(
-              text, 
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Theme.of(context).textTheme.bodyMedium?.color,
-              ), 
-              overflow: TextOverflow.ellipsis
-            )
-          ),
-          const Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey),
-        ],
-      ),
+      child: child,
     );
   }
 }

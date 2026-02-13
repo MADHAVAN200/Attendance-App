@@ -12,6 +12,7 @@ class AttendanceRecord {
   final String? timeInImage; // URL
   final String? timeOutImage; // URL
   final int lateMinutes;
+  final String? lateReason;
   final String status; // 'PRESENT', 'ABSENT', etc.
 
   AttendanceRecord({
@@ -28,6 +29,7 @@ class AttendanceRecord {
     this.timeInImage,
     this.timeOutImage,
     this.lateMinutes = 0,
+    this.lateReason,
     required this.status,
   });
 
@@ -46,6 +48,7 @@ class AttendanceRecord {
       timeInImage: json['time_in_image'], 
       timeOutImage: json['time_out_image'],
       lateMinutes: json['late_minutes'] ?? 0,
+      lateReason: json['late_reason'],
       status: json['status'] ?? 'Draft',
     );
   }

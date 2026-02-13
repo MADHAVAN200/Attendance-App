@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv
@@ -10,14 +11,28 @@ import 'shared/services/auth_service.dart';
 
 import 'shared/services/notification_service.dart';
 import 'shared/services/dashboard_provider.dart'; 
-import 'features/attendance/providers/attendance_provider.dart'; // Import AttendanceProvider
+import 'features/attendance/providers/attendance_provider.dart';
+import 'features/leave/providers/leave_provider.dart';
 import 'features/leave/services/leave_service.dart'; // Import LeaveService
+import 'shared/services/permission_service.dart'; // Import PermissionService
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
+  // Configure Edge-to-Edge
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    systemNavigationBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+  ));
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
   // Load environment variables
   await dotenv.load(fileName: ".env");
+
+  // Request Permissions on Launch
+  final permissionService = PermissionService();
+  await permissionService.requestInitialPermissions();
 
   final authService = AuthService();
   await authService.init();
@@ -32,10 +47,18 @@ void main() async {
         ChangeNotifierProvider<AuthService>.value(value: authService),
         ChangeNotifierProvider<NotificationService>.value(value: notificationService),
         ChangeNotifierProvider<DashboardProvider>(create: (_) => DashboardProvider(authService)),
-        ChangeNotifierProvider<AttendanceProvider>(create: (_) => AttendanceProvider(authService)),
+        ChangeNotifierProxyProvider<AuthService, AttendanceProvider>(
+          create: (context) => AttendanceProvider(context.read<AuthService>()),
+          update: (context, auth, previous) => previous ?? AttendanceProvider(auth),
+        ),
+        ChangeNotifierProxyProvider<AuthService, LeaveProvider>(
+          create: (context) => LeaveProvider(context.read<AuthService>()),
+          update: (context, auth, previous) => previous ?? LeaveProvider(auth),
+        ),
         ProxyProvider<AuthService, LeaveService>(
           update: (_, auth, __) => LeaveService(auth.dio),
         ),
+        Provider<PermissionService>.value(value: permissionService),
       ],
       child: const AttendanceApp(),
     ),
@@ -45,12 +68,15 @@ void main() async {
 class AttendanceApp extends StatelessWidget {
   const AttendanceApp({super.key});
 
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, currentMode, child) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'Admin Dashboard',
           debugShowCheckedModeBanner: false,
           theme: _buildTheme(Brightness.light),
@@ -149,7 +175,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       return const OrientationGuard(child: DashboardScreen());
     }
 
-    // Use the new LoginScreen
-    return const LoginScreen();
+    // Use the new LoginScreen wrapped in OrientationGuard
+    return const OrientationGuard(child: LoginScreen());
   }
 }

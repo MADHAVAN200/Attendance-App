@@ -8,8 +8,11 @@ class AttendanceProvider with ChangeNotifier {
   final AuthService _authService;
   late final AttendanceService _attendanceService;
 
-  // Cache: "YYYY-MM-DD" -> List<AttendanceRecord>
+  // Cache: "userId_YYYY-MM-DD" -> List<AttendanceRecord>
   final Map<String, List<AttendanceRecord>> _recordsCache = {};
+
+  // Range Cache: "userId_from_to" -> List<AttendanceRecord>
+  final Map<String, List<AttendanceRecord>> _rangeCache = {};
   
   // Current State
   List<AttendanceRecord> _currentRecords = [];
@@ -18,7 +21,26 @@ class AttendanceProvider with ChangeNotifier {
 
   AttendanceProvider(this._authService) {
     _attendanceService = AttendanceService(_authService.dio);
+    _lastUserId = _authService.user?.employeeId;
+    _authService.addListener(_onAuthChanged);
   }
+
+  void _onAuthChanged() {
+    final currentUserId = _authService.user?.employeeId;
+    if (currentUserId != _lastUserId) {
+      debugPrint('AttendanceProvider: User changed from $_lastUserId to $currentUserId. Clearing cache.');
+      clearCache();
+      _lastUserId = currentUserId;
+    }
+  }
+
+  @override
+  void dispose() {
+    _authService.removeListener(_onAuthChanged);
+    super.dispose();
+  }
+
+  String? _lastUserId;
 
   // Getters
   List<AttendanceRecord> get records => _currentRecords;
@@ -28,11 +50,13 @@ class AttendanceProvider with ChangeNotifier {
   // Fetch Records for a specific date
   Future<void> fetchRecords(DateTime date, {bool forceRefresh = false}) async {
     final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    final userId = _authService.user?.employeeId ?? 'anon';
+    final cacheKey = "${userId}_$dateStr";
     _error = null;
 
     // 1. Return from Cache if available and not forcing refresh
-    if (!forceRefresh && _recordsCache.containsKey(dateStr)) {
-      _currentRecords = _recordsCache[dateStr]!;
+    if (!forceRefresh && _recordsCache.containsKey(cacheKey)) {
+      _currentRecords = _recordsCache[cacheKey]!;
       notifyListeners();
       return;
     }
@@ -42,10 +66,15 @@ class AttendanceProvider with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final data = await _attendanceService.getMyRecords(fromDate: dateStr, toDate: dateStr);
+      final userId = _authService.user?.employeeId;
+      final data = await _attendanceService.getMyRecords(
+        fromDate: dateStr, 
+        toDate: dateStr,
+        userId: userId,
+      );
       
       // Update Cache
-      _recordsCache[dateStr] = data;
+      _recordsCache[cacheKey] = data;
       _currentRecords = data;
       
     } catch (e) {
@@ -59,11 +88,58 @@ class AttendanceProvider with ChangeNotifier {
     }
   }
 
+  // Fetch Records for a range
+  Future<List<AttendanceRecord>> fetchRange(DateTime from, DateTime to, {bool forceRefresh = false}) async {
+    final fromStr = DateFormat('yyyy-MM-dd').format(from);
+    final toStr = DateFormat('yyyy-MM-dd').format(to);
+    final userId = _authService.user?.employeeId ?? 'anon';
+    final cacheKey = "${userId}_${fromStr}_$toStr";
+    
+    // 1. Return from Cache
+    if (!forceRefresh && _rangeCache.containsKey(cacheKey)) {
+      return _rangeCache[cacheKey]!;
+    }
+
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      final data = await _attendanceService.getMyRecords(
+        fromDate: fromStr, 
+        toDate: toStr,
+        userId: userId,
+      );
+      
+      // 2. Update Cache
+      _rangeCache[cacheKey] = data;
+      return data;
+    } catch (e) {
+      _error = e.toString();
+      return [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   // Invalidate cache for today (e.g. after punching in/out)
   void invalidateCache(DateTime date) {
     final dateStr = DateFormat('yyyy-MM-dd').format(date);
-    _recordsCache.remove(dateStr);
+    final userId = _authService.user?.employeeId ?? 'anon';
+    _recordsCache.remove("${userId}_$dateStr");
+    
+    // Also clear range cache to be safe as it might include this date
+    _rangeCache.clear();
+    
     // Note: We don't automatically refetch here, usually the UI will trigger refetch 
     // or we can call fetchRecords(date, forceRefresh: true) immediately.
+  }
+
+  // Clear all caches (e.g. on logout)
+  void clearCache() {
+    _recordsCache.clear();
+    _rangeCache.clear();
+    _currentRecords = [];
+    notifyListeners();
   }
 }

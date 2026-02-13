@@ -7,6 +7,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/glass_date_picker.dart';
 import '../../../../shared/widgets/custom_dialog.dart';
@@ -18,8 +20,8 @@ import '../../widgets/late_arrival_dialog.dart';
 import '../../../../shared/widgets/attendance_success_dialog.dart';
 import '../../widgets/attendance_history_tab.dart';
 import '../../widgets/attendance_analytics_tab.dart';
-import '../../providers/attendance_provider.dart'; // Import Provider
-import '../../widgets/correction_request_form.dart';
+import 'package:flutter_application/features/attendance/admin/views/admin_correction_requests.dart';
+import '../../providers/attendance_provider.dart';
 
 class MyAttendanceView extends StatefulWidget {
   const MyAttendanceView({super.key});
@@ -32,6 +34,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
   late AttendanceService _attendanceService;
   final ImagePicker _picker = ImagePicker();
   DateTime _selectedDate = DateTime.now();
+  bool _isProcessing = false;
 
 
 
@@ -77,37 +80,40 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
   }
 
   Future<void> _handleAttendanceAction(bool isTimeIn) async {
-    // 1. Get Location
-    final position = await _getCurrentLocation();
-    if (position == null) return;
+    if (_isProcessing) return;
+    setState(() => _isProcessing = true);
 
-    // 1. Permission Check with Settings Prompt
-    var status = await Permission.camera.status;
-    if (!status.isGranted) {
-      status = await Permission.camera.request();
-      if (status.isPermanentlyDenied) {
-        if (mounted) {
-           CustomDialog.show(
-             context: context,
-             title: "Permission Required",
-             message: "Camera access is needed to mark attendance. Please enable it in settings.",
-             positiveButtonText: "Open Settings",
-             onPositivePressed: () {
-               Navigator.pop(context); // Close dialog
-               openAppSettings();
-             },
-             negativeButtonText: "Cancel",
-             onNegativePressed: () => Navigator.pop(context),
-             icon: Icons.camera_alt_outlined,
-           );
-        }
-        return;
-      }
-      if (!status.isGranted) return; // Denied but not permanently
-    }
-
-    // 2. Capture Selfie (System Camera)
     try {
+      // 1. Get Location
+      final position = await _getCurrentLocation();
+      if (position == null) return;
+
+      // 1. Permission Check with Settings Prompt
+      var status = await Permission.camera.status;
+      if (!status.isGranted) {
+        status = await Permission.camera.request();
+        if (status.isPermanentlyDenied) {
+          if (mounted) {
+             CustomDialog.show(
+               context: context,
+               title: "Permission Required",
+               message: "Camera access is needed to mark attendance. Please enable it in settings.",
+               positiveButtonText: "Open Settings",
+               onPositivePressed: () {
+                 if (mounted) Navigator.pop(context); // Close dialog
+                 openAppSettings();
+               },
+               negativeButtonText: "Cancel",
+               onNegativePressed: () => Navigator.pop(context),
+               icon: Icons.camera_alt_outlined,
+             );
+          }
+          return;
+        }
+        if (!status.isGranted) return; // Denied but not permanently
+      }
+
+      // 2. Capture Selfie (System Camera)
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera, 
         preferredCameraDevice: CameraDevice.front,
@@ -125,8 +131,8 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
 
-      Future<void> performTimeIn({String? reason}) async {
-         await _attendanceService.timeIn(
+      Future<Map<String, dynamic>> performTimeIn({String? reason}) async {
+         return await _attendanceService.timeIn(
              latitude: position.latitude,
             longitude: position.longitude,
             accuracy: position.accuracy,
@@ -134,39 +140,51 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
             lateReason: reason,
           );
       }
-
-      // 3. Submit
-      try {
-        if (isTimeIn) {
+ 
+       // 3. Submit
+       try {
+         if (isTimeIn) {
           try {
-             await performTimeIn(); // Try without reason first
+            final response = await performTimeIn(); // Try without reason first
+            
+            // Debug: Check for lateness flag in successful response
+            debugPrint("MyAttendanceView: First attempt success. Response: $response");
+            
+            if (isTimeIn && (response['is_late'] == true || response['status'] == 'LATE') && response['late_reason_required'] == true) {
+               debugPrint("MyAttendanceView: Lateness detected in flags. Requesting reason.");
+               // Throw pseudo-error to trigger the late reason popup
+               throw Exception("late_reason_required_flag");
+            }
           } catch (e) {
-             final msg = e.toString().toLowerCase();
-             // Check for specific error message or key keywords
-             if (msg.contains("reason' is required") || 
-                 msg.contains("late_reason") || 
-                 msg.contains("reason is required") ||
-                 msg.contains("late time in")) {
-                // Show Input Dialog
-                if (!mounted) return;
-                Navigator.pop(context); // Hide loading
-                
-                final reason = await LateArrivalDialog.show(context);
-                
-                if (reason != null && reason.isNotEmpty) {
-                   if (!mounted) return;
-                   showDialog(
-                      context: context,
-                      barrierDismissible: false,
-                      builder: (_) => const Center(child: CircularProgressIndicator()),
-                   );
-                   await performTimeIn(reason: reason); // Retry
-                } else {
-                   return; // Cancelled
-                }
-             } else {
-               rethrow;
-             }
+            final msg = e.toString().toLowerCase();
+            debugPrint("MyAttendanceView: First attempt failed. Error: $msg");
+            
+            // Broaden matching for more reliable detection and sync with mobile
+            if (msg.contains("reason") || 
+                msg.contains("late") || 
+                msg.contains("required") ||
+                msg.contains("late_reason_required_flag")) {
+               // Show Input Dialog
+               if (!mounted) return;
+               Navigator.pop(context); // Hide loading
+               
+               final reason = await LateArrivalDialog.show(context);
+               debugPrint("MyAttendanceView: User provided reason: $reason");
+               
+               if (reason != null && reason.isNotEmpty) {
+                  if (!mounted) return;
+                  showDialog(
+                     context: context,
+                     barrierDismissible: false,
+                     builder: (_) => const Center(child: CircularProgressIndicator()),
+                  );
+                  await performTimeIn(reason: reason); // Retry
+               } else {
+                  return; // Cancelled
+               }
+            } else {
+              rethrow;
+            }
           }
         } else {
           await _attendanceService.timeOut(
@@ -199,11 +217,15 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
       }
     } catch (e) {
        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Camera Error: $e")));
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
     return Consumer<AttendanceProvider>(
       builder: (context, provider, child) {
         final _records = provider.records;
@@ -217,7 +239,7 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
         }
 
         return DefaultTabController(
-          length: 2, // Reduced to 2
+          length: 2, 
           child: Column(
             children: [
               // Tab Bar
@@ -285,18 +307,37 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                 child: TabBarView(
                   children: [
                     // Tab 1: Mark Attendance
-                    SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildActionButtons(context, isCheckedIn),
-                          const SizedBox(height: 32),
-                          _buildDateSelector(context),
-                          const SizedBox(height: 16),
-                          _buildHistoryList(context, _records, _isLoading),
-                        ],
-                      ),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Landscape: Full Width
+                        // Portrait: Cap at 650 for readability
+                        final double maxWidth = isLandscape ? constraints.maxWidth : (constraints.maxWidth > 650 ? 650.0 : constraints.maxWidth);
+                        
+                        return Align(
+                          alignment: Alignment.topCenter,
+                          child: SizedBox(
+                            width: maxWidth,
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Top: Time In / Time Out
+                                  _buildActionButtons(context, isCheckedIn),
+                                  const SizedBox(height: 32),
+                                  
+                                  // Middle: Correction / Date
+                                  _buildDateSelector(context),
+                                  const SizedBox(height: 16),
+                                  
+                                  // Bottom: List
+                                  _buildHistoryList(context, _records, _isLoading),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
 
                     // Tab 2: My Attendance Reports
@@ -310,28 +351,58 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
       },
     );
   }
+
   Widget _buildActionButtons(BuildContext context, bool isCheckedIn) {
-    // Stacked vertically as requested using Glass Cards
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+
+    if (isLandscape) {
+      return Row(
+        children: [
+          Expanded(
+            child: _buildLargeActionButton(
+              context,
+              label: 'Time In',
+              subLabel: isCheckedIn ? 'Logged In' : 'Start Shift',
+              icon: Icons.login,
+              color: const Color(0xFF10B981),
+              isActive: !isCheckedIn,
+              onTap: () => _handleAttendanceAction(true),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _buildLargeActionButton(
+              context,
+              label: 'Time Out',
+              subLabel: isCheckedIn ? 'End Shift' : 'Logged Out',
+              icon: Icons.logout,
+              color: const Color(0xFFEF4444),
+              isActive: isCheckedIn,
+              onTap: () => _handleAttendanceAction(false),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       children: [
-        // Time In Button
         _buildLargeActionButton(
           context,
           label: 'Time In',
           subLabel: isCheckedIn ? 'You are currently checked in' : 'Start your shift',
           icon: Icons.login,
-          color: const Color(0xFF10B981), // Green
+          color: const Color(0xFF10B981),
           isActive: !isCheckedIn,
           onTap: () => _handleAttendanceAction(true),
         ),
         const SizedBox(height: 16),
-        // Time Out Button
         _buildLargeActionButton(
           context,
           label: 'Time Out',
           subLabel: isCheckedIn ? 'End current shift' : 'Not checked in',
           icon: Icons.logout,
-          color: const Color(0xFFEF4444), // Red
+          color: const Color(0xFFEF4444),
           isActive: isCheckedIn,
           onTap: () => _handleAttendanceAction(false),
         ),
@@ -372,28 +443,32 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
                 ),
               ),
               const SizedBox(width: 20),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(isActive ? 1.0 : 0.5),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).textTheme.bodyLarge?.color?.withOpacity(isActive ? 1.0 : 0.5),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    subLabel,
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: Theme.of(context).textTheme.bodySmall?.color,
+                    Text(
+                      subLabel,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 12),
               if (isActive)
                 Icon(Icons.chevron_right, color: Theme.of(context).textTheme.bodySmall?.color),
             ],
@@ -404,7 +479,8 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
   }
 
   Widget _buildDateSelector(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Todays Activity',
@@ -414,77 +490,76 @@ class _MyAttendanceViewState extends State<MyAttendanceView> {
             color: Theme.of(context).textTheme.bodyLarge?.color,
           ),
         ),
-        const Spacer(),
-        // Correction Button (ADDED)
-             // Correction Button 
-             // Same as Mobile, removing complex logic or relying on global/passed state if needed.
-             // For now just triggering dialog which needs id.
-             // We can get ID from provider inside default dialog if current day.
-             // But simpler to just show for now with null ID or handle internally.
-             InkWell(
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: InkWell(
                 onTap: () {
-                  // Get records from Provider directly if needed, or pass them down.
                   final provider = Provider.of<AttendanceProvider>(context, listen: false);
                   final records = provider.records;
                   final attendanceId = records.isNotEmpty ? records.first.attendanceId : null;
                   CorrectionRequestDialog.show(context, date: _selectedDate, attendanceId: attendanceId);
                 },
                 child: GlassContainer(
-                  height: 40,
+                  height: 44,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   borderRadius: 12,
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.edit_note, size: 16, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).primaryColor),
+                      Icon(Icons.edit_note, size: 18, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Theme.of(context).primaryColor),
                       const SizedBox(width: 8),
                       Text('Correction', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),
-             ),
-        const SizedBox(width: 12),
-        InkWell(
-          onTap: () async {
-            await showDialog(
-              context: context,
-              builder: (context) => GlassDatePicker(
-                isLarge: true, // Larger for tablet
-                initialDate: _selectedDate,
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
-                onDateSelected: (newDate) {
-                  setState(() => _selectedDate = newDate);
-                  _fetchRecords();
-                },
               ),
-            );
-          },
-          child: GlassContainer(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            borderRadius: 12,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.calendar_today, 
-                  size: 14, 
-                  color: Theme.of(context).brightness == Brightness.dark 
-                      ? Colors.white 
-                      : Theme.of(context).primaryColor
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  DateFormat('EEE, dd MMM yyyy').format(_selectedDate),
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).textTheme.bodyLarge?.color,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: InkWell(
+                onTap: () async {
+                  await showDialog(
+                    context: context,
+                    builder: (context) => GlassDatePicker(
+                      isLarge: true,
+                      initialDate: _selectedDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                      onDateSelected: (newDate) {
+                        setState(() => _selectedDate = newDate);
+                        _fetchRecords();
+                      },
+                    ),
+                  );
+                },
+                child: GlassContainer(
+                  height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  borderRadius: 12,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.calendar_today, 
+                        size: 16, 
+                        color: Theme.of(context).brightness == Brightness.dark ? Colors.white70 : Theme.of(context).primaryColor
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          DateFormat('dd MMM yyyy').format(_selectedDate),
+                          style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );
@@ -898,31 +973,39 @@ class _MyAttendanceReportsTabState extends State<_MyAttendanceReportsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView( // Make whole tab scrollable
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Sub-tabs
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    return Column(
+      children: [
+        // Sub-tabs (Same as Mobile)
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
                 _buildSubTab('History', 0, Icons.history),
-                const SizedBox(width: 32),
+                const SizedBox(width: 24),
                 _buildSubTab('Analytics', 1, Icons.analytics_outlined),
+                const SizedBox(width: 24),
+                _buildSubTab('Corrections', 2, Icons.edit_calendar_outlined),
               ],
             ),
           ),
-          
-          // Content
-          _selectedIndex == 0 
-            ? const AttendanceHistoryTab(shrinkWrap: true, physics: NeverScrollableScrollPhysics()) 
-            : const AttendanceAnalyticsTab(shrinkWrap: true, physics: NeverScrollableScrollPhysics()),
-        ],
-      ),
+        ),
+        
+        // Content
+        Expanded(
+          child: _selectedIndex == 0 
+            ? const AttendanceHistoryTab() 
+            : _selectedIndex == 1
+                ? const AttendanceAnalyticsTab()
+                : AdminCorrectionRequests(
+                    userId: Provider.of<AuthService>(context, listen: false).user?.employeeId,
+                  ),
+        ),
+      ],
     );
   }
+
 
   Widget _buildSubTab(String label, int index, IconData icon) {
     final isSelected = _selectedIndex == index;

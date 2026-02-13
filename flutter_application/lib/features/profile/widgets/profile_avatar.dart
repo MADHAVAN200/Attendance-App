@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/models/user_model.dart';
 import '../../../../shared/constants/api_constants.dart';
@@ -28,10 +29,13 @@ class ProfileAvatar extends StatefulWidget {
 class _ProfileAvatarState extends State<ProfileAvatar> {
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
-  int _cacheBuster = DateTime.now().millisecondsSinceEpoch; // Initialize
+
+  bool _isPickingImage = false;
 
   Future<void> _pickImage(ImageSource source) async {
-    if (!widget.canEdit) return;
+    if (!widget.canEdit || _isPickingImage) return;
+
+    setState(() => _isPickingImage = true);
 
     try {
       final XFile? image = await _picker.pickImage(source: source, imageQuality: 85);
@@ -59,10 +63,16 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
       await authService.updateProfilePicture(File(image.path));
 
       if (mounted) {
-        setState(() {
-           _cacheBuster = DateTime.now().millisecondsSinceEpoch; // Update on success
-        });
-        
+        // Evict from cache so new image loads
+        if (widget.user?.profileImage != null) {
+           final url = widget.user!.profileImage!.startsWith('http') 
+               ? widget.user!.profileImage! 
+               : '${ApiConstants.baseUrl}/${widget.user!.profileImage!}';
+           
+           await DefaultCacheManager().removeFile(url);
+           await CachedNetworkImageProvider(url).evict();
+        }
+
         CustomDialog.show(
           context: context,
           title: "Success",
@@ -83,7 +93,12 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
          );
       }
     } finally {
-      if (mounted) setState(() => _isUploading = false);
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+          _isPickingImage = false;
+        });
+      }
     }
   }
   
@@ -165,6 +180,9 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
 
   Future<void> _removeImage() async {
       setState(() => _isUploading = true);
+      
+      // Capture URL before it's cleared from user object
+      final String? urlToEvict = widget.user?.profileImage;
 
       try {
         if (!mounted) return;
@@ -172,10 +190,16 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
         await authService.deleteProfilePicture();
 
         if (mounted) {
-          setState(() {
-             _cacheBuster = DateTime.now().millisecondsSinceEpoch;
-          });
-          
+          // Evict from cache
+          if (urlToEvict != null) {
+             final url = urlToEvict.startsWith('http') 
+                 ? urlToEvict 
+                 : '${ApiConstants.baseUrl}/$urlToEvict';
+             
+             await DefaultCacheManager().removeFile(url);
+             await CachedNetworkImageProvider(url).evict();
+          }
+
           CustomDialog.show(
             context: context,
             title: "Success",
@@ -248,12 +272,9 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     final initials = user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : '?';
     String? imageUrl = user?.profileImage;
     
-    // Add cache buster
-    if (imageUrl != null) {
-       if (!imageUrl.startsWith('http')) {
-          imageUrl = '${ApiConstants.baseUrl}/$imageUrl';
-       }
-       imageUrl = '$imageUrl?t=$_cacheBuster';
+    // URL Resolution
+    if (imageUrl != null && !imageUrl.startsWith('http')) {
+       imageUrl = '${ApiConstants.baseUrl}/$imageUrl';
     }
 
     debugPrint("Building ProfileAvatar: canEdit=${widget.canEdit}, size=${widget.size}");

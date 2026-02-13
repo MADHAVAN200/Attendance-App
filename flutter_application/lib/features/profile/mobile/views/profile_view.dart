@@ -126,9 +126,7 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
               color: Theme.of(context).textTheme.titleLarge?.color,
             ),
           ),
-          const SizedBox(height: 24),
-          const Divider(height: 1, thickness: 1, color: Colors.white10),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           // Vertical Stack for Mobile
           _buildInfoItem(
             context,
@@ -164,9 +162,7 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
               color: Theme.of(context).textTheme.titleLarge?.color,
             ),
           ),
-          const SizedBox(height: 24),
-          const Divider(height: 1, thickness: 1, color: Colors.white10),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           // Vertical Stack
           _buildInfoItem(
             context,
@@ -252,7 +248,7 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
             color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, size: 20, color: Colors.grey[400]),
+          child: Icon(icon, size: 20, color: isDark ? Colors.grey[400] : Colors.grey[700]),
         ),
         const SizedBox(width: 16),
         Expanded(
@@ -263,7 +259,7 @@ class _MobileProfileContentState extends State<MobileProfileContent> {
                 label,
                 style: GoogleFonts.poppins(
                   fontSize: 12,
-                  color: Colors.grey[500],
+                  color: isDark ? Colors.grey[500] : Colors.grey[700],
                 ),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,

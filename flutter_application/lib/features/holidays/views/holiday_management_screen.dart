@@ -167,7 +167,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
     // [Search Bar (Expanded)]  [Import CSV]  [+ Add Holiday]
     // On Mobile: Search bar on one row, buttons on next? Or compressed.
     
-    final isEmployee = Provider.of<AuthService>(context, listen: false).user?.isEmployee ?? false;
+    final isAdmin = Provider.of<AuthService>(context, listen: false).user?.isAdmin ?? false;
 
     final isMobile = MediaQuery.of(context).size.width < 600;
 
@@ -177,7 +177,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
         children: [
            _buildSearchField(context, isDark),
            const SizedBox(height: 12),
-           if (!isEmployee)
+           if (isAdmin)
              Row(
                children: [
                  Expanded(child: _buildImportButton(context, isDark)),
@@ -192,7 +192,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
     return Row(
       children: [
         Expanded(child: _buildSearchField(context, isDark)),
-        if (!isEmployee) ...[
+        if (isAdmin) ...[
           const SizedBox(width: 16),
           _buildImportButton(context, isDark),
           const SizedBox(width: 12),
@@ -209,7 +209,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
         color: isDark ? const Color(0xFF1E2939) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade300,
+          color: isDark ? Colors.white.withAlpha(12) : Colors.grey.shade300,
         ),
       ),
       child: TextField(
@@ -239,7 +239,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
         backgroundColor: isDark ? const Color(0xFF1E2939) : Colors.white,
         shape: RoundedRectangleBorder(
            borderRadius: BorderRadius.circular(12),
-           side: BorderSide(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade300)
+           side: BorderSide(color: isDark ? Colors.white.withAlpha(12) : Colors.grey.shade300)
         ),
       ),
     );
@@ -266,6 +266,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
     // If Mobile (< 700), use ListView of Cards.
     // If Tablet/Desktop (>= 700), use Header Row + ListView of Rows.
     final isMobile = MediaQuery.of(context).size.width < 700;
+    final isAdmin = Provider.of<AuthService>(context, listen: false).user?.isAdmin ?? false;
 
     return GlassContainer(
       width: double.infinity,
@@ -283,7 +284,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
                    Expanded(flex: 3, child: _tableHeader("HOLIDAY NAME")),
                    Expanded(flex: 2, child: _tableHeader("DATE")),
                    Expanded(flex: 2, child: _tableHeader("TYPE")),
-                   if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee)
+                   if (isAdmin)
                      SizedBox(width: 80, child: _tableHeader("ACTIONS", alignRight: true)),
                 ],
               ),
@@ -294,7 +295,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
           Expanded(
             child: ListView.separated(
               itemCount: _filteredHolidays.length,
-              separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100),
+              separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? Colors.white.withAlpha(12) : Colors.grey.shade100),
               itemBuilder: (context, index) {
                 final holiday = _filteredHolidays[index];
                 if (isMobile) {
@@ -324,7 +325,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
   }
 
   Widget _buildDesktopRow(Holiday holiday, bool isDark) {
-    final isEmployee = Provider.of<AuthService>(context, listen: false).user?.isEmployee ?? false;
+    final isAdmin = Provider.of<AuthService>(context, listen: false).user?.isAdmin ?? false;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
@@ -333,7 +334,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
           Expanded(
             flex: 3,
             child: InkWell( // Make name clickable for edit
-              onTap: isEmployee ? null : () => _showEditDialog(holiday),
+              onTap: !isAdmin ? null : () => _showEditDialog(holiday),
               child: Text(
                 holiday.name,
                 style: GoogleFonts.poppins(
@@ -356,7 +357,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
                   _formatDate(holiday.date),
                   style: GoogleFonts.poppins(
                     fontSize: 13,
-                    color: isDark ? Colors.white70 : Colors.grey[400],
+                    color: isDark ? Colors.white : Colors.grey[700],
                   ),
                 ),
               ],
@@ -373,7 +374,7 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
           ),
 
           // 4. Actions
-          if (!isEmployee)
+          if (isAdmin)
             SizedBox(
               width: 80,
               child: Align(
@@ -391,11 +392,11 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
   }
 
   Widget _buildMobileCard(Holiday holiday, bool isDark) {
-    final isEmployee = Provider.of<AuthService>(context, listen: false).user?.isEmployee ?? false;
+    final isAdmin = Provider.of<AuthService>(context, listen: false).user?.isAdmin ?? false;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: InkWell(
-        onTap: isEmployee ? null : () => _showEditDialog(holiday),
+        onTap: !isAdmin ? null : () => _showEditDialog(holiday),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -422,10 +423,10 @@ class _HolidayManagementScreenState extends State<HolidayManagementScreen> {
                 const SizedBox(width: 8),
                 Text(
                   _formatDate(holiday.date),
-                  style: GoogleFonts.poppins(fontSize: 12, color: isDark ? Colors.white70 : Colors.grey[400]),
+                  style: GoogleFonts.poppins(fontSize: 12, color: isDark ? Colors.white : Colors.grey[700]),
                 ),
                 const Spacer(),
-                if (!isEmployee)
+                if (isAdmin)
                   IconButton(
                     icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
                     onPressed: () => _showDeleteConfirm(holiday.id),

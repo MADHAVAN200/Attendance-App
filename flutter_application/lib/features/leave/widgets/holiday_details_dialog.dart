@@ -15,6 +15,18 @@ class HolidayDetailsDialog extends StatelessWidget {
     this.width = 400,
     this.padding = const EdgeInsets.all(24),
   });
+  
+  static Future<void> showMobile(BuildContext context, {required Holiday holiday}) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => HolidayDetailsDialog(
+        holiday: holiday,
+        width: MediaQuery.of(context).size.width * 0.9,
+        padding: const EdgeInsets.all(20),
+      ),
+    );
+  }
 
   static Future<void> showPortrait(BuildContext context, {required Holiday holiday}) async {
     await showDialog(
@@ -56,24 +68,10 @@ class HolidayDetailsDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with Date Badge and Close Button
+            // Header with Name and Close Button
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(DateFormat('dd').format(dt), style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
-                      Text(DateFormat('MMM').format(dt).toUpperCase(), style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 20),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +79,7 @@ class HolidayDetailsDialog extends StatelessWidget {
                       Text(
                         holiday.name,
                         style: GoogleFonts.poppins(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: isDark ? Colors.white : Colors.black87,
                         ),
@@ -99,7 +97,7 @@ class HolidayDetailsDialog extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, color: isDark ? Colors.white : Colors.black),
+                  icon: Icon(Icons.close, color: isDark ? Colors.white : Colors.black54),
                 ),
               ],
             ),
@@ -108,7 +106,7 @@ class HolidayDetailsDialog extends StatelessWidget {
             // Details Section
             _buildDetailRow(context, Icons.event, "Date", DateFormat('MMMM dd, yyyy').format(dt)),
             const SizedBox(height: 16),
-            _buildDetailRow(context, Icons.category, "Type", "Public Holiday"), // Assuming type or static
+            _buildDetailRow(context, Icons.category, "Type", "Public Holiday"), 
             const SizedBox(height: 16),
             _buildDetailRow(context, Icons.calendar_today, "Day", DateFormat('EEEE').format(dt)),
             
@@ -121,7 +119,7 @@ class HolidayDetailsDialog extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
+                  backgroundColor: const Color(0xFF6366F1),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   elevation: 0,

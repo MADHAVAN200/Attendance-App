@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart'; // Added geolocator
 
 import 'word_captcha.dart'; // Import WordCaptcha
 import 'mobile/views/login_mobile_portrait.dart';
 import 'tablet/views/login_tablet_portrait.dart';
 import 'tablet/views/login_tablet_landscape.dart';
 import '../../shared/services/auth_service.dart';
+import '../../shared/widgets/custom_dialog.dart';
 import '../../main.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,6 +19,18 @@ class LoginScreen extends StatefulWidget {
 }
 
 class LoginScreenState extends State<LoginScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _requestLocationPermission();
+  }
+
+  Future<void> _requestLocationPermission() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      await Geolocator.requestPermission();
+    }
+  }
   final formKey = GlobalKey<FormState>();
   final identifierController = TextEditingController();
   final passwordController = TextEditingController();
@@ -80,11 +94,33 @@ class LoginScreenState extends State<LoginScreen> {
   }
 
   void _showError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
+    String title = "Login Error";
+    IconData icon = Icons.error_outline;
+    Color iconColor = Colors.red;
+
+    final lowerMsg = msg.toLowerCase();
+    if (lowerMsg.contains("captcha") || lowerMsg.contains("verification")) {
+      title = "Verification Required";
+      icon = Icons.security_rounded;
+      iconColor = Colors.orange;
+    } else if (lowerMsg.contains("invalid") || lowerMsg.contains("credential") || lowerMsg.contains("password") || lowerMsg.contains("username")) {
+      title = "Invalid Credentials";
+      icon = Icons.lock_person_rounded;
+      iconColor = Colors.red;
+    } else if (lowerMsg.contains("connection") || lowerMsg.contains("network") || lowerMsg.contains("timeout")) {
+      title = "Connection Error";
+      icon = Icons.wifi_off_rounded;
+      iconColor = Colors.blue;
+    }
+
+    CustomDialog.show(
+      context: context,
+      title: title,
+      message: msg,
+      icon: icon,
+      iconColor: iconColor,
+      positiveButtonText: "Try Again",
+      onPositivePressed: () {},
     );
   }
 

@@ -58,8 +58,8 @@ class StatCard extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: baseColor.withOpacity(0.5)),
-                  color: baseColor.withOpacity(0.1),
+                  border: Border.all(color: baseColor.withValues(alpha: 0.5)),
+                  color: baseColor.withValues(alpha: 0.1),
                 ),
                 child: Icon(icon, color: baseColor, size: 14), // Reduced from 16
               ),

@@ -9,7 +9,6 @@ class AnomaliesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dividerColor = Theme.of(context).dividerColor.withOpacity(0.1);
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
 
     return GlassContainer(

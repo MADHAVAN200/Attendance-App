@@ -28,7 +28,7 @@ class _ActivityFeedState extends State<ActivityFeed> {
     final displayedActivities = _showAll ? widget.activities : widget.activities.take(5).toList();
     final hasMore = widget.activities.length > 5;
 
-    final dividerColor = Theme.of(context).dividerColor.withOpacity(0.1);
+    final dividerColor = Theme.of(context).dividerColor.withValues(alpha: 0.1);
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
     final subTextColor = Theme.of(context).textTheme.bodySmall?.color;
 
@@ -58,7 +58,7 @@ class _ActivityFeedState extends State<ActivityFeed> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 0),
           
           // Scrollable List
           ListView.separated(
@@ -79,7 +79,7 @@ class _ActivityFeedState extends State<ActivityFeed> {
                 children: [
                   CircleAvatar(
                     radius: 18,
-                    backgroundColor: color.withOpacity(0.1),
+                    backgroundColor: color.withValues(alpha: 0.1),
                     child: Text(
                       avatarChar,
                       style: GoogleFonts.poppins(
@@ -115,7 +115,7 @@ class _ActivityFeedState extends State<ActivityFeed> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.5),
+                      color: Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(color: dividerColor),
                     ),
@@ -144,7 +144,7 @@ class _ActivityFeedState extends State<ActivityFeed> {
                   });
                 },
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withOpacity(0.2) : dividerColor),
+                  side: BorderSide(color: Theme.of(context).brightness == Brightness.dark ? Colors.white.withValues(alpha: 0.2) : dividerColor),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 child: Text(

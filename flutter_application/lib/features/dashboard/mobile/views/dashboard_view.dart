@@ -6,14 +6,10 @@ import '../../../../shared/services/auth_service.dart';
 import '../../../../shared/models/dashboard_model.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../tablet/widgets/stat_card.dart';
-import '../../tablet/widgets/action_card.dart';
 import '../../tablet/widgets/activity_feed.dart';
 import '../../tablet/widgets/trends_chart.dart';
-import '../../tablet/widgets/anomalies_card.dart';
 import '../../dashboard.dart'; // Keep for DashboardLogic.quickActions/anomalies
 import '../../../../shared/navigation/navigation_controller.dart'; 
-import '../../../policy_engine/tablet/views/policy_engine_view.dart'; 
-import '../../widgets/employee_dashboard_widgets.dart';
 import 'employee_dashboard_mobile.dart';
 
 class MobileDashboardContent extends StatelessWidget {
@@ -69,21 +65,11 @@ class _MobileAdminDashboardContentState extends State<MobileAdminDashboardConten
             
             // 1. KPI Section (Vertical Stack)
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-                  Text(
-                    'Overview',
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: subTextColor,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   _buildMobileKPIStack(provider.stats, provider.trends),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                 ]),
               ),
             ),
@@ -91,7 +77,7 @@ class _MobileAdminDashboardContentState extends State<MobileAdminDashboardConten
             // 2. Quick Actions
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -128,11 +114,11 @@ class _MobileAdminDashboardContentState extends State<MobileAdminDashboardConten
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
             // 3. Analytics
             SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
                   Text(
@@ -153,10 +139,7 @@ class _MobileAdminDashboardContentState extends State<MobileAdminDashboardConten
                   const SizedBox(height: 24),
                   // Activity Feed
                   ActivityFeed(activities: provider.activities),
-                  const SizedBox(height: 24),
-                  // Anomalies Card
-                  AnomaliesCard(anomalies: DashboardLogic.anomalies), 
-                  const SizedBox(height: 40), 
+                  const SizedBox(height: 16), 
                 ]),
               ),
             ),

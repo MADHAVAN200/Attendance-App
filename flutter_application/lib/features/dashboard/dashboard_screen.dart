@@ -10,9 +10,6 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Force Immersive Mode
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
     return LayoutBuilder(
       builder: (context, constraints) {
         // Mobile Breakpoint (Content Width < 600 typically means Portrait Phone)

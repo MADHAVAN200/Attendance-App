@@ -19,7 +19,7 @@ class TrendsChart extends StatelessWidget {
       );
     }
 
-    final dividerColor = Theme.of(context).dividerColor.withOpacity(0.1);
+    final dividerColor = Theme.of(context).dividerColor.withValues(alpha: 0.1);
     final textColor = Theme.of(context).textTheme.bodyLarge?.color;
     final subTextColor = Theme.of(context).textTheme.bodySmall?.color;
 

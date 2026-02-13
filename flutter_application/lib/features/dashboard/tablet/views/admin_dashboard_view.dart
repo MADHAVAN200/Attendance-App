@@ -6,7 +6,6 @@ import '../../../../shared/navigation/navigation_controller.dart';
 import '../../dashboard.dart';
 import '../widgets/action_card.dart';
 import '../widgets/activity_feed.dart';
-import '../widgets/anomalies_card.dart';
 import '../widgets/stat_card.dart';
 import '../widgets/trends_chart.dart';
 
@@ -49,12 +48,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
 
               // Row 3: Split View (Chart & Feed)
               _buildSplitView(provider),
-              const SizedBox(height: 32),
-
-              // Row 4: Anomalies (Full Width)
-              AnomaliesCard(
-                anomalies: DashboardLogic.anomalies,
-              ),
+              const SizedBox(height: 16),
             ],
           ),
         );

@@ -10,7 +10,6 @@ import '../../../../shared/navigation/navigation_controller.dart';
 import '../../dashboard.dart';
 import '../../tablet/widgets/action_card.dart';
 import '../../tablet/widgets/activity_feed.dart';
-import '../../tablet/widgets/anomalies_card.dart';
 import '../../tablet/widgets/stat_card.dart';
 import '../../tablet/widgets/trends_chart.dart';
 import '../../widgets/employee_dashboard_widgets.dart';
@@ -20,10 +19,9 @@ import '../../../employees/mobile/views/employees_mobile_view.dart';
 import '../../../attendance/mobile/views/my_attendance_view.dart';
 import '../../../live_attendance/mobile/views/live_attendance_view.dart';
 import '../../../reports/mobile/views/reports_view.dart';
-import '../../../holidays/mobile/views/holidays_view.dart';
 import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
 import '../../../leave/tablet/views/leave_view.dart'; // Reusing tablet view
-import '../../../daily_activity/daily_activity_screen.dart'; // ADDED
+
 import '../../../feedback/mobile/views/feedback_mobile_view.dart'; // Reusing tablet view
 
 class MobileLandscape extends StatelessWidget {
@@ -81,8 +79,7 @@ class MobileLandscape extends StatelessWidget {
       case PageType.geoFencing:
         return const MobileGeoFencingContent();
 
-      case PageType.dailyActivity:
-        return const DailyActivityScreen(); // ADDED
+
            
       case PageType.feedback:
            return const FeedbackMobileView();
@@ -91,6 +88,9 @@ class MobileLandscape extends StatelessWidget {
          return const PolicyEngineView();
       case PageType.profile:
          return Center(child: Text('${page.title} (Landscape)'));
+      
+      default:
+         return const SizedBox.shrink();
     }
   }
 }
@@ -406,8 +406,7 @@ class _MobileAdminDashboardLandscapeState extends State<MobileAdminDashboardLand
         ),
         const SizedBox(height: 24),
         ActivityFeed(activities: provider.activities),
-        const SizedBox(height: 24),
-        AnomaliesCard(anomalies: DashboardLogic.anomalies),
+        const SizedBox(height: 16),
       ],
     );
   }

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; // Import GoogleFonts
-import 'package:provider/provider.dart';
 import '../../../../shared/widgets/sidebars/sidebar_tablet_landscape.dart';
 import '../../../../shared/widgets/custom_app_bar.dart';
 import '../../../../shared/navigation/navigation_controller.dart';
-import '../../dashboard.dart';
 
 import 'dashboard_view.dart';
 import '../../../employees/tablet/views/employees_view.dart';
@@ -15,6 +12,7 @@ import '../../../leave/tablet/views/leave_view.dart';
 import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 import '../../../profile/tablet/views/profile_view.dart';
 import '../../../feedback/tablet/views/landscape.dart';
+
 
 class TabletLandscape extends StatelessWidget {
   const TabletLandscape({super.key});
@@ -36,11 +34,16 @@ class TabletLandscape extends StatelessWidget {
                 backgroundColor: Theme.of(context).brightness == Brightness.dark 
                     ? const Color(0xFF101828) // Matches Sidebar
                     : Colors.transparent,
-                appBar: ValueListenableBuilder<PageType>(
-                  valueListenable: navigationNotifier,
-                  builder: (context, currentPage, _) => CustomAppBar(
-                    title: currentPage.title,
-                    showDrawerButton: false, // Sidebar is visible
+                appBar: PreferredSize(
+                  preferredSize: const Size.fromHeight(kToolbarHeight),
+                  child: ValueListenableBuilder<PageType>(
+                    valueListenable: navigationNotifier,
+                    builder: (context, currentPage, _) {
+                      return CustomAppBar(
+                        title: currentPage.title,
+                        showDrawerButton: false, // Sidebar is visible
+                      );
+                    },
                   ),
                 ),
                 body: ValueListenableBuilder<PageType>(

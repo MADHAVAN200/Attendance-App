@@ -1,24 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
 import '../../../../shared/widgets/sidebars/sidebar_mobile.dart';
 import '../../../../shared/widgets/custom_app_bar.dart'; // Import CustomAppBar
 import '../../../../shared/navigation/navigation_controller.dart';
 import 'dashboard_view.dart';
-import '../../../employees/tablet/views/employees_view.dart';
 import '../../../employees/mobile/views/employees_mobile_view.dart';
 import '../../../attendance/mobile/views/my_attendance_view.dart';
-import '../../../attendance/tablet/views/my_attendance_view.dart';
 import '../../../live_attendance/mobile/views/live_attendance_view.dart';
-import '../../../live_attendance/tablet/views/live_attendance_view.dart';
 import '../../../reports/mobile/views/reports_view.dart';
-import '../../../reports/tablet/views/reports_view.dart';
-import '../../../holidays/mobile/views/holidays_view.dart';
-import '../../../holidays/tablet/views/holidays_view.dart';
 import '../../../profile/mobile/views/profile_view.dart';
 import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
 import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 import '../../../leave/tablet/views/leave_view.dart';
-import '../../../daily_activity/daily_activity_screen.dart'; // ADDED
+
 import '../../../feedback/mobile/views/feedback_mobile_view.dart';
 
 class MobilePortrait extends StatelessWidget {
@@ -29,39 +23,43 @@ class MobilePortrait extends StatelessWidget {
     // Gradient Background (matching TabletPortrait)
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Container(
-      color: isDark ? const Color(0xFF101828) : const Color(0xFFF1F5F9), // Light grey for light mode
-      // decoration: BoxDecoration(...) removed for flat design
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        drawer: SidebarMobile(
-          onLinkTap: () {
-            Navigator.pop(context); // Close drawer
-          },
-        ),
-        body: Column( // Use Column to stack Header and Body
-          children: [
-            // Safe Area for Status Bar
-            ValueListenableBuilder<PageType>(
-              valueListenable: navigationNotifier,
-              builder: (context, currentPage, _) {
-                return CustomAppBar(
-                  title: currentPage.title,
-                  showDrawerButton: true, // Show hamburger
-                );
-              },
-            ),
-            
-            // Expanded Body Content
-            Expanded(
-              child: ValueListenableBuilder<PageType>(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      ),
+      child: Container(
+        color: isDark ? const Color(0xFF101828) : const Color(0xFFF1F5F9), 
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          drawer: SidebarMobile(
+            onLinkTap: () {
+              Navigator.pop(context); // Close drawer
+            },
+          ),
+          body: Column(
+            children: [
+              // appBar now correctly handles its own SafeArea background
+              ValueListenableBuilder<PageType>(
                 valueListenable: navigationNotifier,
-                builder: (context, currentPage, child) {
-                  return _buildContent(context, currentPage, isDark);
+                builder: (context, currentPage, _) {
+                  return CustomAppBar(
+                    title: currentPage.title,
+                    showDrawerButton: true,
+                  );
                 },
               ),
-            ),
-          ],
+              
+              Expanded(
+                child: ValueListenableBuilder<PageType>(
+                  valueListenable: navigationNotifier,
+                  builder: (context, currentPage, child) {
+                    return _buildContent(context, currentPage, isDark);
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -97,16 +95,15 @@ class MobilePortrait extends StatelessWidget {
       case PageType.geoFencing:
         return const MobileGeoFencingContent();
 
-      case PageType.dailyActivity:
-        return const DailyActivityScreen(); // ADDED
+
 
       // PageType.leaves case REMOVED (merged above)
 
       case PageType.feedback:
         return const FeedbackMobileView();
-         
+      
       default:
-        return Center(child: Text('Page: ${page.title}'));
+        return const SizedBox.shrink();
     }
   }
 }

@@ -1,27 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../../../../shared/services/dashboard_provider.dart';
-import '../../../../shared/models/dashboard_model.dart';
 import '../../../../shared/widgets/sidebars/sidebar_tablet_portrait.dart';
 import '../../../../shared/widgets/custom_app_bar.dart';
 import '../../../../shared/navigation/navigation_controller.dart';
-import '../../dashboard.dart';
-import '../widgets/action_card.dart';
-import '../widgets/activity_feed.dart';
-import '../widgets/anomalies_card.dart';
-import '../widgets/stat_card.dart';
-import '../widgets/trends_chart.dart';
 import 'dashboard_view.dart';
 import '../../../employees/tablet/views/employees_view.dart';
 import '../../../attendance/tablet/views/my_attendance_view.dart';
+import '../../../attendance/mobile/views/my_attendance_view.dart';
 import '../../../live_attendance/tablet/views/live_attendance_view.dart';
 import '../../../reports/tablet/views/reports_view.dart';
 import '../../../leave/tablet/views/leave_view.dart'; // UPDATED
 import '../../../policy_engine/tablet/views/policy_engine_view.dart';
 import '../../../profile/tablet/views/profile_view.dart';
 import '../../../feedback/tablet/views/portrait.dart';
-import '../../../daily_activity/daily_activity_screen.dart'; // ADDED
+import '../../../geo_fencing/tablet/views/geo_fencing_view.dart';
+
 
 class TabletPortrait extends StatelessWidget {
   const TabletPortrait({super.key});
@@ -58,6 +50,7 @@ class TabletPortrait extends StatelessWidget {
                     );
                   }
                 ),
+                const SizedBox(height: 24), // Added breathing room
 
                 // Scrollable Content Region
                 Expanded(
@@ -71,7 +64,7 @@ class TabletPortrait extends StatelessWidget {
                         case PageType.employees:
                            return const EmployeesView();
                         case PageType.myAttendance:
-                           return const MyAttendanceView();
+                           return const MobileMyAttendanceContent();
                         case PageType.liveAttendance:
                            return const LiveAttendanceView();
                         case PageType.reports:
@@ -80,41 +73,15 @@ class TabletPortrait extends StatelessWidget {
                            return LeaveView(); // UPDATED (removed const)
                         case PageType.policyEngine:
                            return const PolicyEngineView();
-                        case PageType.dailyActivity:
-                           return const DailyActivityScreen(); // ADDED
+
                         case PageType.geoFencing:
-                           return Center(
-                             child: Column(
-                               mainAxisAlignment: MainAxisAlignment.center,
-                               children: [
-                                 Icon(Icons.screen_rotation, size: 64, color: Colors.grey[400]),
-                                 const SizedBox(height: 24),
-                                 Text(
-                                   'Please rotate your device',
-                                   style: GoogleFonts.poppins(
-                                     fontSize: 20,
-                                     fontWeight: FontWeight.w600,
-                                     color: isDark ? Colors.white : Colors.black87,
-                                   ),
-                                 ),
-                                 const SizedBox(height: 8),
-                                 Text(
-                                   'Geo-Fencing features require landscape mode',
-                                   style: GoogleFonts.poppins(
-                                     fontSize: 14,
-                                     color: Colors.grey[500],
-                                   ),
-                                   textAlign: TextAlign.center,
-                                 ),
-                               ],
-                             ),
-                           );
+                           return const GeoFencingView();
                         case PageType.feedback:
                            return const FeedbackTabletPortrait();
                         case PageType.profile:
                            return const ProfileView();
                         default:
-                          return Center(child: Text('Page: ${currentPage.title}'));
+                           return const SizedBox.shrink();
                       }
                     }
                   ),
@@ -125,17 +92,6 @@ class TabletPortrait extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Widget _buildPageContent(PageType page) {
-    switch (page) {
-      case PageType.dashboard:
-        return const DashboardView();
-      case PageType.employees:
-        return const EmployeesView();
-      default:
-        return Center(child: Text('Coming Soon: ${page.title}'));
-    }
   }
 }
 

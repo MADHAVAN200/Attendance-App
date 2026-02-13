@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../../../../shared/widgets/glass_date_picker.dart';
 import '../../../../shared/services/auth_service.dart';
-import '../../../dashboard/tablet/widgets/stat_card.dart';
+import 'package:flutter_application/features/dashboard/tablet/widgets/stat_card.dart';
 import '../../../employees/services/employee_service.dart';
 import '../../../employees/models/employee_model.dart';
 import '../../../attendance/services/attendance_service.dart';
 import '../../../attendance/models/attendance_record.dart';
 import '../../../attendance/models/live_attendance_item.dart';
-import 'correction_requests_view.dart';
+import '../../../attendance/admin/views/admin_correction_requests.dart';
 
 class LiveAttendanceView extends StatefulWidget {
   const LiveAttendanceView({super.key});
@@ -36,6 +37,9 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
   int _active = 0;
   int _absent = 0;
   int _late = 0;
+  
+  // Badge
+  int _pendingRequestsCount = 0;
 
   late EmployeeService _employeeService;
   late AttendanceService _attendanceService;
@@ -50,6 +54,21 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
     _attendanceService = AttendanceService(authService.dio);
     
     _fetchDashboardData();
+    _fetchPendingRequests();
+  }
+
+  Future<void> _fetchPendingRequests() async {
+    if (!mounted) return;
+    try {
+      final requests = await _attendanceService.getCorrectionRequests(status: 'pending');
+      if (mounted) {
+        setState(() {
+          _pendingRequestsCount = requests.length;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching pending requests: $e");
+    }
   }
 
   Future<void> _fetchDashboardData({bool forceRefresh = false}) async {
@@ -57,16 +76,18 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
     
     final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
 
+    // Refresh badge count too
+    _fetchPendingRequests();
+
     // 1. Check Cache
     if (!forceRefresh && _dashboardCache.containsKey(dateStr)) {
       _updateStateWithItems(_dashboardCache[dateStr]!);
       return;
     }
+// ... (rest of _fetchDashboardData) 
 
     setState(() => _isLoading = true);
     try {
-      final dio = Provider.of<AuthService>(context, listen: false).dio;
-
       final results = await Future.wait([
         _employeeService.getEmployees(),  
         _attendanceService.getAdminAttendanceRecords(dateStr)
@@ -114,8 +135,9 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
   List<LiveAttendanceItem> mergeAttendanceData(List<Employee> users, List<AttendanceRecord> records) {
     return users.map((user) {
       final userRecs = records.where((r) => r.userId == user.userId).toList();
-      final record = userRecs.isNotEmpty ? userRecs.first : null;
-      return LiveAttendanceItem(user: user, record: record);
+      // Sort records by attendanceId to ensure latest is last
+      userRecs.sort((a, b) => a.attendanceId.compareTo(b.attendanceId));
+      return LiveAttendanceItem(user: user, records: userRecs);
     }).toList();
   }
 
@@ -140,7 +162,10 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
               _buildLiveDashboard(context),
               
               // Tab 2: Correction Requests
-              const CorrectionRequestsView(),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24),
+                child: AdminCorrectionRequests(),
+              ),
             ],
           ),
         ),
@@ -149,61 +174,77 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
   }
 
   Widget _buildTabs(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(32, 24, 32, 24),
-      height: 48,
+      margin: const EdgeInsets.fromLTRB(24, 24, 24, 16), // Match MyAttendance margin
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E2939) : Colors.white,
+        color: isDark 
+            ? const Color(0xFF0F172A) // Match Dark Color
+            : const Color(0xFFF1F5F9), // Match Light Color
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[300]!),
+        border: Border.all(
+          color: isDark 
+              ? Colors.white.withOpacity(0.1) 
+              : Colors.grey[300]!
+        ),
       ),
       child: TabBar(
         controller: _tabController,
+        indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
-          color: primaryColor, 
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: isDark ? [
+          color: isDark 
+              ? const Color(0xFF334155) 
+              : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
             BoxShadow(
-              color: primaryColor.withOpacity(0.4),
-              blurRadius: 8,
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
               offset: const Offset(0, 2),
-            )
-          ] : [
-            BoxShadow(
-              color: primaryColor.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            )
+            ),
           ],
         ),
-        labelColor: Colors.white, 
-        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
-        indicatorSize: TabBarIndicatorSize.tab,
+        labelColor: const Color(0xFF5B60F6), // Match Label Color
+        unselectedLabelColor: isDark 
+            ? const Color(0xFF94A3B8)
+            : const Color(0xFF64748B),
         dividerColor: Colors.transparent,
-        padding: const EdgeInsets.all(4), 
-        labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+        labelStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
         tabs: [
-          const Tab(text: 'Live Dashboard'),
+          const Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.dashboard_outlined, size: 16),
+                SizedBox(width: 8),
+                Text('Live Dashboard'),
+              ],
+            ),
+          ),
           Tab(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text('Correction Requests'),
+                const Icon(Icons.assignment_late_outlined, size: 16),
                 const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.red, 
-                    borderRadius: BorderRadius.circular(20),
+                const Text('Correction Requests'),
+                // Dynamic Badge
+                if (_pendingRequestsCount > 0) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$_pendingRequestsCount',
+                      style: GoogleFonts.poppins(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
                   ),
-                  child: Text(
-                    '5',
-                    style: GoogleFonts.poppins(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
-                ),
+                ],
               ],
             ),
           ),
@@ -224,15 +265,15 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
         children: [
           // Date Selector
           _buildDateSelector(context),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           
           // 1. KPIs
           _buildKPIGrid(),
-          const SizedBox(height: 20),
-
+          const SizedBox(height: 4), // Reduced from 12
+          
           // 2. Filters 
           _buildFilters(context),
-          const SizedBox(height: 20),
+          const SizedBox(height: 2), // Reduced from 12
 
           // 3. List
           _buildMonitoringList(context),
@@ -269,7 +310,7 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
                   Icons.calendar_today, 
                   size: 16, 
                   color: Theme.of(context).brightness == Brightness.dark 
-                      ? Colors.white 
+                      ? Colors.white70 
                       : Theme.of(context).primaryColor
                 ),
                 const SizedBox(width: 8),
@@ -432,85 +473,105 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
       case "Late": color = Colors.orange; break;
       default: color = Colors.grey;
     }
-    
-    final inTime = item.record?.timeIn != null ? _formatTime(item.record!.timeIn) : '--';
-    final outTime = item.record?.timeOut != null ? _formatTime(item.record!.timeOut) : '--';
-    // Calc hours if both present? Or just raw
-    final hrs = '--'; // Todo: calculate duration if needed
+    final latest = item.latestRecord;
+    final inTime = latest?.timeIn != null ? _formatTime(latest!.timeIn) : '--';
+    final outTime = latest?.timeOut != null ? _formatTime(latest!.timeOut) : '--';
 
-    return GlassContainer(
-      padding: const EdgeInsets.all(16),
-      borderRadius: 16,
-      child: Column(
-        children: [
-          // Row 1: Profile + Status
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: color.withOpacity(0.1),
-                child: Text(
-                  item.name.isNotEmpty ? item.name[0].toUpperCase() : '?', 
-                  style: GoogleFonts.poppins(color: color, fontWeight: FontWeight.bold),
+    return InkWell(
+      onTap: () => _showEmployeeSessionsDialog(context, item),
+      borderRadius: BorderRadius.circular(16),
+      child: GlassContainer(
+        padding: const EdgeInsets.all(16),
+        borderRadius: 16,
+        child: Column(
+          children: [
+            // Row 1: Profile + Status
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: color.withOpacity(0.1),
+                  child: item.user.profileImage != null && item.user.profileImage!.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: CachedNetworkImage(
+                            imageUrl: item.user.profileImage!,
+                            width: 40,
+                            height: 40,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Text(
+                              item.name.isNotEmpty ? item.name[0].toUpperCase() : '?', 
+                              style: GoogleFonts.poppins(color: color, fontWeight: FontWeight.bold),
+                            ),
+                            errorWidget: (context, url, error) => Text(
+                              item.name.isNotEmpty ? item.name[0].toUpperCase() : '?', 
+                              style: GoogleFonts.poppins(color: color, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          item.name.isNotEmpty ? item.name[0].toUpperCase() : '?', 
+                          style: GoogleFonts.poppins(color: color, fontWeight: FontWeight.bold),
+                        ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.name, // Use userName from LiveAttendanceItem
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name, // Use userName from LiveAttendanceItem
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                        ),
                       ),
-                    ),
-                    Text(
-                      "${item.designation} • ${item.department}",
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: Theme.of(context).textTheme.bodySmall?.color,
+                      Text(
+                        "${item.designation} • ${item.department}",
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              // Status Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: color.withOpacity(0.2)),
-                ),
-                child: Text(
-                  item.statusLabel,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: color,
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          Divider(height: 1, color: Theme.of(context).dividerColor.withOpacity(0.5)),
-          const SizedBox(height: 12),
+                // Status Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: color.withOpacity(0.2)),
+                  ),
+                  child: Text(
+                    item.statusLabel,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            Divider(height: 1, color: Theme.of(context).dividerColor.withOpacity(0.5)),
+            const SizedBox(height: 12),
 
-          // Row 2: Metrics
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildMetricItem(context, 'Time In', inTime),
-              _buildMetricItem(context, 'Time Out', outTime),
-              _buildMetricItem(context, 'Shift', item.user.shift ?? 'General'),
-            ],
-          ),
-        ],
+            // Row 2: Metrics
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildMetricItem(context, 'Time In', inTime),
+                _buildMetricItem(context, 'Time Out', outTime),
+                _buildMetricItem(context, 'Shift', item.user.shift ?? 'General'),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -543,6 +604,250 @@ class _LiveAttendanceViewState extends State<LiveAttendanceView> with SingleTick
             fontSize: 13,
             fontWeight: FontWeight.w600,
             color: Theme.of(context).textTheme.bodyLarge?.color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showEmployeeSessionsDialog(BuildContext context, LiveAttendanceItem item) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = const Color(0xFF5B60F6);
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+          child: GlassContainer(
+            padding: const EdgeInsets.all(32),
+            borderRadius: 24,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: primaryColor.withOpacity(0.1),
+                      child: item.user.profileImage != null && item.user.profileImage!.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(28),
+                              child: CachedNetworkImage(
+                                imageUrl: item.user.profileImage!,
+                                width: 56,
+                                height: 56,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Text(
+                                  item.name.isNotEmpty ? item.name[0].toUpperCase() : '?',
+                                  style: GoogleFonts.poppins(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 20),
+                                ),
+                                errorWidget: (context, url, error) => Text(
+                                  item.name.isNotEmpty ? item.name[0].toUpperCase() : '?',
+                                  style: GoogleFonts.poppins(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 20),
+                                ),
+                              ),
+                            )
+                          : Text(
+                              item.name.isNotEmpty ? item.name[0].toUpperCase() : '?',
+                              style: GoogleFonts.poppins(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 20),
+                            ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(item.name, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),
+                          Text("${item.designation} • ${item.department}", style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 24),
+                
+                Text(
+                  "Daily Sessions (${DateFormat('dd MMM yyyy').format(_selectedDate)})",
+                  style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.grey),
+                ),
+                const SizedBox(height: 24),
+                
+                Flexible(
+                  child: item.records.isEmpty 
+                    ? const Center(child: Text("No records found"))
+                    : ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: item.records.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 24),
+                        itemBuilder: (context, index) {
+                          final record = item.records[index];
+                          return _buildSessionTimelineItem(context, record, index + 1);
+                        },
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSessionTimelineItem(BuildContext context, AttendanceRecord record, int sessionNum) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF5B60F6).withOpacity(0.1),
+                border: Border.all(color: const Color(0xFF5B60F6).withOpacity(0.3)),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: Text(
+                  "$sessionNum",
+                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: const Color(0xFF5B60F6)),
+                ),
+              ),
+            ),
+            if (sessionNum < 10)
+              Container(width: 1, height: 40, color: Colors.grey.withOpacity(0.2)),
+          ],
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildTimeDetailColumn("Time In", _formatTime(record.timeIn), record.timeInImage),
+                  _buildTimeDetailColumn("Time Out", _formatTime(record.timeOut), record.timeOutImage),
+                ],
+              ),
+              const SizedBox(height: 12),
+              _buildLocationRow(Icons.location_on_outlined, record.timeInAddress ?? 'No check-in address'),
+              if (record.timeOut != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: _buildLocationRow(Icons.logout_outlined, record.timeOutAddress ?? 'No check-out address'),
+                ),
+              if (record.lateReason != null && record.lateReason!.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.withOpacity(0.2)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, size: 14, color: Colors.orange[800]),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Late Reason",
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        record.lateReason!,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimeDetailColumn(String label, String time, String? imageUrl) {
+    return Row(
+      children: [
+        if (imageUrl != null && imageUrl.isNotEmpty)
+          CachedNetworkImage(
+            imageUrl: imageUrl,
+            imageBuilder: (context, imageProvider) => Container(
+              width: 40,
+              height: 40,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                image: DecorationImage(
+                  image: imageProvider, 
+                  fit: BoxFit.cover
+                ),
+              ),
+            ),
+            placeholder: (context, url) => Container(
+              width: 40,
+              height: 40,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey.withOpacity(0.2),
+              ),
+              child: const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))),
+            ),
+            errorWidget: (context, url, error) => Container(
+              width: 40,
+              height: 40,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                color: Colors.grey.withOpacity(0.2),
+              ),
+              child: const Icon(Icons.broken_image, size: 18, color: Colors.grey),
+            ),
+          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey)),
+            Text(time, style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocationRow(IconData icon, String address) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: Colors.grey),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            address, 
+            style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey, height: 1.4),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

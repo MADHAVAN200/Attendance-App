@@ -1,0 +1,324 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../providers/leave_provider.dart';
+import 'custom_date_picker_dialog.dart';
+
+class LeaveRequestForm extends StatefulWidget {
+  final VoidCallback onSuccess;
+
+  const LeaveRequestForm({super.key, required this.onSuccess});
+
+  @override
+  State<LeaveRequestForm> createState() => _LeaveRequestFormState();
+}
+
+class _LeaveRequestFormState extends State<LeaveRequestForm> {
+  final _formKey = GlobalKey<FormState>();
+  
+  String? _selectedLeaveType;
+  DateTime? _startDate;
+  DateTime? _endDate;
+  final _reasonController = TextEditingController();
+  List<PlatformFile> _selectedFiles = [];
+
+  final List<String> _leaveTypes = [
+    'Casual Leave',
+    'Sick Leave',
+    'Privilege Leave', 
+    'Emergency Leave',
+    'Unpaid Leave'
+  ];
+
+  Future<void> _pickDate(bool isStart) async {
+    final initialDate = isStart 
+        ? (_startDate ?? DateTime.now()) 
+        : (_endDate ?? _startDate ?? DateTime.now());
+
+    final picked = await showDialog<DateTime>(
+      context: context,
+      builder: (context) => CustomDatePickerDialog(
+        initialDate: initialDate,
+        firstDate: DateTime(2025),
+        lastDate: DateTime(2030),
+      ),
+    );
+
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _startDate = picked;
+          // Reset end date if it's before start date
+          if (_endDate != null && _endDate!.isBefore(picked)) {
+            _endDate = null;
+          }
+        } else {
+          _endDate = picked;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+      allowMultiple: true,
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedFiles.addAll(result.files);
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_startDate == null || _endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select start and end dates')),
+      );
+      return;
+    }
+
+    try {
+      final requestData = {
+        'leave_type': _selectedLeaveType,
+        'start_date': DateFormat('yyyy-MM-dd').format(_startDate!),
+        'end_date': DateFormat('yyyy-MM-dd').format(_endDate!),
+        'reason': _reasonController.text.trim(),
+        if (_selectedFiles.isNotEmpty) 'attachments': _selectedFiles,
+      };
+
+      await context.read<LeaveProvider>().submitLeaveRequest(requestData);
+      widget.onSuccess();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to submit: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isLoading = context.watch<LeaveProvider>().isLoadingMyLeaves;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E2939) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Apply for Leave',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : const Color(0xFF1E293B),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            
+            // Leave Type Dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedLeaveType,
+              decoration: _inputDecoration(isDark, 'Leave Type', Icons.category_outlined),
+              items: _leaveTypes.map((type) {
+                return DropdownMenuItem(
+                  value: type,
+                  child: Text(type),
+                );
+              }).toList(),
+              onChanged: (val) => setState(() => _selectedLeaveType = val),
+              validator: (val) => val == null ? 'Required' : null,
+              dropdownColor: isDark ? const Color(0xFF1E2939) : Colors.white,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            ),
+            const SizedBox(height: 16),
+
+            // Date Selection
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _pickDate(true),
+                    child: InputDecorator(
+                      decoration: _inputDecoration(isDark, 'Start Date', Icons.calendar_today),
+                      child: Text(
+                        _startDate == null ? 'Select' : DateFormat('MMM dd, yyyy').format(_startDate!),
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _pickDate(false),
+                    child: InputDecorator(
+                      decoration: _inputDecoration(isDark, 'End Date', Icons.event),
+                      child: Text(
+                        _endDate == null ? 'Select' : DateFormat('MMM dd, yyyy').format(_endDate!),
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Reason
+            TextFormField(
+              controller: _reasonController,
+              decoration: _inputDecoration(isDark, 'Reason', Icons.edit_note),
+              maxLines: 3,
+              validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+            ),
+            const SizedBox(height: 16),
+
+            // Attachments
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                InkWell(
+                  onTap: _pickFile,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: isDark ? Colors.white24 : Colors.black12),
+                      borderRadius: BorderRadius.circular(12),
+                      color: isDark ? Colors.black12 : Colors.grey.shade50,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.attach_file,
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Attach Documents (Optional)',
+                            style: TextStyle(
+                              color: isDark ? Colors.white70 : Colors.black54,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.add_circle_outline,
+                          size: 20,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (_selectedFiles.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _selectedFiles.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final file = entry.value;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Theme.of(context).primaryColor.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                file.name,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            InkWell(
+                              onTap: () => setState(() => _selectedFiles.removeAt(index)),
+                              child: const Icon(Icons.close, size: 14, color: Colors.red),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Submit Button
+            ElevatedButton(
+              onPressed: isLoading ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF4338CA),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text(
+                      'Submit Request',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+            ),
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(bool isDark, String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: isDark ? Colors.white54 : Colors.grey),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: isDark ? Colors.white24 : Colors.black12),
+      ),
+      filled: true,
+      fillColor: isDark ? Colors.black12 : Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      labelStyle: TextStyle(color: isDark ? Colors.white54 : Colors.grey[600]),
+    );
+  }
+}

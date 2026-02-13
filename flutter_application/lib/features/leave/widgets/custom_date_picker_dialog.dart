@@ -107,7 +107,7 @@ class _CustomDatePickerDialogState extends State<CustomDatePickerDialog> {
                 defaultTextStyle: GoogleFonts.poppins(color: textColor, fontSize: 13),
                 weekendTextStyle: GoogleFonts.poppins(color: textColor, fontSize: 13),
                 todayDecoration: BoxDecoration(
-                  color: primaryColor.withOpacity(0.1),
+                  color: primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 todayTextStyle: GoogleFonts.poppins(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 13),

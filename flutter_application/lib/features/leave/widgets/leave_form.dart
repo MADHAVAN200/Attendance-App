@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
-import '../../../../shared/widgets/glass_container.dart';
 import 'custom_date_picker_dialog.dart';
 
 class LeaveForm extends StatefulWidget {
@@ -149,7 +148,7 @@ class _LeaveFormState extends State<LeaveForm> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.calendar_today_outlined, size: 16, color: labelColor),
+                            Icon(Icons.calendar_today_outlined, size: 16, color: isDark ? Colors.white70 : labelColor),
                             const SizedBox(width: 8),
                             Text(DateFormat('MMM dd, yyyy').format(_startDate), style: GoogleFonts.poppins(color: textColor)),
                           ],
@@ -190,7 +189,7 @@ class _LeaveFormState extends State<LeaveForm> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.calendar_today_outlined, size: 16, color: labelColor),
+                            Icon(Icons.calendar_today_outlined, size: 16, color: isDark ? Colors.white70 : labelColor),
                             const SizedBox(width: 8),
                             Text(DateFormat('MMM dd, yyyy').format(_endDate), style: GoogleFonts.poppins(color: textColor)),
                           ],
@@ -340,7 +339,6 @@ class _DottedPainter extends CustomPainter {
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
 
-    final path = Path();
     // Simple implementation or use package:dotted_border for simplicity if available. 
     // Drawing a rect with dash effect manually for zero dependency if preferred, 
     // but here just a simple border visual helper.

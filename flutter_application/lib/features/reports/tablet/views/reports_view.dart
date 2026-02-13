@@ -296,7 +296,11 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.calendar_today, size: 16, color: Theme.of(context).primaryColor),
+                              Icon(
+                                Icons.calendar_today, 
+                                size: 16, 
+                                color: isDark ? Colors.white70 : Theme.of(context).primaryColor
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
@@ -486,31 +490,62 @@ class _ReportsViewState extends State<ReportsView> with SingleTickerProviderStat
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      height: 48,
+      margin: const EdgeInsets.fromLTRB(24, 24, 24, 16), // Match Standard Tablet Margin
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF101828) : Colors.white,
+         color: Theme.of(context).brightness == Brightness.dark 
+            ? const Color(0xFF0F172A) // Match Dark Color
+            : const Color(0xFFF1F5F9), // Match Light Color
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[300]!),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? Colors.white.withOpacity(0.1) 
+              : Colors.grey[300]!
+        ),
       ),
       child: TabBar(
         controller: _tabController,
+        indicatorSize: TabBarIndicatorSize.tab,
         indicator: BoxDecoration(
-          color: primaryColor,
-          borderRadius: BorderRadius.circular(10),
+          color: Theme.of(context).brightness == Brightness.dark 
+              ? const Color(0xFF334155) 
+              : Colors.white,
+          borderRadius: BorderRadius.circular(8),
           boxShadow: [
-             if (isDark) BoxShadow(color: primaryColor.withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(0, 2)),
+             BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
-        labelColor: Colors.white,
-        unselectedLabelColor: isDark ? Colors.grey[500] : Colors.grey[600],
-        indicatorSize: TabBarIndicatorSize.tab,
+        labelColor: const Color(0xFF5B60F6), // Match Standard Active Color
+        unselectedLabelColor: Theme.of(context).brightness == Brightness.dark 
+            ? const Color(0xFF94A3B8)
+            : const Color(0xFF64748B),
         dividerColor: Colors.transparent,
-        padding: const EdgeInsets.all(4),
-        labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+        labelStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
         tabs: const [
-          Tab(text: 'Data Preview'),
-          Tab(text: 'Export History'),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.table_chart_outlined, size: 16),
+                SizedBox(width: 8),
+                Text('Data Preview'),
+              ],
+            ),
+          ),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.history, size: 16),
+                SizedBox(width: 8),
+                Text('Export History'),
+              ],
+            ),
+          ),
         ],
       ),
     );

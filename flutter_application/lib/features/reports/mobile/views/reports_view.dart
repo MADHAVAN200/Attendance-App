@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../../../../shared/widgets/glass_container.dart';
+import '../../../../shared/widgets/glass_date_picker.dart';
 import '../../../../shared/services/auth_service.dart';
 import '../../services/report_service.dart';
 import '../../models/report_history_model.dart';
@@ -209,17 +210,18 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
   }
 
   Future<void> _pickDate(BuildContext context) async {
-    final picked = await showDatePicker(
+    showDialog(
       context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-      helpText: _requiresMonth ? "SELECT MONTH (Pick any day)" : "SELECT DATE",
+      builder: (context) => GlassDatePicker(
+        initialDate: _selectedDate,
+        firstDate: DateTime(2020),
+        lastDate: DateTime(2030),
+        onDateSelected: (date) {
+          setState(() => _selectedDate = date);
+          _fetchPreview();
+        },
+      ),
     );
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-      _fetchPreview();
-    }
   }
 
   @override
@@ -281,7 +283,7 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.calendar_today, size: 16, color: Theme.of(context).primaryColor),
+                    Icon(Icons.calendar_today, size: 16, color: isDark ? const Color(0xFF818CF8) : Theme.of(context).primaryColor),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -437,7 +439,7 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
       height: 48,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0),
         borderRadius: BorderRadius.circular(12),
       ),
       child: TabBar(
@@ -457,10 +459,28 @@ class _MobileReportsContentState extends State<MobileReportsContent> with Single
         unselectedLabelColor: Colors.grey[600],
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
-        labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+        labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
         tabs: const [
-          Tab(text: 'Preview'), 
-          Tab(text: 'History'),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.visibility_outlined, size: 16),
+                SizedBox(width: 8),
+                Text('Preview'),
+              ],
+            ),
+          ), 
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.history, size: 16),
+                SizedBox(width: 8),
+                Text('History'),
+              ],
+            ),
+          ),
         ],
       ),
     );

@@ -11,6 +11,7 @@ class GlassContainer extends StatelessWidget {
   final double blur;
   final Color? color;
   final BoxBorder? border;
+  final Gradient? gradient; // Added
 
   const GlassContainer({
     super.key,
@@ -20,9 +21,10 @@ class GlassContainer extends StatelessWidget {
     this.padding,
     this.margin,
     this.borderRadius = 16,
-    this.blur = 40, // Stronger blur
+    this.blur = 40, 
     this.color,
     this.border,
+    this.gradient, // Added
   });
 
   @override
@@ -36,11 +38,12 @@ class GlassContainer extends StatelessWidget {
         margin: margin,
         decoration: BoxDecoration(
           color: color ?? Colors.white,
+          gradient: gradient, // Added
           borderRadius: BorderRadius.circular(borderRadius),
-          border: border ?? Border.all(color: Colors.grey[200]!, width: 1),
+          border: border ?? Border.all(color: Colors.grey[300]!, width: 1), 
           boxShadow: [
              BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.08), 
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -60,11 +63,11 @@ class GlassContainer extends StatelessWidget {
       margin: margin,
       decoration: BoxDecoration(
         // Use provided color OR default to Card Color (#1E2939). 
-        // We strictly enforce opacity by .withOpacity(1.0) just in case, though likely unnecessary if solid.
-        color: (color ?? const Color(0xFF1E2939)).withOpacity(1.0),
+        color: color ?? const Color(0xFF1E2939),
+        gradient: gradient, // Added
         borderRadius: BorderRadius.circular(borderRadius),
-        border: null, 
-        boxShadow: const <BoxShadow>[], // No shadow for flat look
+        border: border, 
+        boxShadow: const <BoxShadow>[], 
       ),
       child: Padding(
         padding: padding ?? EdgeInsets.zero,

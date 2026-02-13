@@ -106,18 +106,20 @@ class _GlassDatePickerState extends State<GlassDatePicker> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => 
-                  SizedBox(
-                    width: widget.isLarge ? 40 : 32,
-                    child: Center(
+                  Flexible(
+                    child: SizedBox(
+                      width: widget.isLarge ? 40 : 28, // Reduced from 32
+                      child: Center(
                       child: Text(
                         day,
                         style: GoogleFonts.poppins(
                           fontSize: dayLabelSize,
                           fontWeight: FontWeight.w500,
-                          color: textColor.withOpacity(0.5),
+                          color: textColor.withValues(alpha: 0.5),
                         ),
                       ),
                     ),
+                  )
                   )
                 ).toList(),
               ),
@@ -137,7 +139,7 @@ class _GlassDatePickerState extends State<GlassDatePicker> {
                     style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                     child: Text(
                       'Cancel',
-                      style: GoogleFonts.poppins(fontSize: dayNumSize, color: textColor.withOpacity(0.7)),
+                      style: GoogleFonts.poppins(fontSize: dayNumSize, color: textColor.withValues(alpha: 0.7)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -194,7 +196,7 @@ class _GlassDatePickerState extends State<GlassDatePicker> {
           },
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected ? accentColor : (isToday ? accentColor.withOpacity(0.2) : Colors.transparent),
+              color: isSelected ? accentColor : (isToday ? accentColor.withValues(alpha: 0.2) : Colors.transparent),
               shape: BoxShape.circle,
               border: isToday && !isSelected ? Border.all(color: accentColor, width: 1) : null,
             ),
@@ -204,7 +206,7 @@ class _GlassDatePickerState extends State<GlassDatePicker> {
                 style: GoogleFonts.poppins(
                   fontSize: fontSize,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected ? Colors.white : (isDisabled ? textColor.withOpacity(0.2) : textColor),
+                  color: isSelected ? Colors.white : (isDisabled ? textColor.withValues(alpha: 0.2) : textColor),
                 ),
               ),
             ),

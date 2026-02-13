@@ -12,6 +12,7 @@ class CustomDialog extends StatelessWidget {
   final IconData? icon;
   final Color? iconColor;
   final bool isDestructive;
+  final Color? positiveButtonColor;
 
   const CustomDialog({
     super.key,
@@ -24,6 +25,7 @@ class CustomDialog extends StatelessWidget {
     this.icon,
     this.iconColor,
     this.isDestructive = false,
+    this.positiveButtonColor,
   });
 
   static Future<bool?> show({
@@ -37,10 +39,11 @@ class CustomDialog extends StatelessWidget {
     IconData? icon,
     Color? iconColor,
     bool isDestructive = false,
+    Color? positiveButtonColor,
   }) {
     return showDialog<bool>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.6), // Darker overlay for focus
+      barrierColor: Colors.black.withValues(alpha: 0.6), // Darker overlay for focus
       builder: (context) => CustomDialog(
         title: title,
         message: message,
@@ -51,6 +54,7 @@ class CustomDialog extends StatelessWidget {
         icon: icon,
         iconColor: iconColor,
         isDestructive: isDestructive,
+        positiveButtonColor: positiveButtonColor,
       ),
     );
   }
@@ -74,10 +78,10 @@ class CustomDialog extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E2939) : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: isDark ? Border.all(color: Colors.white.withOpacity(0.05)) : null,
+        border: isDark ? Border.all(color: Colors.white.withValues(alpha: 0.05)) : null,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.1),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -98,7 +102,7 @@ class CustomDialog extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: (iconColor ?? Theme.of(context).primaryColor).withOpacity(0.1),
+              color: (iconColor ?? Theme.of(context).primaryColor).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -135,10 +139,9 @@ class CustomDialog extends StatelessWidget {
               Expanded(
                 child: TextButton(
                   onPressed: () {
+                    Navigator.pop(context, false); // Handle dismissal first
                     if (onNegativePressed != null) {
                       onNegativePressed!();
-                    } else {
-                      Navigator.pop(context, false);
                     }
                   },
                   style: TextButton.styleFrom(
@@ -161,10 +164,13 @@ class CustomDialog extends StatelessWidget {
             Expanded(
               child: ElevatedButton(
                 onPressed: () {
+                  Navigator.pop(context, true); // Handle dismissal first
                   onPositivePressed();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isDestructive ? const Color(0xFFEF4444) : Theme.of(context).primaryColor,
+                  backgroundColor: isDestructive 
+                      ? const Color(0xFFEF4444) 
+                      : (positiveButtonColor ?? Theme.of(context).primaryColor),
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shadowColor: Colors.transparent,

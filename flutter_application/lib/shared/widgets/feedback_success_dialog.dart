@@ -92,11 +92,11 @@ class FeedbackSuccessDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: color.withOpacity(0.2),
+                    color: color.withValues(alpha: 0.2),
                     blurRadius: 20,
                     spreadRadius: 5,
                   )
@@ -152,7 +152,7 @@ class FeedbackSuccessDialog extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
-                  shadowColor: color.withOpacity(0.5),
+                  shadowColor: color.withValues(alpha: 0.5),
                 ),
                 child: Text(
                   "Close",

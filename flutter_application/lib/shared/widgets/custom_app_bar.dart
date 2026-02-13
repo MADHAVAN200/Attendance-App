@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/theme_simple.dart';
 import 'glass_container.dart';
@@ -19,244 +20,256 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showDrawerButton = true,
     this.title = 'Dashboard',
   });
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      // Height removed to allow content + padding to determine
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF101828) : Colors.white, // Explicit solid background inside decoration
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[300]!,
-            width: 1,
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: isDark ? const Color(0xFF101828) : Colors.white,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF101828) : Colors.white,
+          border: Border(
+            bottom: BorderSide(
+              color: isDark ? const Color(0xFF1E293B) : Colors.grey[300]!,
+              width: 1,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Container(
+            height: 59,
+            padding: EdgeInsets.fromLTRB(
+              MediaQuery.of(context).size.width < 900 ? 8 : 24,
+              0,
+              24,
+              0,
+            ),
+            child: Row(
+              children: [
+                if (showDrawerButton)
+                  IconButton(
+                    icon: Icon(Icons.menu, color: Theme.of(context).iconTheme.color),
+                    onPressed: () => Scaffold.of(context).openDrawer(),
+                  ),
+                
+                Expanded(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).textTheme.titleLarge?.color,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                ),
+                
+                // Theme Switcher Button
+                ValueListenableBuilder<ThemeMode>(
+                  valueListenable: themeNotifier,
+                  builder: (context, mode, _) {
+                    final isDark = mode == ThemeMode.dark; 
+                    return IconButton(
+                      icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
+                      tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                      onPressed: () {
+                        toggleTheme();
+                      },
+                    );
+                  },
+                ),
+
+                // Notification Icon with Badge
+                Consumer<NotificationService>(
+                  builder: (context, notificationService, _) {
+                    return Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_outlined),
+                          tooltip: 'Notifications',
+                          onPressed: () {
+                            if (MediaQuery.of(context).size.width < 600) {
+                               // Mobile: Navigate to separate screen
+                               Navigator.push(
+                                 context, 
+                                 MaterialPageRoute(builder: (_) => const NotificationsView())
+                               );
+                            } else {
+                              // Tablet/Desktop: Show Popup
+                              showDialog(
+                                context: context,
+                                barrierColor: Colors.transparent,
+                                builder: (context) => Stack(
+                                  children: [
+                                    Positioned(
+                                      top: 60,
+                                      right: 80,
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: const NotificationList(),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                        if (notificationService.unreadCount > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                '${notificationService.unreadCount}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+
+                if (MediaQuery.of(context).size.width > 600) ...[
+                  const SizedBox(width: 16),
+                  // User Profile
+                  Builder(
+                    builder: (context) {
+                      final user = Provider.of<AuthService>(context).user;
+                      final name = user?.name ?? 'Guest';
+                      final role = user?.role.toUpperCase() ?? '';
+                      final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+                      return Theme(
+                        data: Theme.of(context).copyWith(
+                          splashColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                        ),
+                        child: PopupMenuButton<String>(
+                          offset: const Offset(0, 60),
+                          color: Colors.transparent,
+                          elevation: 0,
+                          surfaceTintColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: EdgeInsets.zero,
+                          enableFeedback: true,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          tooltip: 'Profile Options',
+                          itemBuilder: (context) => [
+                            PopupMenuItem<String>(
+                              enabled: false, 
+                              padding: EdgeInsets.zero,
+                              child: GlassContainer(
+                                width: 220,
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _buildDropdownItem(context, icon: Icons.person_outline, text: 'View Profile', onTap: () {
+                                       navigationNotifier.value = PageType.profile;
+                                       Navigator.pop(context);
+                                    }),
+                                    Divider(height: 1, thickness: 1, color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey[200]),
+                                    _buildDropdownItem(context, icon: Icons.logout, text: 'Logout', onTap: () async {
+                                      Navigator.pop(context); // Close dropdown
+                                      
+                                      final auth = Provider.of<AuthService>(context, listen: false);
+                                      await auth.logout();
+                                      
+                                      if (context.mounted) {
+                                        Navigator.pushAndRemoveUntil(
+                                          context,
+                                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                          (route) => false,
+                                        );
+                                        
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Logged out successfully')),
+                                        );
+                                      }
+                                    }, isDestructive: true),
+                                  ],
+                                ),
+                              ),
+                            )
+                          ],
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                               Column(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                                    ),
+                                  ),
+                                  Text(
+                                    role,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      color: Colors.grey,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                decoration: BoxDecoration(
+                                   shape: BoxShape.circle,
+                                   border: Border.all(color: const Color(0xFF5B60F6).withValues(alpha: 0.2)),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 18,
+                                  backgroundColor: const Color(0xFF5B60F6).withValues(alpha: 0.1),
+                                  backgroundImage: (user?.profileImage != null && user!.profileImage!.isNotEmpty)
+                                      ? NetworkImage(user.profileImage!)
+                                      : null,
+                                  child: (user?.profileImage == null || user!.profileImage!.isEmpty)
+                                      ? Text(initials, style: GoogleFonts.poppins(color: const Color(0xFF5B60F6), fontWeight: FontWeight.bold, fontSize: 13))
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Container(
-          height: 59, // Content height
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        children: [
-          if (showDrawerButton)
-            IconButton(
-              icon: Icon(Icons.menu, color: Theme.of(context).iconTheme.color),
-              onPressed: () => Scaffold.of(context).openDrawer(),
-            ),
-            
-          Expanded(
-            child: Text(
-              title,
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).textTheme.titleLarge?.color,
-              ),
-              overflow: TextOverflow.ellipsis,
-              maxLines: 1,
-            ),
-          ),
-          
-          // Theme Switcher Button
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: themeNotifier,
-            builder: (context, mode, _) {
-              final isDark = mode == ThemeMode.dark; 
-              return IconButton(
-                icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-                tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
-                onPressed: () {
-                  toggleTheme();
-                },
-              );
-            },
-          ),
-
-
-
-          // Notification Icon with Badge
-          Consumer<NotificationService>(
-            builder: (context, notificationService, _) {
-              return Stack(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.notifications_outlined),
-                    tooltip: 'Notifications',
-                    onPressed: () {
-                      if (MediaQuery.of(context).size.width < 600) {
-                         // Mobile: Navigate to separate screen
-                         Navigator.push(
-                           context, 
-                           MaterialPageRoute(builder: (_) => const NotificationsView())
-                         );
-                      } else {
-                        // Tablet/Desktop: Show Popup
-                        showDialog(
-                          context: context,
-                          barrierColor: Colors.transparent, // Create a popover feel
-                          builder: (context) => Stack(
-                            children: [
-                              Positioned(
-                                top: 60,
-                                right: 80, // Adjust based on layout
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: const NotificationList(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  if (notificationService.unreadCount > 0)
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          '${notificationService.unreadCount}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-          if (MediaQuery.of(context).size.width > 600) ...[
-            const SizedBox(width: 16),
-            // User Profile
-            Builder(
-              builder: (context) {
-                final user = Provider.of<AuthService>(context).user;
-                final name = user?.name ?? 'Guest';
-                final role = user?.role.toUpperCase() ?? '';
-                final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
-
-                return Theme(
-                  data: Theme.of(context).copyWith(
-                    splashColor: Colors.transparent,
-                    highlightColor: Colors.transparent,
-                  ),
-                  child: PopupMenuButton<String>(
-                    offset: const Offset(0, 60),
-                    color: Colors.transparent,
-                    elevation: 0,
-                    surfaceTintColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding: EdgeInsets.zero,
-                    enableFeedback: true,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    tooltip: 'Profile Options',
-                    itemBuilder: (context) => [
-                      PopupMenuItem<String>(
-                        enabled: false, 
-                        padding: EdgeInsets.zero,
-                        child: GlassContainer(
-                          width: 220,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _buildDropdownItem(context, icon: Icons.person_outline, text: 'View Profile', onTap: () {
-                                 navigationNotifier.value = PageType.profile;
-                                 Navigator.pop(context);
-                              }),
-                              Divider(height: 1, thickness: 1, color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey[200]),
-                              _buildDropdownItem(context, icon: Icons.logout, text: 'Logout', onTap: () async {
-                                Navigator.pop(context); // Close dropdown
-                                
-                                // Perform logout
-                                final auth = Provider.of<AuthService>(context, listen: false);
-                                await auth.logout();
-                                
-                                if (context.mounted) {
-                                  Navigator.pushAndRemoveUntil(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                                    (route) => false,
-                                  );
-                                  
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Logged out successfully')),
-                                  );
-                                }
-                              }, isDestructive: true),
-                            ],
-                          ),
-                        ),
-                      )
-                    ],
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min, // Ensure Row shrinks to fit content
-                      children: [
-                         Column(
-                          mainAxisSize: MainAxisSize.min, // Ensure Column shrinks to fit text
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                             Text(
-                              name,
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).textTheme.bodyLarge?.color,
-                              ),
-                            ),
-                            if (user?.username.isNotEmpty == true)
-                              Text(
-                                '@${user!.username}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            Text(
-                              role,
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                color: Colors.grey,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 12),
-                        CircleAvatar(
-                          radius: 18,
-                          backgroundColor: const Color(0xFF5B60F6).withOpacity(0.2),
-                          child: Text(initials, style: GoogleFonts.poppins(color: const Color(0xFF5B60F6), fontWeight: FontWeight.bold, fontSize: 13)),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-            ),
-          ],
-        ],
-      ),
-    )));
+    );
   }
 
   Widget _buildDropdownItem(BuildContext context, {required IconData icon, required String text, required VoidCallback onTap, bool isDestructive = false}) {

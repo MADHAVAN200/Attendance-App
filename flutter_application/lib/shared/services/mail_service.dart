@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
 
@@ -78,6 +76,42 @@ class MailService {
       return false;
     } catch (e) {
       print('Error sending email: $e');
+      return false;
+    }
+  }
+
+  /// Send Password Reset OTP
+  Future<bool> sendPasswordResetOtp({
+    required String recipientEmail,
+    required String otp,
+  }) async {
+    if (_emailUser.isEmpty || _emailPass.isEmpty) {
+      print('Cannot send email: Missing credentials in .env');
+      return false;
+    }
+
+    final smtpServer = gmail(_emailUser, _emailPass);
+
+    final message = Message()
+      ..from = Address(_emailUser, 'Mano Attention App')
+      ..recipients.add(recipientEmail)
+      ..subject = 'Password Reset OTP - Mano Attendance App'
+      ..text = 'Your OTP for password reset is: $otp. Do not share this code.'
+      ..html = '''
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h2>Password Reset Request</h2>
+          <p>You requested a password reset for your Mano Attendance App account.</p>
+          <p>Your One-Time Password (OTP) is:</p>
+          <h1 style="color: #4A90E2; letter-spacing: 5px;">$otp</h1>
+          <p>If you did not request this, please ignore this email.</p>
+        </div>
+      ''';
+
+    try {
+      await send(message, smtpServer);
+      return true;
+    } catch (e) {
+      print('Error sending OTP email: $e');
       return false;
     }
   }

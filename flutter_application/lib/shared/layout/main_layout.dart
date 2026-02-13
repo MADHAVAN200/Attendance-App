@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../features/dashboard/tablet/views/dashboard_view.dart';
 import '../../features/employees/tablet/views/employees_view.dart';
 import '../../features/attendance/tablet/views/my_attendance_view.dart';
 import '../../features/live_attendance/tablet/views/live_attendance_view.dart';
 import '../../features/leave/tablet/views/leave_view.dart'; // ADDED
 import '../../features/reports/tablet/views/reports_view.dart';
-import '../../features/holidays/tablet/views/holidays_view.dart';
 import '../../features/policy_engine/tablet/views/policy_engine_view.dart';
 import '../../features/geo_fencing/tablet/views/geo_fencing_view.dart';
 import '../../features/feedback/tablet/views/feedback_view.dart'; // ADDED
+
 import '../../features/profile/tablet/views/profile_view.dart';
 import '../navigation/navigation_controller.dart';
-import '../widgets/app_sidebar.dart';
+import '../widgets/sidebars/sidebar_tablet_landscape.dart';
 import '../widgets/custom_app_bar.dart';
 
 class MainLayout extends StatelessWidget {
@@ -32,13 +31,15 @@ class MainLayout extends StatelessWidget {
         body: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const AppSidebar(),
+            const SidebarTabletLandscape(),
             Expanded(
               child: ValueListenableBuilder<PageType>(
                 valueListenable: navigationNotifier,
                 builder: (context, currentPage, _) {
                   return Scaffold(
-                    backgroundColor: Colors.transparent,
+                    backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                        ? const Color(0xFF101828) 
+                        : Colors.transparent,
                     appBar: CustomAppBar(
                       showDrawerButton: false,
                       title: currentPage.title,
@@ -72,6 +73,7 @@ class MainLayout extends StatelessWidget {
         return const PolicyEngineView();
       case PageType.geoFencing:
         return const GeoFencingView();
+
       case PageType.feedback:
         return const FeedbackView(); // ADDED
       case PageType.profile:

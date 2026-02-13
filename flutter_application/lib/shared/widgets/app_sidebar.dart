@@ -16,6 +16,7 @@ class AppSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     // Solid Sidebar
     return GlassContainer(
@@ -25,7 +26,15 @@ class AppSidebar extends StatelessWidget {
       color: Theme.of(context).brightness == Brightness.dark 
           ? const Color(0xFF0F172A) // Darker Sidebar (Slate 900)
           : const Color(0xFFFFFFFF), // Solid White for Light Mode
-      borderRadius: 0, 
+      borderRadius: 0,
+      border: Border(
+        right: BorderSide(
+          color: isDark 
+              ? const Color(0xFF1E293B) // Slate 800 for subtle contrast
+              : Colors.grey[300]!,
+          width: 1,
+        ),
+      ), 
       child: ValueListenableBuilder<PageType>(
         valueListenable: navigationNotifier,
         builder: (context, currentPage, _) {
@@ -38,8 +47,8 @@ class AppSidebar extends StatelessWidget {
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                          ? Colors.white.withOpacity(0.1) 
+                      color: isDark 
+                          ? const Color(0xFF1E293B) // Slate 800 for subtle contrast in black mode
                           : Colors.grey[300]!,
                       width: 1,
                     ),
@@ -83,7 +92,6 @@ class AppSidebar extends StatelessWidget {
                      PageType.myAttendance,
                      PageType.myAttendance,
                      PageType.leavesAndHolidays,   // UPDATED
-                     PageType.dailyActivity, // ADDED
                      PageType.feedback, // ADDED
                      PageType.profile,
                    ];
@@ -113,7 +121,7 @@ class AppSidebar extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         color: isActive 
-            ? (isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05)) // Neutral grey for light mode active
+            ? (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05)) // Neutral grey for light mode active
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
       ),

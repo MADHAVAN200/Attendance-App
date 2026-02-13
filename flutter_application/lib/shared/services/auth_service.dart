@@ -26,14 +26,20 @@ class AuthService extends ChangeNotifier {
   User? get user => _currentUser;
   String? get token => _accessToken;
 
+  bool _isInitialized = false;
+  
   // Initialize AuthService
   Future<void> init() async {
+    if (_isInitialized) return;
+    
     Directory appDocDir = await getApplicationDocumentsDirectory();
     String appDocPath = appDocDir.path;
     _cookieJar = PersistCookieJar(storage: FileStorage("$appDocPath/.cookies/"));
     
     _dio.options.baseUrl = ApiConstants.baseUrl;
     _dio.interceptors.add(CookieManager(_cookieJar));
+    
+    _isInitialized = true;
 
     // Setup Interceptor for Access Token & Refresh Logic
     _dio.interceptors.add(
@@ -130,11 +136,18 @@ class AuthService extends ChangeNotifier {
       if (response.statusCode == 200) {
         final newToken = response.data['accessToken'];
         _accessToken = newToken;
-        // Check if we want to notify listeners on silent refresh? Usually not strictly needed unless UI depends on token
         return newToken;
       }
     } catch (e) {
-      debugPrint("Refresh failed: $e");
+      if (e is DioException) {
+        if (e.response?.statusCode == 403 || e.response?.statusCode == 401) {
+          debugPrint("Refresh failed: Session Expired (403/401)");
+        } else {
+          debugPrint("Refresh failed with status ${e.response?.statusCode}: ${e.message}");
+        }
+      } else {
+        debugPrint("Refresh failed: $e");
+      }
     }
     return null;
   }

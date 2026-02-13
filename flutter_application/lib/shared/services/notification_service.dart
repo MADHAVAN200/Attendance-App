@@ -5,7 +5,6 @@ import '../models/notification_model.dart';
 import 'auth_service.dart';
 
 class NotificationService extends ChangeNotifier {
-  final AuthService _authService;
   final Dio _dio;
   
   List<NotificationModel> _notifications = [];
@@ -16,7 +15,7 @@ class NotificationService extends ChangeNotifier {
   int get unreadCount => _unreadCount;
   bool get isLoading => _isLoading;
 
-  NotificationService(this._authService) : _dio = _authService.dio; // Reuse Dio from AuthService
+  NotificationService(AuthService authService) : _dio = authService.dio; // Reuse Dio from AuthService
 
   Future<void> fetchNotifications({bool refresh = false}) async {
     if (_isLoading && !refresh) return;

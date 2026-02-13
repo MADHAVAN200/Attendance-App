@@ -63,7 +63,7 @@ class DashboardProvider extends ChangeNotifier {
       _data = result;
       _cache[cacheKey] = result;
     } catch (e) {
-      print("Dashboard Error: $e");
+      debugPrint("Dashboard Error: $e");
       // Optionally handle error state
     } finally {
       _isLoading = false;

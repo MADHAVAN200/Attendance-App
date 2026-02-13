@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import '../constants/api_constants.dart';
 import '../../shared/services/auth_service.dart';
 import '../models/dashboard_model.dart'; 

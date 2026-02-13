@@ -19,8 +19,8 @@ android {
         applicationId = "co.mano.attendance"
         minSdk = flutter.minSdkVersion // Required for webview_flutter
         targetSdk = 35
-        versionCode = 4 
-        versionName = "1.0.2"
+        versionCode = 5 
+        versionName = "2.0.0"
         multiDexEnabled = true // Fixes "crash" due to method limit on older devices
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

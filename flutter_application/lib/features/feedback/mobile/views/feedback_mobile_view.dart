@@ -129,7 +129,7 @@ class _FeedbackMobileViewState extends State<FeedbackMobileView> with SingleTick
              Padding(
                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
                child: Container(
-                 height: 40,
+                 height: 48,
                  decoration: BoxDecoration(
                    color: isDark ? const Color(0xFF1E2939) : const Color(0xFFF1F5F9), 
                    borderRadius: BorderRadius.circular(12),
@@ -138,7 +138,7 @@ class _FeedbackMobileViewState extends State<FeedbackMobileView> with SingleTick
                  child: TabBar(
                    controller: _tabController!,
                    indicator: BoxDecoration(
-                     color: Colors.white,
+                     color: isDark ? const Color(0xFF334155) : Colors.white,
                      borderRadius: BorderRadius.circular(10),
                      boxShadow: [
                        BoxShadow(
@@ -150,12 +150,30 @@ class _FeedbackMobileViewState extends State<FeedbackMobileView> with SingleTick
                    ),
                    indicatorSize: TabBarIndicatorSize.tab,
                    dividerColor: Colors.transparent,
-                   labelColor: isDark ? const Color(0xFF818CF8) : const Color(0xFF334155),
+                   labelColor: isDark ? const Color(0xFF818CF8) : const Color(0xFF4338CA),
                    unselectedLabelColor: Colors.grey[600],
-                   labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+                   labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14),
                    tabs: const [
-                     Tab(text: "Bug Report"),
-                     Tab(text: "Feedback"),
+                     Tab(
+                       child: Row(
+                         mainAxisAlignment: MainAxisAlignment.center,
+                         children: [
+                           Icon(Icons.bug_report, size: 16),
+                           SizedBox(width: 8),
+                           Text("Bug Report"),
+                         ],
+                       ),
+                     ),
+                     Tab(
+                       child: Row(
+                         mainAxisAlignment: MainAxisAlignment.center,
+                         children: [
+                           Icon(Icons.feedback, size: 16),
+                           SizedBox(width: 8),
+                           Text("Feedback"),
+                         ],
+                       ),
+                     ),
                    ],
                  ),
                ),

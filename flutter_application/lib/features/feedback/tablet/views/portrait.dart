@@ -151,7 +151,7 @@ class _FeedbackTabletPortraitState extends State<FeedbackTabletPortrait> with Si
          Expanded(
            child: TabBarView(
              controller: _tabController!,
-             physics: const NeverScrollableScrollPhysics(), // Disable swipe to force tap
+             // physics: const NeverScrollableScrollPhysics(), // Enable swipe
              children: [
                _buildFormContent(isBugReport: true, isDark: isDark, primaryColor: const Color(0xFFEF4444)),
                _buildFormContent(isBugReport: false, isDark: isDark, primaryColor: const Color(0xFF5B60F6)),
@@ -177,7 +177,7 @@ class _FeedbackTabletPortraitState extends State<FeedbackTabletPortrait> with Si
           borderRadius: BorderRadius.circular(10),
           boxShadow: isSelected ? [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 4,
               offset: const Offset(0, 1),
             ),
@@ -261,7 +261,7 @@ class _FeedbackTabletPortraitState extends State<FeedbackTabletPortrait> with Si
                   onTap: _pickFiles,
                   borderRadius: BorderRadius.circular(16),
                   child: DashedContainer(
-                    color: primaryColor.withOpacity(0.3), // Light colored dash
+                    color: primaryColor.withValues(alpha: 0.3), // Light colored dash
                     strokeWidth: 2,
                     borderRadius: 16,
                     gap: 6,
@@ -269,7 +269,7 @@ class _FeedbackTabletPortraitState extends State<FeedbackTabletPortrait> with Si
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 32),
                       decoration: BoxDecoration(
-                         color: isDark ? Colors.white.withOpacity(0.02) : Colors.white.withOpacity(0.5),
+                         color: isDark ? Colors.white.withValues(alpha: 0.02) : Colors.white.withValues(alpha: 0.5),
                          borderRadius: BorderRadius.circular(16),
                       ),
                       child: Column(
@@ -277,7 +277,7 @@ class _FeedbackTabletPortraitState extends State<FeedbackTabletPortrait> with Si
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
+                              color: primaryColor.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: Icon(Icons.file_upload_outlined, color: primaryColor, size: 28),

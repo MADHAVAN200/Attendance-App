@@ -74,7 +74,7 @@ class GlassConfirmationDialog extends StatelessWidget {
                     onConfirm();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red.withOpacity(0.8),
+                    backgroundColor: Colors.red.withValues(alpha: 0.8),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

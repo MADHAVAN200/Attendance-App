@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../shared/widgets/glass_container.dart';
 import '../models/employee_model.dart';
 
@@ -139,14 +140,40 @@ class EmployeeDetailDialog extends StatelessWidget {
       child: CircleAvatar(
         radius: radius,
         backgroundColor: isDark ? const Color(0xFF101828) : Theme.of(context).primaryColor.withValues(alpha: 0.15),
-        child: Text(
-          employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?',
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : Theme.of(context).primaryColor,
-            fontSize: radius * 0.75, // Responsive text size
-          ),
-        ),
+        child: employee.profileImage != null && employee.profileImage!.isNotEmpty
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(radius),
+                child: CachedNetworkImage(
+                  imageUrl: employee.profileImage!,
+                  width: radius * 2,
+                  height: radius * 2,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Text(
+                    employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Theme.of(context).primaryColor,
+                      fontSize: radius * 0.75,
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Text(
+                    employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Theme.of(context).primaryColor,
+                      fontSize: radius * 0.75,
+                    ),
+                  ),
+                ),
+              )
+            : Text(
+                employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Theme.of(context).primaryColor,
+                  fontSize: radius * 0.75, // Responsive text size
+                ),
+              ),
       ),
     );
   }

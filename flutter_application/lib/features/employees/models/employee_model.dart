@@ -11,6 +11,8 @@ class Employee {
   final String? shift;
   final int? shiftId;
 
+  final String? profileImage;
+
   Employee({
     required this.userId,
     required this.userName,
@@ -23,6 +25,7 @@ class Employee {
     this.departmentId,
     this.shift,
     this.shiftId,
+    this.profileImage,
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) {
@@ -38,6 +41,7 @@ class Employee {
       departmentId: json['dept_id'],
       shift: json['shift_name'],
       shiftId: json['shift_id'],
+      profileImage: json['profile_image'] ?? json['profile_image_url'] ?? json['avatar_url'],
     );
   }
 
@@ -51,6 +55,7 @@ class Employee {
       'desg_id': designationId,
       'dept_id': departmentId,
       'shift_id': shiftId,
+      'profile_image': profileImage,
     };
   }
 }

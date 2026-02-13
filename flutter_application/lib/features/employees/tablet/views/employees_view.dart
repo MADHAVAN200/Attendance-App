@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../../shared/widgets/glass_container.dart';
 import '../../models/employee_model.dart';
@@ -12,9 +13,6 @@ import '../../../../shared/services/auth_service.dart';
 import 'add_employee_view.dart';
 import '../../widgets/bulk_upload_report_dialog.dart';
 import '../../widgets/glass_confirmation_dialog.dart';
-import '../../widgets/employee_detail_dialog.dart';
-import '../../widgets/employee_action_menu.dart';
-import '../../widgets/employee_action_sheet.dart';
 
 class EmployeesView extends StatefulWidget {
   const EmployeesView({super.key});
@@ -124,9 +122,9 @@ class _EmployeesViewState extends State<EmployeesView> {
     showDialog(
       context: context, 
       barrierDismissible: false, 
-      builder: (_) => const PopScope(
-        canPop: false,
-        child: Center(child: CircularProgressIndicator()),
+      builder: (_) => WillPopScope(
+        onWillPop: () async => false,
+        child: const Center(child: CircularProgressIndicator()),
       ),
     );
 
@@ -151,14 +149,24 @@ class _EmployeesViewState extends State<EmployeesView> {
   }
 
   Future<void> _deleteEmployee(int id) async {
-    // Confirmation handled by EmployeeActionMenu
+    // Confirmation
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => GlassConfirmationDialog(
+        title: 'Confirm Delete',
+        content: 'Are you sure you want to delete this employee?',
+        confirmLabel: 'Delete',
+        onConfirm: () => Navigator.pop(context, true),
+      ),
+    );
+
+    if (confirm != true) return;
+
     try {
       await _employeeService.deleteEmployee(id);
       _fetchEmployees(); // Refresh list
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Employee deleted')));
     } catch (e) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
     }
   }
@@ -217,9 +225,9 @@ class _EmployeesViewState extends State<EmployeesView> {
         showDialog(
           context: context, 
           barrierDismissible: false, 
-          builder: (_) => const PopScope(
-            canPop: false,
-            child: Center(child: CircularProgressIndicator()),
+          builder: (_) => WillPopScope(
+            onWillPop: () async => false,
+            child: const Center(child: CircularProgressIndicator()),
           ),
         );
         
@@ -313,36 +321,64 @@ class _EmployeesViewState extends State<EmployeesView> {
   }
 
   Widget _buildFilterSection(BuildContext context) {
-    if (_isSelectionMode) {
-      return Row(
-        children: [
-          IconButton(
-            onPressed: _exitSelectionMode, 
-            icon: const Icon(Icons.close),
-            tooltip: 'Exit Selection',
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '${_selectedIds.length} Selected',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          const Spacer(),
-          // Select/Unselect All
-          TextButton.icon(
-            onPressed: () => _toggleSelectAll(_selectedIds.length != _filteredEmployees.length),
-            icon: Icon(_selectedIds.length == _filteredEmployees.length ? Icons.deselect : Icons.select_all),
-            label: Text(_selectedIds.length == _filteredEmployees.length ? 'Unselect All' : 'Select All'),
-          ),
-          const SizedBox(width: 16),
-          // Bulk Delete Button
-          _buildActionButton(
-            context,
-            label: 'Delete (${_selectedIds.length})',
-            icon: Icons.delete_outline,
-            isPrimary: false, // Red color handling inside
-            onTap: _bulkDelete,
-          ),
-        ],
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+      if (_isSelectionMode) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.blue.withOpacity(0.1) : Colors.blue.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: _exitSelectionMode, 
+              icon: Icon(Icons.close, color: isDark ? Colors.white : Colors.black87, size: 22),
+              tooltip: 'Exit Selection',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+            ),
+            const SizedBox(width: 16),
+            Text(
+              '${_selectedIds.length} Selected',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600, 
+                fontSize: 18,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const Spacer(),
+            // Select/Unselect All
+            TextButton.icon(
+              onPressed: () => _toggleSelectAll(_selectedIds.length != _filteredEmployees.length),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+              icon: Icon(
+                _selectedIds.length == _filteredEmployees.length ? Icons.deselect : Icons.select_all,
+                color: isDark ? Colors.blue[400] : Theme.of(context).primaryColor,
+                size: 20,
+              ),
+              label: Text(
+                _selectedIds.length == _filteredEmployees.length ? 'Unselect All' : 'Select All',
+                style: GoogleFonts.poppins(
+                  color: isDark ? Colors.blue[400] : Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 24),
+            // Bulk Delete Button
+            _buildActionButton(
+              context,
+              label: 'Delete (${_selectedIds.length})',
+              icon: Icons.delete_outline,
+              isPrimary: false,
+              onTap: _bulkDelete,
+            ),
+          ],
+        ),
       );
     }
 
@@ -368,7 +404,7 @@ class _EmployeesViewState extends State<EmployeesView> {
                     decoration: InputDecoration(
                       hintText: 'Search employees...',
                       hintStyle: GoogleFonts.poppins(
-                        color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+                        color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
                         fontSize: 14,
                       ),
                       border: InputBorder.none,
@@ -385,7 +421,6 @@ class _EmployeesViewState extends State<EmployeesView> {
           ),
         ),
         const SizedBox(width: 12),
-        // ... Dropdown omitted - assuming it's not present or I can omit
         const Spacer(),
 
         if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee) ...[
@@ -445,11 +480,11 @@ class _EmployeesViewState extends State<EmployeesView> {
           color: isPrimary ? primaryColor : (isDark ? const Color(0xFF1E2939) : Colors.white),
           borderRadius: BorderRadius.circular(12),
           border: isPrimary ? null : Border.all(
-            color: isDark ? const Color(0xFF1E2939) : primaryColor.withValues(alpha: 0.1)
+            color: isDark ? const Color(0xFF1E2939) : primaryColor.withOpacity(0.1)
           ),
           boxShadow: isPrimary ? [
             BoxShadow(
-              color: primaryColor.withValues(alpha: 0.3),
+              color: primaryColor.withOpacity(0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             )
@@ -496,7 +531,7 @@ class _EmployeesViewState extends State<EmployeesView> {
         child: SizedBox(
           width: double.infinity,
           child: DataTable(
-            headingRowColor: WidgetStateProperty.all(Colors.transparent),
+            headingRowColor: MaterialStateProperty.all(Colors.transparent),
             columnSpacing: 16, 
             horizontalMargin: 16, 
             dataRowMaxHeight: 85,
@@ -516,6 +551,8 @@ class _EmployeesViewState extends State<EmployeesView> {
               _buildDataColumn(context, 'ROLE & DEPT'),
               _buildDataColumn(context, 'PHONE'),
               _buildDataColumn(context, 'SHIFT'),
+              if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee)
+                 const DataColumn(label: Expanded(child: Text('ACTIONS', textAlign: TextAlign.right))), 
             ],
             rows: _filteredEmployees.map((e) => _buildDataRow(context, e)).toList(),
           ),
@@ -532,7 +569,7 @@ class _EmployeesViewState extends State<EmployeesView> {
           fontWeight: FontWeight.w600,
           fontSize: 11,
           letterSpacing: 0.5,
-          color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+          color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.7),
         ),
       ),
     );
@@ -545,9 +582,13 @@ class _EmployeesViewState extends State<EmployeesView> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return DataRow(
+      selected: _selectedIds.contains(data.userId),
       onLongPress: () {
         if (!_isSelectionMode && !Provider.of<AuthService>(context, listen: false).user!.isEmployee) {
-           _showActionSheet(context, data);
+          setState(() {
+            _isSelectionMode = true;
+            _toggleSelection(data.userId);
+          });
         }
       },
       onSelectChanged: (_) {
@@ -581,14 +622,38 @@ class _EmployeesViewState extends State<EmployeesView> {
                   ),
                   child: CircleAvatar(
                     radius: 20,
-                    backgroundColor: isDark ? const Color(0xFF101828) : Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                    child: Text(
-                      nameInitial,
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold, 
-                        color: isDark ? Colors.white : Theme.of(context).primaryColor,
-                      ),
-                    ),
+                    backgroundColor: isDark ? const Color(0xFF101828) : Theme.of(context).primaryColor.withOpacity(0.1),
+                    child: data.profileImage != null && data.profileImage!.isNotEmpty
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: CachedNetworkImage(
+                              imageUrl: data.profileImage!,
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Text(
+                                nameInitial,
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold, 
+                                  color: isDark ? Colors.white : Theme.of(context).primaryColor,
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Text(
+                                nameInitial,
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold, 
+                                  color: isDark ? Colors.white : Theme.of(context).primaryColor,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Text(
+                            nameInitial,
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.bold, 
+                              color: isDark ? Colors.white : Theme.of(context).primaryColor,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -620,43 +685,219 @@ class _EmployeesViewState extends State<EmployeesView> {
         DataCell(Text(data.phoneNo ?? 'N/A', style: GoogleFonts.poppins(fontSize: 13, color: subTextColor))),
         // Shift
         DataCell(Text(data.shift ?? 'N/A', style: GoogleFonts.poppins(fontSize: 13, color: subTextColor))),
+        // Actions
+        if (!Provider.of<AuthService>(context, listen: false).user!.isEmployee)
+          DataCell(Align(alignment: Alignment.centerRight, child: _buildActionsMenu(context, data))),
       ],
     );
   }
 
-  void _showActionSheet(BuildContext context, Employee employee) {
-    EmployeeActionSheet.show(
-      context,
-      employeeName: employee.userName,
-      onEdit: () {
-         setState(() {
-           _editingEmployee = employee;
-           _isAddingOrEditing = true;
-         });
-      },
-      onDelete: () async {
-         // Confirm delete
-         final confirm = await showDialog<bool>(
-           context: context,
-           builder: (context) => GlassConfirmationDialog(
-             title: 'Confirm Delete',
-             content: 'Are you sure you want to delete ${employee.userName}? This action cannot be undone.',
-             confirmLabel: 'Delete',
-             onConfirm: () => Navigator.pop(context, true),
-           ),
-         );
+  Widget _buildActionsMenu(BuildContext context, Employee employee) {
+    return IconButton(
+      icon: Icon(Icons.more_vert, color: Theme.of(context).textTheme.bodySmall?.color),
+      onPressed: () => _showEmployeeActionSheet(employee),
+    );
+  }
 
-         if (confirm == true) {
-           _deleteEmployee(employee.userId);
-         }
-      },
+  void _showEmployeeActionSheet(Employee employee) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          decoration: BoxDecoration(
+             color: isDark ? const Color(0xFF1E2939) : Colors.white,
+             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40, 
+                height: 4, 
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300], 
+                  borderRadius: BorderRadius.circular(2)
+                ),
+              ),
+              _buildActionItem(
+                context, 
+                icon: Icons.edit_outlined, 
+                label: 'Edit Employee', 
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _editingEmployee = employee;
+                    _isAddingOrEditing = true;
+                  });
+                }
+              ),
+              const SizedBox(height: 8),
+              _buildActionItem(
+                context, 
+                icon: Icons.delete_outline, 
+                label: 'Delete Employee', 
+                color: Colors.red,
+                onTap: () {
+                  Navigator.pop(context);
+                  _deleteEmployee(employee.userId);
+                }
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      }
+    );
+  }
+
+  Widget _buildActionItem(BuildContext context, {required IconData icon, required String label, required VoidCallback onTap, Color? color}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color ?? (isDark ? Colors.white : Colors.black87), size: 22),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: color ?? (isDark ? Colors.white : Colors.black87),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   void _showEmployeeDetails(BuildContext context, Employee employee) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Reusing the nice dialog from before, but populated with real data
     showDialog(
       context: context,
-      builder: (context) => EmployeeDetailDialog(employee: employee),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        child: GlassContainer(
+          width: 450,
+          padding: const EdgeInsets.all(24),
+          borderRadius: 24,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+               Row(
+                children: [
+                   Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: isDark ? Border.all(color: Colors.blue, width: 2) : null,
+                    ),
+                    child: CircleAvatar(
+                      radius: 32,
+                      backgroundColor: isDark ? const Color(0xFF101828) : Theme.of(context).primaryColor.withOpacity(0.15),
+                      child: employee.profileImage != null && employee.profileImage!.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(32),
+                              child: CachedNetworkImage(
+                                imageUrl: employee.profileImage!,
+                                width: 64,
+                                height: 64,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) => Text(
+                                  employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : Theme.of(context).primaryColor,
+                                    fontSize: 24,
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) => Text(
+                                  employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : Theme.of(context).primaryColor,
+                                    fontSize: 24,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Text(
+                              employee.userName.isNotEmpty ? employee.userName[0].toUpperCase() : '?',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Theme.of(context).primaryColor,
+                                fontSize: 24,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(employee.userName, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(employee.designation ?? 'N/A', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
+                    ],
+                  ),
+                  const Spacer(),
+                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildDetailRow(context, Icons.email_outlined, 'Email', employee.email),
+              const SizedBox(height: 16),
+              _buildDetailRow(context, Icons.phone_outlined, 'Phone', employee.phoneNo ?? 'N/A'),
+              const SizedBox(height: 16),
+              _buildDetailRow(context, Icons.work_outline, 'Department', employee.department ?? 'N/A'),
+              const SizedBox(height: 16),
+              _buildDetailRow(context, Icons.access_time, 'Shift', employee.shift ?? 'N/A'),
+              const SizedBox(height: 24),
+               SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Close', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(BuildContext context, IconData icon, String label, String value) {
+     return Row(
+      children: [
+        Icon(icon, size: 18, color: Theme.of(context).primaryColor),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+            Text(value, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ],
     );
   }
 

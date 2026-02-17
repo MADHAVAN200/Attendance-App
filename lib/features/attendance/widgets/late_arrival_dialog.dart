@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../shared/widgets/glass_container.dart';
+import 'package:flutter_application/shared/widgets/glass_container.dart';
 
 class LateArrivalDialog extends StatefulWidget {
   const LateArrivalDialog({super.key});
@@ -151,3 +151,5 @@ class _LateArrivalDialogState extends State<LateArrivalDialog> {
     );
   }
 }
+
+// [mod:2026-02-17T17:00:00+05:30]

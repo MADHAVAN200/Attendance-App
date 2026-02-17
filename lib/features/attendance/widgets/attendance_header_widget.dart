@@ -6,8 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:dio/dio.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../../../shared/services/auth_service.dart';
-import '../../../shared/widgets/toast_helper.dart';
+import 'package:flutter_application/shared/services/auth_service.dart';
+import 'package:flutter_application/shared/widgets/toast_helper.dart';
 
 class AttendanceHeaderWidget extends StatefulWidget {
   final bool showTabBar;
@@ -834,3 +834,5 @@ class AttendanceTabBar extends StatelessWidget {
     return child;
   }
 }
+
+// [mod:2026-02-17T14:00:00+05:30]

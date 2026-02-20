@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_application/features/leave/providers/leave_provider.dart';
+import 'package:flutter_application/features/leave/core/leave_provider.dart';
 import 'package:flutter_application/features/leave/widgets/leave_history_item.dart';
 import 'package:flutter_application/features/leave/widgets/leave_details_dialog.dart';
 
@@ -132,3 +132,5 @@ class _AdminLeaveHistoryState extends State<AdminLeaveHistory> {
     );
   }
 }
+
+// [mod:2026-02-20T17:30:00+05:30]

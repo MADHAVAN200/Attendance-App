@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_application/features/leave/providers/leave_provider.dart';
-import 'package:flutter_application/features/leave/models/leave_request_model.dart';
+import 'package:flutter_application/features/leave/core/leave_provider.dart';
+import 'package:flutter_application/features/leave/core/leave_request_model.dart';
 import 'package:flutter_application/features/leave/widgets/leave_history_item.dart';
 import 'package:flutter_application/features/leave/widgets/leave_details_dialog.dart';
 import 'package:flutter_application/shared/widgets/toast_helper.dart';
@@ -73,3 +73,5 @@ class AdminLeaveRequests extends StatelessWidget {
     );
   }
 }
+
+// [mod:2026-02-20T17:30:00+05:30]

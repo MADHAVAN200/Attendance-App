@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../../shared/constants/api_constants.dart';
-import '../../../../shared/services/auth_service.dart';
-import '../models/leave_request_model.dart';
-import './leave_details_dialog.dart';
+import 'package:flutter_application/shared/constants/api_constants.dart';
+import 'package:flutter_application/shared/services/auth_service.dart';
+import 'package:flutter_application/features/leave/core/leave_request_model.dart';
+import 'package:flutter_application/features/leave/widgets/leave_details_dialog.dart';
 
 class LeaveHistoryItem extends StatelessWidget {
   final LeaveRequest request;
@@ -191,3 +191,5 @@ class LeaveHistoryItem extends StatelessWidget {
     );
   }
 }
+
+// [mod:2026-02-20T14:00:00+05:30]

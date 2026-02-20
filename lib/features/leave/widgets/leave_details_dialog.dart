@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_application/features/leave/models/leave_request_model.dart';
-import 'package:flutter_application/features/leave/providers/leave_provider.dart';
+import 'package:flutter_application/features/leave/core/leave_request_model.dart';
+import 'package:flutter_application/features/leave/core/leave_provider.dart';
 import 'package:flutter_application/shared/constants/api_constants.dart';
 import 'package:flutter_application/shared/services/auth_service.dart';
 import 'package:flutter_application/shared/widgets/toast_helper.dart';
@@ -782,3 +782,5 @@ class _LeaveDetailsDialogState extends State<LeaveDetailsDialog> {
     }
   }
 }
+
+// [mod:2026-02-20T14:00:00+05:30]

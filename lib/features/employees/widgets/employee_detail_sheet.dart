@@ -2,8 +2,8 @@
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:provider/provider.dart';
-import '../../../../shared/services/auth_service.dart';
-import '../models/employee_model.dart';
+import 'package:flutter_application/shared/services/auth_service.dart';
+import 'package:flutter_application/features/employees/core/employee_model.dart';
 
 class EmployeeDetailSheet extends StatelessWidget {
   final Employee employee;
@@ -473,3 +473,5 @@ class EmployeeDetailSheet extends StatelessWidget {
     );
   }
 }
+
+// [mod:2026-02-21T11:00:00+05:30]

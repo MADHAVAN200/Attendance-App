@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'glass_confirmation_dialog.dart';
+import 'package:flutter_application/features/employees/widgets/glass_confirmation_dialog.dart';
 
 class EmployeeActionMenu extends StatelessWidget {
   final VoidCallback onEdit;
@@ -85,3 +85,5 @@ class EmployeeActionMenu extends StatelessWidget {
     }
   }
 }
+
+// [mod:2026-02-21T11:00:00+05:30]

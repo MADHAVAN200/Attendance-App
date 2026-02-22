@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_application/shared/widgets/glass_container.dart';
-import 'package:flutter_application/features/attendance/providers/attendance_provider.dart';
+import 'package:flutter_application/features/attendance/core/attendance_provider.dart';
 import 'package:flutter_application/shared/navigation/navigation_controller.dart';
 import 'package:flutter_application/shared/services/auth_service.dart';
 
@@ -740,3 +740,5 @@ class EmployeeInfoCard extends StatelessWidget {
     );
   }
 }
+
+// [mod:2026-02-22T12:00:00+05:30]

@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../models/holiday_model.dart';
+import 'package:flutter_application/features/holidays/core/holiday_model.dart';
 
 class HolidayDetailDialog extends StatelessWidget {
   final Holiday holiday;
@@ -139,3 +139,5 @@ class HolidayDetailDialog extends StatelessWidget {
     );
   }
 }
+
+// [mod:2026-02-24T17:00:00+05:30]

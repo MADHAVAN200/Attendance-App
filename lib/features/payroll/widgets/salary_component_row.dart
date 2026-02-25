@@ -71,3 +71,5 @@ class SalaryComponentRow extends StatelessWidget {
     );
   }
 }
+
+// [mod:2026-02-25T17:30:00+05:30]

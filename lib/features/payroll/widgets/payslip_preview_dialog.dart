@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../models/payroll_model.dart';
-import '../services/payslip_pdf_service.dart';
-import 'salary_breakdown_card.dart';
+import 'package:flutter_application/shared/widgets/toast_helper.dart';
+import 'package:flutter_application/features/payroll/core/payroll_model.dart';
+import 'package:flutter_application/features/payroll/core/payslip_pdf_service.dart';
+import 'package:flutter_application/features/payroll/widgets/salary_breakdown_card.dart';
 
 class PayslipPreviewDialog extends StatefulWidget {
   final Payslip payslip;
@@ -21,27 +22,17 @@ class _PayslipPreviewDialogState extends State<PayslipPreviewDialog> {
     try {
       final path = await PayslipPdfService.generateAndSavePayslipPdf(widget.payslip);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("PDF Payslip downloaded: ${path.split('/').last}"),
-            backgroundColor: const Color(0xFF10B981),
-            action: SnackBarAction(
-              label: "OPEN",
-              textColor: Colors.white,
-              onPressed: () => PayslipPdfService.openPayslipPdf(path),
-            ),
-          ),
+        context.showToast(
+          "PDF Payslip downloaded: ${path.split('/').last}",
+          isSuccess: true,
+          actionLabel: "OPEN",
+          onActionPressed: () => PayslipPdfService.openPayslipPdf(path),
         );
         await PayslipPdfService.openPayslipPdf(path);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Failed to generate PDF: $e"),
-            backgroundColor: Colors.red,
-          ),
-        );
+        context.showExceptionToast(e, fallback: "Failed to generate PDF");
       }
     } finally {
       if (mounted) setState(() => _isGeneratingPdf = false);
@@ -247,3 +238,5 @@ class _PayslipPreviewDialogState extends State<PayslipPreviewDialog> {
     );
   }
 }
+
+// [mod:2026-02-25T17:30:00+05:30]

@@ -5,11 +5,11 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import '../../../../shared/services/auth_service.dart';
-import '../../../../shared/models/user_model.dart';
-import '../../../../shared/constants/api_constants.dart';
-import '../../../../shared/widgets/custom_dialog.dart';
-import '../../../../shared/widgets/toast_helper.dart';
+import 'package:flutter_application/shared/services/auth_service.dart';
+import 'package:flutter_application/shared/models/user_model.dart';
+import 'package:flutter_application/shared/constants/api_constants.dart';
+import 'package:flutter_application/shared/widgets/custom_dialog.dart';
+import 'package:flutter_application/shared/widgets/toast_helper.dart';
 
 class ProfileAvatar extends StatefulWidget {
   final double size;
@@ -349,3 +349,5 @@ class _ProfileAvatarState extends State<ProfileAvatar> {
     );
   }
 }
+
+// [mod:2026-02-27T11:30:00+05:30]

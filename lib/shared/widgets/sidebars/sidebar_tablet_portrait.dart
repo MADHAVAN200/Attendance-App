@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../navigation/navigation_controller.dart';
-import '../glass_container.dart';
+import 'package:flutter_application/shared/navigation/navigation_controller.dart';
+import 'package:flutter_application/shared/widgets/glass_container.dart';
 import 'package:provider/provider.dart';
-import '../../services/auth_service.dart';
+import 'package:flutter_application/shared/services/auth_service.dart';
 
 class SidebarTabletPortrait extends StatelessWidget {
   final VoidCallback? onLinkTap;
@@ -12,26 +12,24 @@ class SidebarTabletPortrait extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Tablet Portrait Drawer (Usually behaves like a drawer but wider/different style)
     return Drawer(
-      width: 300,
+      width: 280,
       backgroundColor: Colors.transparent,
       elevation: 0,
       child: GlassContainer(
         width: double.infinity,
         height: double.infinity,
-        blur: 0, 
-        color: Theme.of(context).brightness == Brightness.dark 
-            ? const Color(0xFF0D1117) // Standardized Dark Mode Color
+        blur: 0,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF0D1117)
             : const Color(0xFFFFFFFF),
-        borderRadius: 0, 
+        borderRadius: 0,
         child: _SidebarContent(onLinkTap: onLinkTap),
       ),
     );
   }
 }
 
-// Reusing content logic but separating widget for file isolation as requested
 class _SidebarContent extends StatelessWidget {
   final VoidCallback? onLinkTap;
   const _SidebarContent({this.onLinkTap});
@@ -41,20 +39,37 @@ class _SidebarContent extends StatelessWidget {
     return ValueListenableBuilder<PageType>(
       valueListenable: navigationNotifier,
       builder: (context, currentPage, _) {
+        final user = context.read<AuthService>().user;
+        final isEmployee = user != null && user.isEmployee;
+
+        // Clean list of nav items matching Attendance-Web
+        final navPages = [
+          PageType.dashboard,
+          if (!isEmployee) PageType.employees,
+          if (!isEmployee) PageType.labourManagement,
+          PageType.myAttendance,
+          if (!isEmployee) PageType.liveAttendance,
+          if (!isEmployee) PageType.reports,
+          if (!isEmployee) PageType.payroll,
+          PageType.dailyActivity,
+          if (!isEmployee) PageType.policies,
+          PageType.leavesAndHolidays,
+        ];
+
         return SafeArea(
           child: Column(
             children: [
-               // Sidebar Header
+              // Sidebar Header
               Container(
                 height: 55,
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 alignment: Alignment.centerLeft,
-                margin: const EdgeInsets.only(top: 20, bottom: 8), // Brought down by adding top margin
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                          ? const Color(0xFF30363D) 
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF30363D)
                           : Colors.grey[300]!,
                     ),
                   ),
@@ -72,66 +87,46 @@ class _SidebarContent extends StatelessWidget {
                       style: GoogleFonts.poppins(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).brightness == Brightness.dark 
-                            ? Colors.white 
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
                             : Theme.of(context).primaryColor,
                       ),
                     ),
                   ],
                 ),
               ),
-              
+
               Expanded(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Column(
                     children: [
-                      // Menu Items
-                      ...PageType.values.where((p) {
-                        if (p == PageType.collaboration) return false;
-                        final user = context.read<AuthService>().user;
-                        if (user != null && user.isEmployee) {
-                            final allowed = [
-                              PageType.dashboard,
-                              PageType.myAttendance,
-                              PageType.dailyActivity,
-                              PageType.leavesAndHolidays,
-                              PageType.payroll,
-                              PageType.feedback,
-                              PageType.collaboration, // ADDED
-                              PageType.profile,
-                            ];
-                            if (!allowed.contains(p)) return false;
-                        }
-                         if (p == PageType.profile) return false;
-                         if (p == PageType.feedback) return false; // Hide feedback from list
-                        return true;
-                      }).map((page) => _buildMenuItem(
-                        context, 
-                        page,
-                        currentPage == page,
-                      )),
+                      ...navPages.map((page) => _buildMenuItem(
+                            context,
+                            page,
+                            currentPage == page,
+                          )),
                     ],
                   ),
                 ),
               ),
-  
-               // Fixed Bottom: Bugs & Feedback
+
+              // Fixed Bottom: Bugs & Feedback
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 child: Column(
                   children: [
                     GestureDetector(
                       onTap: () {
-                         navigateTo(PageType.feedback);
-                         if (onLinkTap != null) onLinkTap!();
+                        navigateTo(PageType.feedback);
+                        if (onLinkTap != null) onLinkTap!();
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                         decoration: BoxDecoration(
                           color: currentPage == PageType.feedback
-                              ? (Theme.of(context).brightness == Brightness.dark 
-                                  ? Colors.white.withValues(alpha: 0.1) 
+                              ? (Theme.of(context).brightness == Brightness.dark
+                                  ? Colors.white.withValues(alpha: 0.1)
                                   : const Color(0xFF4338CA).withValues(alpha: 0.1))
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
@@ -139,7 +134,7 @@ class _SidebarContent extends StatelessWidget {
                         child: Row(
                           children: [
                             Icon(
-                              Icons.bug_report_outlined, 
+                              Icons.bug_report_outlined,
                               size: 20,
                               color: currentPage == PageType.feedback
                                   ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
@@ -149,7 +144,7 @@ class _SidebarContent extends StatelessWidget {
                             Text(
                               "Bugs & Feedback",
                               style: GoogleFonts.poppins(
-                                fontSize: 14,
+                                fontSize: 13,
                                 fontWeight: currentPage == PageType.feedback ? FontWeight.w600 : FontWeight.w500,
                                 color: currentPage == PageType.feedback
                                     ? (Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF4338CA))
@@ -166,35 +161,38 @@ class _SidebarContent extends StatelessWidget {
             ],
           ),
         );
-      }
+      },
     );
   }
 
   Widget _buildMenuItem(BuildContext context, PageType page, bool isActive) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       child: Material(
-        color: isActive 
+        color: isActive
             ? (isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFF4338CA).withValues(alpha: 0.1))
             : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         child: ListTile(
           horizontalTitleGap: 8,
           minLeadingWidth: 20,
+          dense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
           leading: Icon(
             page.icon,
-            color: isActive 
+            size: 20,
+            color: isActive
                 ? (isDark ? Colors.white : const Color(0xFF4338CA))
                 : (isDark ? Colors.grey : Colors.black54),
           ),
           title: Text(
             page.title,
             style: GoogleFonts.poppins(
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              color: isActive 
+              color: isActive
                   ? (isDark ? Colors.white : const Color(0xFF4338CA))
                   : (isDark ? Colors.grey[400] : Colors.black87),
             ),
@@ -208,3 +206,5 @@ class _SidebarContent extends StatelessWidget {
     );
   }
 }
+
+// commit-marker: 2026-02-27T18:00:00+05:30

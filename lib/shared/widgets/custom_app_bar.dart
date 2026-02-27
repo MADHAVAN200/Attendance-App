@@ -1,16 +1,16 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../providers/theme_simple.dart';
-import 'glass_container.dart';
+import 'package:flutter_application/shared/providers/theme_simple.dart';
+import 'package:flutter_application/shared/widgets/glass_container.dart';
 import 'package:provider/provider.dart';
-import '../../main.dart';
-import '../services/auth_service.dart';
-import '../navigation/navigation_controller.dart';
-import '../../features/notifications/mobile/views/notifications_view.dart'; // Import Mobile View
-import '../services/notification_service.dart';
-import 'toast_helper.dart';
-import '../../features/collaboration/services/chat_service.dart';
+import 'package:flutter_application/main.dart';
+import 'package:flutter_application/shared/services/auth_service.dart';
+import 'package:flutter_application/shared/navigation/navigation_controller.dart';
+import 'package:flutter_application/features/notifications/views/notifications_mobile_portrait_view.dart'; // Import Mobile View
+import 'package:flutter_application/shared/services/notification_service.dart';
+import 'package:flutter_application/shared/widgets/toast_helper.dart';
+import 'package:flutter_application/features/collaboration/core/chat_service.dart';
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showDrawerButton;
@@ -376,3 +376,5 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(56);
 }
+
+// commit-marker: 2026-02-27T18:00:00+05:30

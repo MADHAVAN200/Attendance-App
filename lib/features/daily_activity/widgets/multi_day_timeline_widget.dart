@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../models/dar_models.dart';
+import 'package:flutter_application/features/daily_activity/core/dar_models.dart';
 
 class MultiDayTimelineWidget extends StatefulWidget {
   final List<DarItem> tasks;
@@ -888,3 +888,5 @@ class _PlannedPatternPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+// [mod:2026-03-18T17:00:00+05:30]

@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../models/shift_model.dart';
-import '../../employees/services/employee_service.dart';
-import '../../employees/models/employee_model.dart' as emp_model;
-import '../../../../shared/services/auth_service.dart';
-import '../../../../shared/constants/api_constants.dart';
-import '../utils/week_off_policy_helper.dart';
-import 'shift_action_sheet.dart';
+import 'package:flutter_application/features/policy_engine/core/shift_model.dart';
+import 'package:flutter_application/features/employees/core/employee_service.dart';
+import 'package:flutter_application/features/employees/core/employee_model.dart' as emp_model;
+import 'package:flutter_application/shared/services/auth_service.dart';
+import 'package:flutter_application/shared/constants/api_constants.dart';
+import 'package:flutter_application/features/policy_engine/core/week_off_policy_helper.dart';
+import 'package:flutter_application/features/policy_engine/widgets/shift_action_sheet.dart';
 
 class ShiftDetailBottomSheet extends StatefulWidget {
   final Shift shift;
@@ -1058,3 +1058,5 @@ String? _resolveAvatarUrl(dynamic profileImage) {
   final cleanUrl = url.startsWith('/') ? url : '/$url';
   return '${ApiConstants.baseUrl}$cleanUrl';
 }
+
+// [mod:2026-03-18T11:30:00+05:30]

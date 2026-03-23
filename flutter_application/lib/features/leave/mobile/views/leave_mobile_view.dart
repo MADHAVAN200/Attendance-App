@@ -62,6 +62,7 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
   }
 
   Future<void> _fetchHolidays() async {
+    if (!mounted) return;
     setState(() => _isLoadingHolidays = true);
     try {
       final data = await _holidayService.getHolidays();
@@ -164,6 +165,7 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
   Future<void> _deleteHoliday(int id) async {
     try {
       await _holidayService.deleteHolidays([id]);
+      if (!mounted) return;
       _fetchHolidays();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Deleted successfully")));
@@ -235,8 +237,10 @@ class _LeaveMobileViewState extends State<LeaveMobileView> with SingleTickerProv
         }
 
         if (batch.isNotEmpty) {
+          if (!mounted) return;
           setState(() => _isLoadingHolidays = true);
           await _holidayService.addBulkHolidays(batch);
+          if (!mounted) return;
           _fetchHolidays();
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Imported ${batch.length} holidays")));

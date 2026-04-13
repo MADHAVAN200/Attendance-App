@@ -1,18 +1,20 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../shared/widgets/glass_container.dart';
-import '../models/labour_models.dart';
+import 'package:flutter_application/features/labour/core/labour_models.dart';
+import 'package:flutter_application/features/labour/widgets/labour_common_widgets.dart';
 
 class AddWorkerDialog extends StatefulWidget {
   final LabourWorker? initialWorker;
   final List<LabourSite> availableSites;
   final Function(Map<String, dynamic> data) onSave;
+  final bool isBottomSheet;
 
   const AddWorkerDialog({
     super.key,
     this.initialWorker,
     required this.availableSites,
     required this.onSave,
+    this.isBottomSheet = false,
   });
 
   @override
@@ -39,6 +41,8 @@ class _AddWorkerDialogState extends State<AddWorkerDialog> {
     'Helper',
     'Foreman',
     'Supervisor',
+    'Bar Bender',
+    'Tile Layer',
   ];
 
   @override
@@ -46,8 +50,20 @@ class _AddWorkerDialogState extends State<AddWorkerDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.initialWorker?.name ?? '');
     _phoneController = TextEditingController(text: widget.initialWorker?.phone ?? '');
-    _dailyWageController = TextEditingController(text: widget.initialWorker?.monthlySalary.toString() ?? '800');
-    _otRateController = TextEditingController(text: widget.initialWorker?.overtimePayPerHour.toString() ?? '120');
+    _dailyWageController = TextEditingController(
+      text: widget.initialWorker != null
+          ? (widget.initialWorker!.monthlySalary == widget.initialWorker!.monthlySalary.roundToDouble()
+              ? widget.initialWorker!.monthlySalary.toInt().toString()
+              : widget.initialWorker!.monthlySalary.toString())
+          : '600',
+    );
+    _otRateController = TextEditingController(
+      text: widget.initialWorker != null
+          ? (widget.initialWorker!.overtimePayPerHour == widget.initialWorker!.overtimePayPerHour.roundToDouble()
+              ? widget.initialWorker!.overtimePayPerHour.toInt().toString()
+              : widget.initialWorker!.overtimePayPerHour.toString())
+          : '100',
+    );
     _sex = widget.initialWorker?.sex ?? 'Male';
     _role = widget.initialWorker?.role ?? 'Helper';
     _selectedSiteId = widget.initialWorker?.siteId;
@@ -65,175 +81,269 @@ class _AddWorkerDialogState extends State<AddWorkerDialog> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isEdit = widget.initialWorker != null;
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: GlassContainer(
-        padding: const EdgeInsets.all(20),
-        borderRadius: 20,
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+    final formContent = Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+                // Header
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      widget.initialWorker == null ? "REGISTER WORKER" : "EDIT WORKER",
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black87,
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6366F1).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF6366F1), size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              isEdit ? "Edit Worker Profile" : "Register New Labour Worker",
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : const Color(0xFF0F172A),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     IconButton(
-                      icon: const Icon(Icons.close, size: 20),
+                      icon: Icon(Icons.close, size: 18, color: isDark ? Colors.grey[400] : Colors.grey[600]),
                       onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Name
+                Text(
+                  "WORKER FULL NAME *",
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? const Color(0xFF8B949E) : const Color(0xFF64748B),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextFormField(
+                  controller: _nameController,
+                  style: GoogleFonts.poppins(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
+                  decoration: InputDecoration(
+                    hintText: "e.g. Ramesh Kumar",
+                    hintStyle: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500]),
+                    fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  ),
+                  validator: (val) => val == null || val.trim().isEmpty ? "Worker name is required" : null,
+                ),
+                const SizedBox(height: 14),
+
+                // Phone & Sex
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "PHONE NUMBER",
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? const Color(0xFF8B949E) : const Color(0xFF64748B),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            style: GoogleFonts.poppins(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
+                            decoration: InputDecoration(
+                              hintText: "10-digit mobile number",
+                              hintStyle: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500]),
+                              fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
+                              filled: true,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CustomDropdown<String>(
+                            label: "GENDER",
+                            value: _sex,
+                            height: 48,
+                            fontSize: 13,
+                            items: const [
+                              DropdownMenuItem(value: 'Male', child: Text("Male")),
+                              DropdownMenuItem(value: 'Female', child: Text("Female")),
+                              DropdownMenuItem(value: 'Other', child: Text("Other")),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) setState(() => _sex = val);
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
 
-                Text("WORKER NAME", style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                const SizedBox(height: 4),
-                TextFormField(
-                  controller: _nameController,
-                  style: GoogleFonts.poppins(fontSize: 13),
-                  decoration: InputDecoration(
-                    hintText: "Full Name",
-                    fillColor: isDark ? const Color(0xFF161B22) : Colors.grey[100],
-                    filled: true,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  ),
-                  validator: (val) => val == null || val.trim().isEmpty ? "Required" : null,
-                ),
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("PHONE NUMBER", style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                          const SizedBox(height: 4),
-                          TextFormField(
-                            controller: _phoneController,
-                            keyboardType: TextInputType.phone,
-                            style: GoogleFonts.poppins(fontSize: 13),
-                            decoration: InputDecoration(
-                              hintText: "Mobile No",
-                              fillColor: isDark ? const Color(0xFF161B22) : Colors.grey[100],
-                              filled: true,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("GENDER", style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                          const SizedBox(height: 4),
-                          Container(
-                            height: 48,
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF161B22) : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _sex,
-                                isExpanded: true,
-                                items: const [
-                                  DropdownMenuItem(value: 'Male', child: Text("Male")),
-                                  DropdownMenuItem(value: 'Female', child: Text("Female")),
-                                ],
-                                onChanged: (val) {
-                                  if (val != null) setState(() => _sex = val);
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                Text("SKILL / ROLE MAPPING", style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                const SizedBox(height: 4),
-                Container(
+                // Skill / Role
+                CustomDropdown<String>(
+                  label: "TRADE SKILL / ROLE *",
+                  value: _skillsList.contains(_role) ? _role : _skillsList.first,
                   height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF161B22) : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _skillsList.contains(_role) ? _role : _skillsList.first,
-                      isExpanded: true,
-                      items: _skillsList.map((skill) {
-                        return DropdownMenuItem(value: skill, child: Text(skill));
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => _role = val);
-                      },
-                    ),
-                  ),
+                  fontSize: 13,
+                  items: _skillsList.map((skill) {
+                    return DropdownMenuItem(value: skill, child: Text(skill));
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => _role = val);
+                  },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
+                // Daily Wage Rate & Overtime Pay Rate
                 Row(
                   children: [
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("DAILY WAGE (₹)", style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                          const SizedBox(height: 4),
+                          Text(
+                            "DAILY WAGE (₹) *",
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? const Color(0xFF8B949E) : const Color(0xFF64748B),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
                           TextFormField(
                             controller: _dailyWageController,
-                            keyboardType: TextInputType.number,
-                            style: GoogleFonts.poppins(fontSize: 13),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            style: GoogleFonts.poppins(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
                             decoration: InputDecoration(
-                              hintText: "800",
-                              fillColor: isDark ? const Color(0xFF161B22) : Colors.grey[100],
+                              hintText: "e.g. 600",
+                              hintStyle: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500]),
+                              prefixText: "₹ ",
+                              prefixStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF6366F1)),
+                              fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
                               filled: true,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+                              ),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             ),
+                            validator: (val) {
+                              if (val == null || val.trim().isEmpty) return "Daily wage required";
+                              if (double.tryParse(val.trim()) == null) return "Invalid number";
+                              return null;
+                            },
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("OT RATE / HR (₹)", style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                          const SizedBox(height: 4),
+                          Text(
+                            "OVERTIME PAY / HR (₹)",
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? const Color(0xFF8B949E) : const Color(0xFF64748B),
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
                           TextFormField(
                             controller: _otRateController,
-                            keyboardType: TextInputType.number,
-                            style: GoogleFonts.poppins(fontSize: 13),
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            style: GoogleFonts.poppins(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
                             decoration: InputDecoration(
-                              hintText: "120",
-                              fillColor: isDark ? const Color(0xFF161B22) : Colors.grey[100],
+                              hintText: "e.g. 100",
+                              hintStyle: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[500]),
+                              prefixText: "₹ ",
+                              prefixStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF6366F1)),
+                              fillColor: isDark ? const Color(0xFF0D1117) : const Color(0xFFF8FAFC),
                               filled: true,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                borderSide: const BorderSide(color: Color(0xFF6366F1), width: 1.5),
+                              ),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             ),
                           ),
@@ -242,73 +352,157 @@ class _AddWorkerDialogState extends State<AddWorkerDialog> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
-                Text("ASSIGNED SITE", style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                const SizedBox(height: 4),
-                Container(
+                // Primary Assigned Site
+                CustomDropdown<int?>(
+                  label: "INITIAL ASSIGNED CONSTRUCTION SITE",
+                  value: widget.availableSites.any((s) => s.siteId == _selectedSiteId) ? _selectedSiteId : null,
                   height: 48,
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF161B22) : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int?>(
-                      value: widget.availableSites.any((s) => s.siteId == _selectedSiteId) ? _selectedSiteId : null,
-                      isExpanded: true,
-                      hint: Text("Unassigned Site", style: GoogleFonts.poppins(fontSize: 13)),
-                      items: [
-                        const DropdownMenuItem<int?>(value: null, child: Text("Unassigned")),
-                        ...widget.availableSites.map((s) {
-                          return DropdownMenuItem<int?>(value: s.siteId, child: Text(s.siteName));
-                        }),
-                      ],
-                      onChanged: (val) => setState(() => _selectedSiteId = val),
+                  fontSize: 13,
+                  hintText: "Unassigned Site (Pool)",
+                  items: [
+                    const DropdownMenuItem<int?>(
+                      value: null,
+                      child: Text("Unassigned Site (General Pool)"),
                     ),
-                  ),
+                    ...widget.availableSites.map((s) {
+                      return DropdownMenuItem<int?>(
+                        value: s.siteId,
+                        child: Text(s.siteName),
+                      );
+                    }),
+                  ],
+                  onChanged: (val) => setState(() => _selectedSiteId = val),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 22),
 
+                // Actions
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text("CANCEL", style: GoogleFonts.poppins(color: Colors.grey, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        "Cancel",
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey,
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5B60F6),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        backgroundColor: const Color(0xFF6366F1),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
+                          final dailyWage = double.tryParse(_dailyWageController.text.trim()) ?? 600.0;
+                          final otRate = double.tryParse(_otRateController.text.trim()) ?? 0.0;
+
                           widget.onSave({
                             'name': _nameController.text.trim(),
-                            'phone': _phoneController.text.trim(),
+                            'phone': _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
                             'sex': _sex,
                             'role': _role,
                             'wage_type': 'Daily Wage',
-                            'monthly_salary': double.tryParse(_dailyWageController.text) ?? 800.0,
+                            'monthly_salary': dailyWage,
                             'allowed_leaves': 0,
                             'site_id': _selectedSiteId,
-                            'overtime_pay_per_hour': double.tryParse(_otRateController.text) ?? 120.0,
+                            'overtime_pay_per_hour': otRate,
                             'status': 'Active',
                           });
                           Navigator.pop(context);
                         }
                       },
-                      child: Text("SAVE WORKER", style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        isEdit ? "Save Profile" : "Register Worker",
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
+    );
+
+    if (widget.isBottomSheet) {
+      return Container(
+        width: double.infinity,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 12,
+          bottom: 20 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF161B22) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          border: Border(
+            top: BorderSide(color: isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1)),
           ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.grey[700] : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                child: formContent,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        width: 520,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF161B22) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? const Color(0xFF30363D) : const Color(0xFFE2E8F0),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: SingleChildScrollView(
+          child: formContent,
         ),
       ),
     );
   }
 }
+
+// [upd:2026-04-13T11:30:00+05:30]

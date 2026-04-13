@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_application/features/labour/core/labour_models.dart';
+import 'package:flutter_application/features/leave/widgets/custom_date_picker_dialog.dart';
+export 'package:flutter_application/features/leave/widgets/custom_date_picker_dialog.dart';
 
 class SkillBadge extends StatelessWidget {
   final String skill;
@@ -7,25 +10,28 @@ class SkillBadge extends StatelessWidget {
   const SkillBadge({super.key, required this.skill});
 
   static Color getSkillColor(String skillName) {
-    switch (skillName.toLowerCase()) {
+    switch (skillName.toLowerCase().trim()) {
       case 'mason':
-        return const Color(0xFF818CF8); // Indigo/Blue
+        return const Color(0xFF6366F1); // Indigo
       case 'electrician':
-        return const Color(0xFF22D3EE); // Cyan
+        return const Color(0xFF06B6D4); // Cyan
       case 'carpenter':
-        return const Color(0xFFFBBF24); // Amber
+        return const Color(0xFFF59E0B); // Amber
       case 'plumber':
-        return const Color(0xFF60A5FA); // Blue
+        return const Color(0xFF3B82F6); // Blue
       case 'welder':
-        return const Color(0xFF2DD4BF); // Teal
+        return const Color(0xFF14B8A6); // Teal
       case 'painter':
-        return const Color(0xFFF472B6); // Pink
+        return const Color(0xFFEC4899); // Pink
       case 'foreman':
       case 'supervisor':
-        return const Color(0xFF34D399); // Emerald
+        return const Color(0xFF10B981); // Emerald
+      case 'bar bender':
+      case 'tile layer':
+        return const Color(0xFF8B5CF6); // Purple
       case 'helper':
       default:
-        return const Color(0xFF9CA3AF); // Grey
+        return const Color(0xFF64748B); // Slate
     }
   }
 
@@ -33,19 +39,19 @@ class SkillBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = getSkillColor(skill);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withValues(alpha: 0.4), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
       ),
       child: Text(
         skill.toUpperCase(),
         style: GoogleFonts.poppins(
           fontSize: 10,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
           color: color,
-          letterSpacing: 0.5,
+          letterSpacing: 0.4,
         ),
       ),
     );
@@ -59,13 +65,20 @@ class SiteStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isActive = status.toLowerCase() == 'active';
-    final color = isActive ? const Color(0xFF10B981) : Colors.grey;
+    final s = status.toLowerCase();
+    Color color;
+    if (s == 'active') {
+      color = const Color(0xFF10B981); // Emerald Green
+    } else if (s == 'completed') {
+      color = const Color(0xFF3B82F6); // Blue
+    } else {
+      color = const Color(0xFFF59E0B); // Amber (On Hold)
+    }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
@@ -73,18 +86,18 @@ class SiteStatusBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 6,
-            height: 6,
+            width: 5,
+            height: 5,
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 5),
+          const SizedBox(width: 4),
           Text(
             status.toUpperCase(),
             style: GoogleFonts.poppins(
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: FontWeight.bold,
               color: color,
-              letterSpacing: 0.5,
+              letterSpacing: 0.3,
             ),
           ),
         ],
@@ -103,26 +116,36 @@ class AttendanceStatusChip extends StatelessWidget {
     Color bg;
     Color fg;
 
-    switch (status.toLowerCase()) {
+    switch (status.toLowerCase().trim()) {
       case 'present':
+      case 'p':
         bg = const Color(0xFF065F46);
         fg = const Color(0xFFA7F3D0);
         break;
       case 'absent':
+      case 'a':
         bg = const Color(0xFF991B1B);
         fg = const Color(0xFFFECACA);
         break;
       case 'half day':
-        bg = const Color(0xFF3730A3);
-        fg = const Color(0xFFC7D2FE);
+      case 'hd':
+      case 'h':
+        bg = const Color(0xFF78350F);
+        fg = const Color(0xFFFDE68A);
         break;
       case 'paid leave':
-        bg = const Color(0xFF075985);
-        fg = const Color(0xFFBAE6FD);
+      case 'pl':
+        bg = const Color(0xFF1E3A8A);
+        fg = const Color(0xFFBFDBFE);
+        break;
+      case 'wo':
+      case 'week off':
+        bg = const Color(0xFF334155);
+        fg = const Color(0xFF94A3B8);
         break;
       default:
-        bg = Colors.grey[800]!;
-        fg = Colors.grey[300]!;
+        bg = const Color(0xFF334155);
+        fg = const Color(0xFFCBD5E1);
     }
 
     return Container(
@@ -143,152 +166,362 @@ class AttendanceStatusChip extends StatelessWidget {
   }
 }
 
-class LabourExcelGrid extends StatelessWidget {
-  final List<String> columns;
-  final List<List<Widget>> rows;
+class LabourStatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color iconColor;
+  final String? subtitle;
   final bool isDark;
-  final List<double>? columnWidths;
 
-  const LabourExcelGrid({
+  const LabourStatCard({
     super.key,
-    required this.columns,
-    required this.rows,
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.iconColor,
+    this.subtitle,
     required this.isDark,
-    this.columnWidths,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (rows.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.table_chart_outlined, size: 44, color: Colors.grey[500]),
-            const SizedBox(height: 12),
-            Text(
-              "No records available in spreadsheet grid",
-              style: GoogleFonts.poppins(color: Colors.grey[400], fontSize: 13, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final headerBg = isDark ? const Color(0xFF151D2A) : const Color(0xFF1E293B);
-    final rowBgEven = isDark ? const Color(0xFF0E1420) : Colors.white;
-    final rowBgOdd = isDark ? const Color(0xFF141C2B) : const Color(0xFFF8FAFC);
-    final gridBorder = isDark ? const Color(0xFF212B3B) : const Color(0xFFE2E8F0);
-    final indexBg = isDark ? const Color(0xFF161F2C) : const Color(0xFFF1F5F9);
-
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: gridBorder, width: 1),
+        color: isDark ? const Color(0xFF161B22) : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? const Color(0xFF30363D) : const Color(0xFFE2E8F0),
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Table(
-              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-              columnWidths: {
-                0: const FixedColumnWidth(48), // Index Column #
-                if (columnWidths != null)
-                  for (int i = 0; i < columnWidths!.length; i++)
-                    i + 1: FixedColumnWidth(columnWidths![i]),
-              },
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, color: iconColor, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Header Row
-                TableRow(
-                  decoration: BoxDecoration(color: headerBg),
-                  children: [
-                    // Index Header #
-                    TableCell(
-                      child: Container(
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                        decoration: BoxDecoration(
-                          border: Border(right: BorderSide(color: isDark ? const Color(0xFF2A364B) : Colors.white24, width: 1)),
-                        ),
-                        child: Text(
-                          "#",
-                          style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF94A3B8)),
-                        ),
-                      ),
-                    ),
-                    // Data Column Headers
-                    ...columns.map((col) {
-                      return TableCell(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          decoration: BoxDecoration(
-                            border: Border(right: BorderSide(color: isDark ? const Color(0xFF2A364B) : Colors.white12, width: 1)),
-                          ),
-                          child: Text(
-                            col.toUpperCase(),
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-
-                // Data Rows
-                for (int rowIndex = 0; rowIndex < rows.length; rowIndex++)
-                  TableRow(
-                    decoration: BoxDecoration(
-                      color: rowIndex % 2 == 0 ? rowBgEven : rowBgOdd,
-                      border: Border(bottom: BorderSide(color: gridBorder, width: 1)),
-                    ),
-                    children: [
-                      // Index Cell (1, 2, 3...)
-                      TableCell(
-                        child: Container(
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
-                          decoration: BoxDecoration(
-                            color: indexBg,
-                            border: Border(right: BorderSide(color: gridBorder, width: 1)),
-                          ),
-                          child: Text(
-                            "${rowIndex + 1}",
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? const Color(0xFF94A3B8) : Colors.grey[600],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Data Cells
-                      ...rows[rowIndex].map((cellWidget) {
-                        return TableCell(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                            decoration: BoxDecoration(
-                              border: Border(right: BorderSide(color: gridBorder, width: 1)),
-                            ),
-                            child: cellWidget,
-                          ),
-                        );
-                      }),
-                    ],
+                Text(
+                  title.toUpperCase(),
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? const Color(0xFF8B949E) : const Color(0xFF64748B),
+                    letterSpacing: 0.5,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : const Color(0xFF0F172A),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    subtitle!,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: isDark ? const Color(0xFF6E7681) : const Color(0xFF94A3B8),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class LabourSiteCard extends StatelessWidget {
+  final LabourSite site;
+  final int assignedWorkers;
+  final VoidCallback onSelect;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final bool isDark;
+
+  const LabourSiteCard({
+    super.key,
+    required this.site,
+    required this.assignedWorkers,
+    required this.onSelect,
+    required this.onEdit,
+    required this.onDelete,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onSelect,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF161B22) : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isDark ? const Color(0xFF30363D) : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(Icons.business_rounded, color: Color(0xFF6366F1), size: 15),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        site.siteName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF0F172A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (site.locationDetails != null && site.locationDetails!.isNotEmpty)
+                        Text(
+                          site.locationDetails!,
+                          style: GoogleFonts.poppins(
+                            fontSize: 9.5,
+                            color: isDark ? const Color(0xFF8B949E) : const Color(0xFF64748B),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                SiteStatusBadge(status: site.status),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.people_alt_outlined, size: 13, color: Color(0xFF6366F1)),
+                    const SizedBox(width: 4),
+                    Text(
+                      "$assignedWorkers Worker${assignedWorkers == 1 ? '' : 's'}",
+                      style: GoogleFonts.poppins(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF6366F1),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.edit_outlined, size: 15, color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                      onPressed: onEdit,
+                      tooltip: "Edit Site",
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 15, color: Color(0xFFEF4444)),
+                      onPressed: onDelete,
+                      tooltip: "Delete Site",
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: onSelect,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "Dashboard",
+                              style: GoogleFonts.poppins(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                            const SizedBox(width: 2),
+                            const Icon(Icons.chevron_right, size: 12, color: Colors.white),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
+
+/// Custom Date Picker Helper using CustomDatePickerDialog
+Future<DateTime?> showLabourDatePicker(
+  BuildContext context, {
+  required DateTime initialDate,
+  DateTime? firstDate,
+  DateTime? lastDate,
+}) {
+  return showDialog<DateTime>(
+    context: context,
+    builder: (ctx) => CustomDatePickerDialog(
+      initialDate: initialDate,
+      firstDate: firstDate ?? DateTime(2020),
+      lastDate: lastDate ?? DateTime(2035),
+    ),
+  );
+}
+
+/// Custom Styled Dropdown Widget with dark/light mode support, clean borders, and custom arrow
+class CustomDropdown<T> extends StatelessWidget {
+  final T value;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+  final String? label;
+  final String? hintText;
+  final Widget? prefixIcon;
+  final double height;
+  final double fontSize;
+  final bool isExpanded;
+
+  const CustomDropdown({
+    super.key,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+    this.label,
+    this.hintText,
+    this.prefixIcon,
+    this.height = 36,
+    this.fontSize = 11.5,
+    this.isExpanded = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF161B22) : Colors.white;
+    final border = isDark ? const Color(0xFF30363D) : const Color(0xFFCBD5E1);
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (label != null) ...[
+          Text(
+            label!,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: isDark ? const Color(0xFF8B949E) : const Color(0xFF64748B),
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 5),
+        ],
+        Container(
+          height: height,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: border),
+          ),
+          child: Row(
+            children: [
+              if (prefixIcon != null) ...[
+                prefixIcon!,
+                const SizedBox(width: 6),
+              ],
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<T>(
+                    value: value,
+                    isExpanded: isExpanded,
+                    dropdownColor: isDark ? const Color(0xFF161B22) : Colors.white,
+                    style: GoogleFonts.poppins(
+                      fontSize: fontSize,
+                      fontWeight: FontWeight.w500,
+                      color: textColor,
+                    ),
+                    icon: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 18,
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                    items: items,
+                    onChanged: onChanged,
+                    hint: hintText != null
+                        ? Text(
+                            hintText!,
+                            style: GoogleFonts.poppins(
+                              fontSize: fontSize,
+                              color: Colors.grey[500],
+                            ),
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// [upd:2026-04-13T09:00:00+05:30]

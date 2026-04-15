@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../models/dar_models.dart';
+import 'package:flutter_application/features/daily_activity/core/dar_models.dart';
 
 class EventMeetingDialog extends StatefulWidget {
   final DarItem? initialData;
@@ -590,3 +590,5 @@ class _EventMeetingDialogState extends State<EventMeetingDialog> {
     );
   }
 }
+
+// [upd:2026-04-15T14:00:00+05:30]

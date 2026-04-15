@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../shared/layout/responsive_layout.dart';
-import '../../../shared/services/auth_service.dart';
-import './dar_admin/dar_admin_controller.dart';
-import './dar_admin/dar_admin_mobile_view.dart';
-import './dar_admin/dar_admin_tablet_portrait_view.dart';
-import './dar_admin/dar_admin_tablet_landscape_view.dart';
+import 'package:flutter_application/shared/layout/responsive_layout.dart';
+import 'package:flutter_application/shared/services/auth_service.dart';
+import 'package:flutter_application/features/daily_activity/widgets/dar_admin_controller.dart';
+import 'package:flutter_application/features/daily_activity/widgets/dar_admin_mobile_view.dart';
+import 'package:flutter_application/features/daily_activity/widgets/dar_admin_tablet_portrait_view.dart';
+import 'package:flutter_application/features/daily_activity/widgets/dar_admin_tablet_landscape_view.dart';
 
 /// Thin shell that wires the [DarAdminController] into the widget tree and
 /// delegates rendering to the correct responsive layout variant.
@@ -46,3 +46,5 @@ class _EmployeesDarAdminViewState
     );
   }
 }
+
+// [upd:2026-04-15T14:00:00+05:30]

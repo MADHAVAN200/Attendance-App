@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
-import '../../../shared/widgets/glass_container.dart';
-import '../models/dar_models.dart';
+import 'package:flutter_application/shared/widgets/glass_container.dart';
+import 'package:flutter_application/features/daily_activity/core/dar_models.dart';
 
 class DailyActivityDaySnapshotCard extends StatelessWidget {
   final String date;
@@ -171,3 +171,5 @@ class DailyActivityDaySnapshotCard extends StatelessWidget {
     );
   }
 }
+
+// [upd:2026-04-15T11:30:00+05:30]

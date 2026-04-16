@@ -1,16 +1,16 @@
-
+﻿
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
-import '../../../../shared/services/auth_service.dart';
-import '../models/correction_request.dart';
-import '../services/attendance_service.dart';
+import 'package:flutter_application/shared/services/auth_service.dart';
+import 'package:flutter_application/features/attendance/core/correction_request.dart';
+import 'package:flutter_application/features/attendance/core/attendance_service.dart';
 
-import 'correction_ui_components.dart';
-import '../../../../features/leave/widgets/custom_date_picker_dialog.dart';
+import 'package:flutter_application/features/attendance/widgets/correction_ui_components.dart';
+import 'package:flutter_application/features/leave/widgets/custom_date_picker_dialog.dart';
 
 class CorrectionRequestForm extends StatefulWidget {
   final VoidCallback onSuccess;
@@ -619,3 +619,5 @@ extension StringExtension on String {
     return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 }
+
+// [upd:2026-04-16T14:00:00+05:30]

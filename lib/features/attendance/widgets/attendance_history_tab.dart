@@ -1,17 +1,17 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'dart:io';
-import '../../../../shared/widgets/glass_container.dart';
-import '../../../../shared/services/auth_service.dart';
-import '../providers/attendance_provider.dart';
-import '../services/attendance_service.dart';
-import '../models/attendance_record.dart';
-import 'attendance_common_widgets.dart';
-import '../../../../shared/widgets/interactive_image_viewer.dart';
+import 'package:flutter_application/shared/widgets/glass_container.dart';
+import 'package:flutter_application/shared/services/auth_service.dart';
+import 'package:flutter_application/features/attendance/core/attendance_provider.dart';
+import 'package:flutter_application/features/attendance/core/attendance_service.dart';
+import 'package:flutter_application/features/attendance/core/attendance_record.dart';
+import 'package:flutter_application/features/attendance/widgets/attendance_common_widgets.dart';
+import 'package:flutter_application/shared/widgets/interactive_image_viewer.dart';
 
 class AttendanceHistoryTab extends StatefulWidget {
   final bool shrinkWrap;
@@ -402,3 +402,5 @@ class _AttendanceHistoryTabState extends State<AttendanceHistoryTab> {
     );
   }
 }
+
+// [upd:2026-04-16T11:30:00+05:30]

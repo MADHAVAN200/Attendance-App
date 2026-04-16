@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../shared/widgets/glass_container.dart';
+import 'package:flutter_application/shared/widgets/glass_container.dart';
 
 // --- Header ---
 class MonthlyReportHeader extends StatelessWidget {
@@ -245,3 +245,5 @@ class AttendanceSummaryCard extends StatelessWidget {
     );
   }
 }
+
+// [upd:2026-04-16T09:00:00+05:30]

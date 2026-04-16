@@ -11,23 +11,24 @@ import 'package:flutter_application/shared/services/auth_service.dart';
 import 'package:flutter_application/features/attendance/core/attendance_provider.dart';
 import 'package:flutter_application/features/attendance/core/attendance_service.dart';
 import 'package:flutter_application/features/attendance/core/attendance_record.dart';
-import 'package:flutter_application/features/attendance/widgets/attendance_common_widgets.dart';
+import 'package:flutter_application/features/attendance/widgets/attendance_common_widgets.dart'; // Keep for SummaryCard
+import 'package:flutter_application/features/attendance/widgets/attendance_mobile_common_widgets.dart'; // Mobile Header
 
-class AttendanceAnalyticsTab extends StatefulWidget {
+class AttendanceAnalyticsMobile extends StatefulWidget {
   final bool shrinkWrap;
   final ScrollPhysics? physics;
 
-  const AttendanceAnalyticsTab({
-    super.key, 
+  const AttendanceAnalyticsMobile({
+    super.key,
     this.shrinkWrap = false,
     this.physics,
   });
 
   @override
-  State<AttendanceAnalyticsTab> createState() => _AttendanceAnalyticsTabState();
+  State<AttendanceAnalyticsMobile> createState() => _AttendanceAnalyticsMobileState();
 }
 
-class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
+class _AttendanceAnalyticsMobileState extends State<AttendanceAnalyticsMobile> {
   DateTime _selectedMonth = DateTime.now();
   List<AttendanceRecord> _records = [];
   bool _isLoading = false;
@@ -79,7 +80,7 @@ class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Report saved: $fileName'),
+            content: const Text('Report saved'),
             action: SnackBarAction(
               label: 'OPEN',
               onPressed: () => OpenFilex.open(filePath),
@@ -109,9 +110,6 @@ class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final isDesktop = MediaQuery.of(context).size.width > 900;
-    final isTablet = MediaQuery.of(context).size.width > 600 && !isDesktop;
-
     // Analytics Calculations
     final totalDays = _records.length;
     final onTimeCount = _records.where((r) => r.status.toUpperCase() == 'PRESENT').length;
@@ -135,9 +133,9 @@ class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
     return ListView(
       shrinkWrap: widget.shrinkWrap,
       physics: widget.physics,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       children: [
-        MonthlyReportHeader(
+        MonthlyReportHeaderMobile(
           selectedMonth: _selectedMonth, 
           onMonthChanged: (newDate) {
             setState(() {
@@ -150,34 +148,22 @@ class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
         ),
         const SizedBox(height: 24),
         
-        // 1. Summary Cards
-        isDesktop || isTablet
-          ? Row(
-              children: [
-                Expanded(child: AttendanceSummaryCard(title: 'Total Records', value: '$totalDays', icon: Icons.calendar_today, color: Colors.blue)),
-                const SizedBox(width: 16),
-                Expanded(child: AttendanceSummaryCard(title: 'Present', value: '$presentPercent%', percentage: '$presentPercent%')),
-                const SizedBox(width: 16),
-                Expanded(child: AttendanceSummaryCard(title: 'Late', value: '$latePercent%', percentage: '$latePercent%')),
-                const SizedBox(width: 16),
-                Expanded(child: AttendanceSummaryCard(title: 'Avg Hours', value: avgHours, icon: Icons.access_time, color: Colors.blue)),
-              ],
-            )
-          : Column(
-              children: [
-                AttendanceSummaryCard(title: 'Total Records', value: '$totalDays', icon: Icons.calendar_today, color: Colors.blue),
-                const SizedBox(height: 12),
-                AttendanceSummaryCard(title: 'Present', value: '$presentPercent%', percentage: '$presentPercent%'),
-                const SizedBox(height: 12),
-                AttendanceSummaryCard(title: 'Late', value: '$latePercent%', percentage: '$latePercent%'),
-                const SizedBox(height: 12),
-                AttendanceSummaryCard(title: 'Avg Hours', value: avgHours, icon: Icons.access_time, color: Colors.blue),
-              ],
-            ),
+        // 1. Summary Cards (Stacked for Mobile)
+        Column(
+          children: [
+            AttendanceSummaryCard(title: 'Total Records', value: '$totalDays', icon: Icons.calendar_today, color: Colors.blue),
+            const SizedBox(height: 12),
+            AttendanceSummaryCard(title: 'Present', value: '$presentPercent%', percentage: '$presentPercent%'),
+            const SizedBox(height: 12),
+            AttendanceSummaryCard(title: 'Late', value: '$latePercent%', percentage: '$latePercent%'),
+            const SizedBox(height: 12),
+            AttendanceSummaryCard(title: 'Avg Hours', value: avgHours, icon: Icons.access_time, color: Colors.blue),
+          ],
+        ),
         
         const SizedBox(height: 24),
 
-        // 2. Total Attendance Report Chart (Line Chart) - Kept Mock for now as it needs daily series
+        // 2. Line Chart
         GlassContainer(
           padding: const EdgeInsets.all(24),
           borderRadius: 24,
@@ -187,13 +173,13 @@ class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Total Attendance Report', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
+                  Text('Total Attendance', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
                   const Icon(Icons.more_vert, size: 20, color: Colors.grey),
                 ],
               ),
               const SizedBox(height: 32),
-              const SizedBox(
-                height: 300,
+              SizedBox(
+                height: 250, // Slightly shorter for mobile
                 child: _LineChartWidget(),
               ),
             ],
@@ -202,23 +188,10 @@ class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
 
         const SizedBox(height: 24),
 
-        // 3. Bottom Row: Attendance Status (Pie) & Weekly Activity (Radar)
-         isDesktop || isTablet
-          ? Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _buildAttendanceStatusCard(context, onTimeCount, lateCount)),
-                const SizedBox(width: 24),
-                Expanded(child: _buildWeeklyActivityCard(context)),
-              ],
-            )
-          : Column(
-              children: [
-                _buildAttendanceStatusCard(context, onTimeCount, lateCount),
-                const SizedBox(height: 24),
-                _buildWeeklyActivityCard(context),
-              ],
-            ),
+        // 3. Status & Weekly (Stacked)
+        _buildAttendanceStatusCard(context, onTimeCount, lateCount),
+        const SizedBox(height: 24),
+        _buildWeeklyActivityCard(context),
       ],
     );
   }
@@ -232,9 +205,9 @@ class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Attendance Status', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           SizedBox(
-            height: 250,
+            height: 200,
             child: Row(
               children: [
                 Expanded(
@@ -244,18 +217,18 @@ class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
                       PieChart(
                         PieChartData(
                           sectionsSpace: 0,
-                          centerSpaceRadius: 60,
+                          centerSpaceRadius: 50,
                           sections: [
-                            PieChartSectionData(color: const Color(0xFF10B981), value: onTime.toDouble(), radius: 25, showTitle: false), // On Time
-                            PieChartSectionData(color: const Color(0xFFF59E0B), value: late.toDouble(), radius: 25, showTitle: false), // Late
+                            PieChartSectionData(color: const Color(0xFF10B981), value: onTime.toDouble(), radius: 20, showTitle: false), 
+                            PieChartSectionData(color: const Color(0xFFF59E0B), value: late.toDouble(), radius: 20, showTitle: false),
                           ],
                         ),
                       ),
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('$total', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold)),
-                          Text('TOTAL', style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey)),
+                          Text('$total', style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold)),
+                          Text('TOTAL', style: GoogleFonts.poppins(fontSize: 9, color: Colors.grey)),
                         ],
                       ),
                     ],
@@ -280,11 +253,10 @@ class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
 
   Widget _buildLegendItem(Color color, String text) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 8),
-        Flexible(child: Text(text, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey), overflow: TextOverflow.ellipsis)),
+        Text(text, style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
       ],
     );
   }
@@ -297,43 +269,42 @@ class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Weekly Activity', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           SizedBox(
-            height: 250,
-            child: RadarChart(
-              RadarChartData(
-                radarBackgroundColor: Colors.transparent,
-                borderData: FlBorderData(show: false),
-                radarBorderData: const BorderSide(color: Colors.transparent),
-                titlePositionPercentageOffset: 0.2,
-                titleTextStyle: GoogleFonts.poppins(fontSize: 10, color: Colors.grey),
-                tickCount: 1,
-                ticksTextStyle: const TextStyle(color: Colors.transparent),
-                gridBorderData: BorderSide(color: Colors.grey.withValues(alpha: 0.1), width: 1),
-                radarShape: RadarShape.polygon,
-                getTitle: (index, angle) {
-                  const titles = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                  if (index < titles.length) return RadarChartTitle(text: titles[index]);
-                  return const RadarChartTitle(text: '');
-                },
-                dataSets: [
-                  RadarDataSet(
-                    fillColor: const Color(0xFF5B60F6).withValues(alpha: 0.2),
-                    borderColor: const Color(0xFF5B60F6),
-                    entryRadius: 2,
-                    dataEntries: [
-                       const RadarEntry(value: 3),
-                       const RadarEntry(value: 5),
-                       const RadarEntry(value: 2),
-                       const RadarEntry(value: 4),
-                       const RadarEntry(value: 1),
-                       const RadarEntry(value: 0),
-                       const RadarEntry(value: 0),
-                    ],
-                    borderWidth: 2,
+            height: 200,
+            child: Column(
+              children: [
+                Text('Weekly Activity (summary)', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+                      final values = [3.0,5.0,2.0,4.0,1.0,0.0,0.0];
+                      final maxVal = values.fold<double>(0, (prev, e) => e > prev ? e : prev);
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: List.generate(labels.length, (i) {
+                          final heightFactor = maxVal > 0 ? values[i] / maxVal : 0.0;
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Container(
+                                width: (constraints.maxWidth - 24) / 14,
+                                height: constraints.maxHeight * 0.65 * heightFactor,
+                                decoration: BoxDecoration(color: const Color(0xFF5B60F6).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(labels[i], style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey)),
+                            ],
+                          );
+                        }),
+                      );
+                    },
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -343,83 +314,48 @@ class _AttendanceAnalyticsTabState extends State<AttendanceAnalyticsTab> {
 }
 
 class _LineChartWidget extends StatelessWidget {
-  const _LineChartWidget();
-
   @override
   Widget build(BuildContext context) {
     return LineChart(
       LineChartData(
-        gridData: FlGridData(
-          show: true,
-          drawVerticalLine: false,
-          horizontalInterval: 0.2,
-          getDrawingHorizontalLine: (value) => FlLine(
-            color: Colors.grey.withValues(alpha: 0.1),
-            strokeWidth: 1,
-          ),
-        ),
+        gridData: FlGridData(show: false),
         titlesData: FlTitlesData(
           show: true,
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              reservedSize: 30,
+              reservedSize: 22,
               interval: 1,
               getTitlesWidget: (value, meta) {
-                // Mock dates
-                const dates = ['15', '18', '19', '19', '19', '21', '22', '23', '25', '25']; 
-                if (value.toInt() >= 0 && value.toInt() < dates.length) {
-                   return Padding(
-                     padding: const EdgeInsets.only(top: 8.0),
-                     child: Text(dates[value.toInt()], style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey)),
-                   );
-                }
-                return const Text('');
+                  // Simplified for mobile
+                  const dates = ['15', '', '19', '', '', '21', '', '23', '', '25']; 
+                  if (value.toInt() >= 0 && value.toInt() < dates.length) {
+                     return Text(dates[value.toInt()], style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey));
+                  }
+                  return const Text('');
               },
-            ),
-          ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              interval: 0.2,
-              getTitlesWidget: (value, meta) => Text(
-                value.toStringAsFixed(1),
-                style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey),
-              ),
-              reservedSize: 30,
             ),
           ),
         ),
         borderData: FlBorderData(show: false),
         minX: 0,
         maxX: 9,
-        minY: 0,
-        maxY: 1.0,
         lineBarsData: [
           LineChartBarData(
             spots: const [
-              FlSpot(0, 0.2),
-              FlSpot(1, 0.4),
-              FlSpot(2, 0.3),
-              FlSpot(3, 0.7),
-              FlSpot(4, 0.5),
-              FlSpot(5, 0.8),
-              FlSpot(6, 0.6),
-              FlSpot(7, 0.9),
-              FlSpot(8, 0.4),
-              FlSpot(9, 0.5),
+              FlSpot(0, 0.2), FlSpot(1, 0.4), FlSpot(2, 0.3), FlSpot(3, 0.7),
+              FlSpot(4, 0.5), FlSpot(5, 0.8), FlSpot(6, 0.6), FlSpot(7, 0.9),
+              FlSpot(8, 0.4), FlSpot(9, 0.5),
             ],
             isCurved: true,
             color: const Color(0xFF5B60F6),
             barWidth: 2,
             isStrokeCapRound: true,
             dotData: const FlDotData(show: false),
-            belowBarData: BarAreaData(
-              show: true,
-              color: const Color(0xFF5B60F6).withValues(alpha: 0.1),
-            ),
+            belowBarData: BarAreaData(show: true, color: const Color(0xFF5B60F6).withValues(alpha: 0.1)),
           ),
         ],
       ),

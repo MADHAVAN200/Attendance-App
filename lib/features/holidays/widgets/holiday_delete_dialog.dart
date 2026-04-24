@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../shared/widgets/glass_container.dart';
+import 'package:flutter_application/shared/widgets/glass_container.dart';
 
 class HolidayDeleteDialog extends StatelessWidget {
   final String title;
@@ -133,3 +133,5 @@ class HolidayDeleteDialog extends StatelessWidget {
     );
   }
 }
+
+// [upd:2026-04-24T11:30:00+05:30]

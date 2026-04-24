@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../../shared/constants/api_constants.dart';
-import '../models/chat_models.dart';
-import '../services/chat_service.dart';
-import '../../../shared/services/auth_service.dart';
-import '../../../shared/widgets/glass_container.dart';
-import '../../../shared/widgets/toast_helper.dart';
+import 'package:flutter_application/shared/constants/api_constants.dart';
+import 'package:flutter_application/features/collaboration/core/chat_models.dart';
+import 'package:flutter_application/features/collaboration/core/chat_service.dart';
+import 'package:flutter_application/shared/services/auth_service.dart';
+import 'package:flutter_application/shared/widgets/glass_container.dart';
+import 'package:flutter_application/shared/widgets/toast_helper.dart';
 
 class NewDmDialog extends StatefulWidget {
   final Function(ChatRoom) onRoomCreated;
@@ -865,3 +865,5 @@ Widget _buildInitialsAvatar(String displayName, String initials, double radius) 
     ),
   );
 }
+
+// [upd:2026-04-24T17:00:00+05:30]

@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,17 +8,17 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../models/chat_models.dart';
-import '../services/chat_service.dart';
-import '../../../../shared/services/socket_service.dart';
-import '../../../../shared/services/auth_service.dart';
-import '../../../../shared/widgets/glass_container.dart';
-import '../../../../shared/widgets/toast_helper.dart';
-import '../../../../shared/widgets/interactive_image_viewer.dart';
-import '../../../../shared/constants/api_constants.dart';
-import '../../../../shared/navigation/navigation_controller.dart';
-import 'chat_dialogs.dart';
-import 'voice_note_player_widget.dart';
+import 'package:flutter_application/features/collaboration/core/chat_models.dart';
+import 'package:flutter_application/features/collaboration/core/chat_service.dart';
+import 'package:flutter_application/shared/services/socket_service.dart';
+import 'package:flutter_application/shared/services/auth_service.dart';
+import 'package:flutter_application/shared/widgets/glass_container.dart';
+import 'package:flutter_application/shared/widgets/toast_helper.dart';
+import 'package:flutter_application/shared/widgets/interactive_image_viewer.dart';
+import 'package:flutter_application/shared/constants/api_constants.dart';
+import 'package:flutter_application/shared/navigation/navigation_controller.dart';
+import 'package:flutter_application/features/collaboration/widgets/chat_dialogs.dart';
+import 'package:flutter_application/features/collaboration/widgets/voice_note_player_widget.dart';
 
 class ChatWorkspaceWidget extends StatefulWidget {
   final ChatRoom initialRoom;
@@ -1325,9 +1325,9 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
                 } else if (cardType == 'correction_request') {
                   navigateTo(PageType.myAttendance);
                 } else if (cardType == 'shift_assign') {
-                  navigateTo(PageType.policyEngine);
+                  navigateToPolicies(tab: 'shifts');
                 } else if (cardType == 'geofence_assign') {
-                  navigateTo(PageType.geoFencing);
+                  navigateToPolicies(tab: 'geofencing');
                 }
               },
               borderRadius: BorderRadius.circular(6),
@@ -1988,3 +1988,5 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
     );
   }
 }
+
+// [upd:2026-04-24T17:00:00+05:30]

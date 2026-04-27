@@ -155,10 +155,15 @@ class _LoadingScreenState extends State<LoadingScreen> with TickerProviderStateM
     final bgGradColor1 = isDark ? const Color(0xFF4F46E5) : const Color(0xFF6366F1);
     final bgGradColor2 = isDark ? const Color(0xFF7C3AED) : const Color(0xFF8B5CF6);
 
-    Widget loadingContent = Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
+    Widget loadingContent = FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
         // Brand Icon Outer Container with pulse and rotation
         SizedBox(
           width: 60,
@@ -257,6 +262,7 @@ class _LoadingScreenState extends State<LoadingScreen> with TickerProviderStateM
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   "MANO ",
@@ -295,7 +301,9 @@ class _LoadingScreenState extends State<LoadingScreen> with TickerProviderStateM
           ],
         ),
       ],
-    );
+    ),
+  ),
+);
 
     if (!widget.fullScreen) {
       return Container(
@@ -393,3 +401,5 @@ class _LoadingScreenState extends State<LoadingScreen> with TickerProviderStateM
     );
   }
 }
+
+// [upd:2026-04-27T17:00:00+05:30]

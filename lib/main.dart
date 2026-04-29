@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,9 +6,9 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // Import dotenv
-import 'package:flutter_application/features/dashboard/dashboard_screen.dart';
-import 'package:flutter_application/features/auth/login_screen.dart'; // Import new LoginScreen
-import 'package:flutter_application/features/auth/views/force_password_change_screen.dart';
+import 'package:flutter_application/features/dashboard/core/dashboard_screen.dart';
+import 'package:flutter_application/features/auth/core/login_screen.dart'; // Import new LoginScreen
+import 'package:flutter_application/features/auth/core/force_password_change_screen.dart';
 import 'package:flutter_application/shared/providers/theme_simple.dart';
 import 'package:flutter_application/shared/widgets/orientation_guard.dart';
 import 'package:flutter_application/shared/widgets/loading_screen.dart';
@@ -19,13 +19,13 @@ import 'package:flutter_application/shared/services/in_app_update_service.dart';
 import 'package:flutter_application/shared/services/notification_service.dart';
 import 'package:flutter_application/shared/services/local_notification_service.dart';
 import 'package:flutter_application/shared/services/dashboard_provider.dart';
-import 'package:flutter_application/features/attendance/providers/attendance_provider.dart';
-import 'package:flutter_application/features/leave/providers/leave_provider.dart';
-import 'package:flutter_application/features/leave/services/leave_service.dart'; // Import LeaveService
+import 'package:flutter_application/features/attendance/core/attendance_provider.dart';
+import 'package:flutter_application/features/leave/core/leave_provider.dart';
+import 'package:flutter_application/features/leave/core/leave_service.dart'; // Import LeaveService
 import 'package:flutter_application/shared/services/permission_service.dart'; // Import PermissionService
 import 'package:flutter_application/shared/services/chatbot_service.dart'; // Import ChatbotService
 import 'package:flutter_application/shared/services/socket_service.dart';
-import 'package:flutter_application/features/collaboration/services/chat_service.dart';
+import 'package:flutter_application/features/collaboration/core/chat_service.dart';
 
 
 @pragma('vm:entry-point')
@@ -351,3 +351,5 @@ class _AuthWrapperState extends State<AuthWrapper> {
     );
   }
 }
+
+// [upd:2026-04-29T17:00:00+05:30]

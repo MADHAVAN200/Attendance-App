@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'glass_container.dart';
-import '../services/notification_service.dart';
-import '../models/notification_model.dart';
-import '../utils/notification_helper.dart';
+import 'package:flutter_application/shared/widgets/glass_container.dart';
+import 'package:flutter_application/shared/services/notification_service.dart';
+import 'package:flutter_application/shared/models/notification_model.dart';
+import 'package:flutter_application/shared/utils/notification_helper.dart';
 import 'package:intl/intl.dart';
 
 class NotificationList extends StatefulWidget {
@@ -388,3 +388,5 @@ class _NotificationListState extends State<NotificationList> {
     }
   }
 }
+
+// [upd:2026-04-29T09:00:00+05:30]

@@ -212,6 +212,7 @@ class ChatbotFabLocation extends FloatingActionButtonLocation {
     final Offset standardOffset = FloatingActionButtonLocation.endFloat.getOffset(scaffoldGeometry);
     final hasExistingFab = pageType == PageType.employees ||
         pageType == PageType.leavesAndHolidays ||
+        pageType == PageType.policies ||
         pageType == PageType.policyEngine ||
         pageType == PageType.dailyActivity;
         
@@ -237,6 +238,7 @@ class DynamicChatbotFabLocation extends FloatingActionButtonLocation {
     final pageType = navigationNotifier.value;
     final hasExistingFab = pageType == PageType.employees ||
         pageType == PageType.leavesAndHolidays ||
+        pageType == PageType.policies ||
         pageType == PageType.policyEngine ||
         pageType == PageType.dailyActivity;
         
@@ -347,3 +349,5 @@ class ChatbotOverlayManager {
     hideFab();
   }
 }
+
+// [upd:2026-04-29T09:00:00+05:30]

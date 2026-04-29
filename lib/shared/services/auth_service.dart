@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:dio/dio.dart';
@@ -7,19 +7,19 @@ import 'package:cookie_jar/cookie_jar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
-import '../constants/api_constants.dart';
-import '../widgets/toast_helper.dart';
-import '../utils/error_helper.dart';
-import '../utils/error_logger.dart';
+import 'package:flutter_application/shared/constants/api_constants.dart';
+import 'package:flutter_application/shared/widgets/toast_helper.dart';
+import 'package:flutter_application/shared/utils/error_helper.dart';
+import 'package:flutter_application/shared/utils/error_logger.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'network_monitor.dart';
+import 'package:flutter_application/shared/services/network_monitor.dart';
 
-import '../models/user_model.dart';
+import 'package:flutter_application/shared/models/user_model.dart';
 import 'package:http_parser/http_parser.dart'; // For MediaType
 import 'package:mime/mime.dart'; // If available, or manually check extensions
 import 'package:http/http.dart' as http; // For MultipartRequest
 import 'dart:convert'; // For jsonDecode
-import 'mail_service.dart';
+import 'package:flutter_application/shared/services/mail_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 const MethodChannel _settingsChannel = MethodChannel('co.mano.attendance/settings');
@@ -758,3 +758,5 @@ class AuthService extends ChangeNotifier {
   // Expose Dio client for other services to reuse auth headers/interceptors
   Dio get dio => _dio;
 }
+
+// [upd:2026-04-29T09:00:00+05:30]

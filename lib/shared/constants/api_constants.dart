@@ -105,10 +105,21 @@ class ApiConstants {
   static const String labourSites = '/labour/sites';
   static const String labourLabours = '/labour/labours';
   static const String labourAttendance = '/labour/attendance';
+  static const String labourAttendanceMonthlySummary = '/labour/attendance/monthly-summary';
   static const String labourSchedule = '/labour/schedule';
   static const String labourFinancesSummary = '/labour/finances/summary';
   static const String labourFinancesAdvance = '/labour/finances/advance';
   static const String labourFinancesPayout = '/labour/finances/payout';
+
+  // Payroll
+  static const String payrollDashboard = '/payroll/dashboard';
+  static const String payrollFinalize = '/payroll/finalize';
+  static const String payrollRuns = '/payroll/runs';
+  static const String payrollSettings = '/payroll/settings';
+  // Per-employee payroll (append /:employeeId/...)
+  static const String payrollEmployee = '/payroll/employees';
+  // Per-entry payroll (append /:entryId/...)
+  static const String payrollEntries = '/payroll/entries';
 
   // Chatbot
   static const String chatbotAskInternal = '/website-chatbot/ask-internal';
@@ -116,3 +127,5 @@ class ApiConstants {
   // Keys
   static String get recaptchaSiteKey => dotenv.env['RECAPTCHA_SITE_KEY'] ?? '';
 }
+
+// [upd:2026-04-29T11:30:00+05:30]

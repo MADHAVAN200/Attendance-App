@@ -267,3 +267,5 @@ void _backgroundTapHandler(NotificationResponse response) {
   // Navigation happens in NotificationService via onMessageOpenedApp / getInitialMessage.
   debugPrint('LocalNotificationService: background tap — payload: ${response.payload}');
 }
+
+// [upd:2026-04-29T11:30:00+05:30]

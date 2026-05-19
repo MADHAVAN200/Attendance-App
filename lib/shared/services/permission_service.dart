@@ -4,6 +4,12 @@ import 'dart:io';
 
 class PermissionService {
   Future<void> requestInitialPermissions() async {
+    // Skip on unsupported platforms to avoid MissingPluginException
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      debugPrint('PermissionService: Skipping permissions on this platform');
+      return;
+    }
+
     // Request multiple permissions at once
     Map<Permission, PermissionStatus> statuses = await [
       Permission.location,

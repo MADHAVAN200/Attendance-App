@@ -87,6 +87,7 @@ class _SidebarContent extends StatelessWidget {
                               PageType.myAttendance,
                               PageType.dailyActivity,
                               PageType.leavesAndHolidays,
+                              PageType.payroll,
                               PageType.feedback, // Kept in logic for permission check, but excluded from this loop
                               PageType.collaboration, // ADDED
                               PageType.profile,

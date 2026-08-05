@@ -47,7 +47,8 @@ class ChatMessage {
   final int roomId;
   final int senderId;
   final String messageText;
-  final Map<String, dynamic>? attachment; // { name, url, size, type }
+  final Map<String, dynamic>? attachment; // { name, url, size, type, duration }
+  final Map<String, dynamic>? replyTo; // { message_id, user_name, message_text, attachment }
   final String createdAt;
   final String? userName;
   final String? profileImageUrl;
@@ -59,11 +60,26 @@ class ChatMessage {
     required this.senderId,
     required this.messageText,
     this.attachment,
+    this.replyTo,
     required this.createdAt,
     this.userName,
     this.profileImageUrl,
     this.status = 'sent',
   });
+
+  bool get isVoiceNote {
+    if (attachment == null) return false;
+    final type = (attachment!['type'] ?? '').toString().toLowerCase();
+    final name = (attachment!['name'] ?? '').toString().toLowerCase();
+    return type.contains('audio') || name.endsWith('.mp3') || name.endsWith('.m4a') || name.endsWith('.aac') || name.endsWith('.wav') || name.endsWith('.opus');
+  }
+
+  bool get isImageAttachment {
+    if (attachment == null) return false;
+    final type = (attachment!['type'] ?? '').toString().toLowerCase();
+    final name = (attachment!['name'] ?? '').toString().toLowerCase();
+    return type.contains('image') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.webp');
+  }
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     String? name = json['user_name'] ?? json['sender_name'] ?? json['userName'] ?? json['senderName'];
@@ -82,6 +98,18 @@ class ChatMessage {
       }
     }
 
+    Map<String, dynamic>? parsedReplyTo;
+    if (json['reply_to'] != null || json['replyTo'] != null) {
+      final rData = json['reply_to'] ?? json['replyTo'];
+      if (rData is Map) {
+        parsedReplyTo = Map<String, dynamic>.from(rData);
+      } else if (rData is String && rData.isNotEmpty) {
+        try {
+          parsedReplyTo = Map<String, dynamic>.from(jsonDecode(rData));
+        } catch (_) {}
+      }
+    }
+
     return ChatMessage(
       messageId: json['message_id'] ?? json['id'] ?? json['messageId'],
       roomId: json['room_id'] is String 
@@ -92,6 +120,7 @@ class ChatMessage {
           : (json['sender_id'] ?? json['senderId'] ?? 0),
       messageText: json['message_text'] ?? json['messageText'] ?? json['message'] ?? json['text'] ?? '',
       attachment: parsedAttachment,
+      replyTo: parsedReplyTo,
       createdAt: json['created_at'] ?? json['createdAt'] ?? DateTime.now().toIso8601String(),
       userName: name,
       profileImageUrl: json['profile_image_url'] ?? json['profile_image'] ?? json['profileImageUrl'],
@@ -106,6 +135,7 @@ class ChatMessage {
       'sender_id': senderId,
       'message_text': messageText,
       'attachment': attachment,
+      'reply_to': replyTo,
       'created_at': createdAt,
       'user_name': userName,
       'profile_image_url': profileImageUrl,

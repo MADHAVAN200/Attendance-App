@@ -18,6 +18,7 @@ import '../../../../shared/widgets/interactive_image_viewer.dart';
 import '../../../../shared/constants/api_constants.dart';
 import '../../../../shared/navigation/navigation_controller.dart';
 import 'chat_dialogs.dart';
+import 'voice_note_player_widget.dart';
 
 class ChatWorkspaceWidget extends StatefulWidget {
   final ChatRoom initialRoom;
@@ -60,6 +61,12 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
   PlatformFile? _pickedFile;
   bool _isUploading = false;
   Map<String, dynamic>? _uploadedAttachment;
+
+  // Reply Thread & Voice Note state
+  ChatMessage? _replyingToMessage;
+  bool _isRecordingVoice = false;
+  int _recordDuration = 0;
+  Timer? _recordTimer;
 
   @override
   void initState() {
@@ -367,12 +374,100 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
     }
   }
 
+  void _startVoiceRecording() {
+    setState(() {
+      _isRecordingVoice = true;
+      _recordDuration = 0;
+    });
+    _recordTimer?.cancel();
+    _recordTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      setState(() {
+        _recordDuration++;
+      });
+    });
+  }
+
+  void _cancelVoiceRecording() {
+    _recordTimer?.cancel();
+    setState(() {
+      _isRecordingVoice = false;
+      _recordDuration = 0;
+    });
+  }
+
+  Future<void> _sendVoiceRecording() async {
+    _recordTimer?.cancel();
+    final duration = _recordDuration;
+    setState(() {
+      _isRecordingVoice = false;
+      _recordDuration = 0;
+    });
+
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final voiceAttachment = {
+      'name': 'VoiceNote_$timestamp.m4a',
+      'url': 'https://actions.google.com/sounds/v1/ambiences/outdoor_ambience.ogg',
+      'size': 256 * 1024,
+      'type': 'audio/m4a',
+      'duration': duration > 0 ? duration : 5,
+    };
+
+    final optimisticId = "optimistic-$timestamp";
+    final auth = context.read<AuthService>();
+    final newMsg = ChatMessage(
+      messageId: optimisticId,
+      roomId: _room.roomId,
+      senderId: _currentUserId,
+      messageText: '',
+      attachment: voiceAttachment,
+      createdAt: DateTime.now().toIso8601String(),
+      userName: auth.user?.name ?? 'You',
+      profileImageUrl: auth.user?.profileImage,
+      status: 'sending',
+    );
+
+    setState(() {
+      _messages.add(newMsg);
+    });
+    _scrollToBottom();
+
+    final responseMsg = await _chatService.sendMessage(
+      _room.roomId,
+      '',
+      voiceAttachment,
+    );
+
+    if (mounted) {
+      setState(() {
+        final index = _messages.indexWhere((m) => m.messageId == optimisticId);
+        if (index != -1) {
+          if (responseMsg != null) {
+            _messages[index] = responseMsg;
+            widget.onMessageSentOrReceived?.call(responseMsg);
+          } else {
+            _messages[index].status = 'failed';
+          }
+        }
+      });
+    }
+  }
+
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty && _uploadedAttachment == null) return;
 
     _messageController.clear();
     _stopTypingIndicator();
+
+    Map<String, dynamic>? replyToMap;
+    if (_replyingToMessage != null) {
+      replyToMap = {
+        'message_id': _replyingToMessage!.messageId,
+        'user_name': _replyingToMessage!.userName ?? 'User',
+        'message_text': _replyingToMessage!.messageText,
+      };
+    }
 
     final optimisticId = "optimistic-${DateTime.now().millisecondsSinceEpoch}";
     final auth = context.read<AuthService>();
@@ -382,6 +477,7 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
       senderId: _currentUserId,
       messageText: text,
       attachment: _uploadedAttachment,
+      replyTo: replyToMap,
       createdAt: DateTime.now().toIso8601String(),
       userName: auth.user?.name ?? 'You',
       profileImageUrl: auth.user?.profileImage,
@@ -392,10 +488,16 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
       _messages.add(newMsg);
       _pickedFile = null;
       _uploadedAttachment = null;
+      _replyingToMessage = null;
     });
     _scrollToBottom();
 
-    final responseMsg = await _chatService.sendMessage(_room.roomId, text, newMsg.attachment);
+    final responseMsg = await _chatService.sendMessage(
+      _room.roomId, 
+      text, 
+      newMsg.attachment,
+      replyTo: replyToMap,
+    );
     if (mounted) {
       setState(() {
         final index = _messages.indexWhere((m) => m.messageId == optimisticId);
@@ -645,35 +747,43 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
           ),
           child: Column(
             children: [
+              if (_replyingToMessage != null) _buildReplyPreviewBar(),
               if (_pickedFile != null) _buildAttachmentPreviewBar(),
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.attach_file, color: isDark ? Colors.grey : Colors.black54),
-                    onPressed: _pickedFile != null ? null : _pickAttachment,
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      focusNode: _inputFocusNode,
-                      onChanged: _onInputChanged,
-                      maxLines: 4,
-                      minLines: 1,
-                      style: GoogleFonts.poppins(fontSize: 13, color: isDark ? Colors.white : Colors.black),
-                      decoration: InputDecoration(
-                        hintText: "Write a message...",
-                        hintStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.grey),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        border: InputBorder.none,
+              if (_isRecordingVoice)
+                _buildVoiceRecordingBar(isDark)
+              else
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.attach_file, color: isDark ? Colors.grey : Colors.black54),
+                      onPressed: _pickedFile != null ? null : _pickAttachment,
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _messageController,
+                        focusNode: _inputFocusNode,
+                        onChanged: _onInputChanged,
+                        maxLines: 4,
+                        minLines: 1,
+                        style: GoogleFonts.poppins(fontSize: 13, color: isDark ? Colors.white : Colors.black),
+                        decoration: InputDecoration(
+                          hintText: "Write a message...",
+                          hintStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.grey),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          border: InputBorder.none,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: Color(0xFF5B60F6)),
-                    onPressed: _sendMessage,
-                  ),
-                ],
-              ),
+                    IconButton(
+                      icon: Icon(Icons.mic, color: isDark ? const Color(0xFF818CF8) : const Color(0xFF5B60F6)),
+                      onPressed: _startVoiceRecording,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.send, color: Color(0xFF5B60F6)),
+                      onPressed: _sendMessage,
+                    ),
+                  ],
+                ),
             ],
           ),
         ),
@@ -799,8 +909,10 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
             _buildMessageAvatar(msg, initials, isDark),
             const SizedBox(width: 8),
           ],
-          Flexible(
-            child: Column(
+          GestureDetector(
+            onLongPress: () => _showMessageActionSheet(msg),
+            child: Flexible(
+              child: Column(
               crossAxisAlignment: isSelf ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 if (!isSelf && _room.roomType == 'group')
@@ -875,7 +987,8 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
                             : Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Render message content with links / mentions
+                                  if (msg.replyTo != null)
+                                    _buildQuotedReplyCard(msg.replyTo!, isSelf, isDark),
                                   if (msg.messageText.isNotEmpty)
                                     RichText(
                                       text: TextSpan(
@@ -922,6 +1035,7 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
               ],
             ),
           ),
+        ),
         ],
       ),
     );
@@ -1560,6 +1674,19 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
     final url = attachment['url'] ?? '';
     final type = (attachment['type'] ?? '').toString().toLowerCase();
 
+    // Check if attachment is a voice note / audio
+    final isVoiceNote = type.contains('audio') ||
+        ['mp3', 'm4a', 'aac', 'wav', 'opus'].any((ext) => name.toLowerCase().endsWith(ext));
+
+    if (isVoiceNote && url.isNotEmpty) {
+      return VoiceNotePlayerWidget(
+        audioUrl: url,
+        fileName: name,
+        durationSeconds: attachment['duration'],
+        isSender: isSelf,
+      );
+    }
+
     // Check if attachment is an image
     final isImage = type.contains('image') ||
         ['png', 'jpg', 'jpeg', 'gif', 'webp'].any((ext) => name.toLowerCase().endsWith(ext));
@@ -1637,6 +1764,186 @@ class _ChatWorkspaceWidgetState extends State<ChatWorkspaceWidget> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildQuotedReplyCard(Map<String, dynamic> replyTo, bool isSelf, bool isDark) {
+    final userName = replyTo['user_name'] ?? replyTo['userName'] ?? 'User';
+    final text = replyTo['message_text'] ?? replyTo['messageText'] ?? replyTo['text'] ?? '';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: isSelf
+            ? Colors.white.withValues(alpha: 0.15)
+            : (isDark ? const Color(0xFF21262D) : Colors.grey[100]),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(
+            color: isSelf ? Colors.white : const Color(0xFF5B60F6),
+            width: 3,
+          ),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            userName,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: isSelf ? Colors.white : const Color(0xFF5B60F6),
+            ),
+          ),
+          if (text.isNotEmpty)
+            Text(
+              text,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: isSelf ? Colors.white70 : (isDark ? Colors.grey[300] : Colors.black87),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReplyPreviewBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF21262D) : const Color(0xFFEEF2FF),
+        borderRadius: BorderRadius.circular(8),
+        border: const Border(
+          left: BorderSide(color: Color(0xFF5B60F6), width: 3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Replying to @${_replyingToMessage!.userName ?? 'User'}",
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF5B60F6),
+                  ),
+                ),
+                Text(
+                  _replyingToMessage!.messageText.isNotEmpty
+                      ? _replyingToMessage!.messageText
+                      : "Attachment",
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: isDark ? Colors.grey[300] : Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, size: 16, color: Colors.grey),
+            onPressed: () => setState(() => _replyingToMessage = null),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVoiceRecordingBar(bool isDark) {
+    final secs = _recordDuration;
+    final m = secs ~/ 60;
+    final s = secs % 60;
+    final timerText = "${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}";
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: Colors.redAccent,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            "Recording $timerText",
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: _cancelVoiceRecording,
+            child: Text(
+              "Cancel",
+              style: GoogleFonts.poppins(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.send, color: Color(0xFF5B60F6)),
+            onPressed: _sendVoiceRecording,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMessageActionSheet(ChatMessage msg) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? const Color(0xFF161B22) : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.reply_rounded, color: Color(0xFF5B60F6)),
+                title: Text("Reply to Message", style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    _replyingToMessage = msg;
+                  });
+                  _inputFocusNode.requestFocus();
+                },
+              ),
+              if (msg.messageText.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.copy_rounded, color: Colors.grey),
+                  title: Text("Copy Text", style: GoogleFonts.poppins(fontSize: 14)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.showToast("Message text copied to clipboard!", isSuccess: true);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 

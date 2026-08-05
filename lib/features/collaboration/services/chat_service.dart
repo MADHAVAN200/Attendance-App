@@ -126,13 +126,19 @@ class ChatService extends ChangeNotifier {
   }
 
   // 4. Send Chat Message
-  Future<ChatMessage?> sendMessage(int roomId, String messageText, Map<String, dynamic>? attachment) async {
+  Future<ChatMessage?> sendMessage(
+    int roomId, 
+    String messageText, 
+    Map<String, dynamic>? attachment, {
+    Map<String, dynamic>? replyTo,
+  }) async {
     try {
       final response = await _dio.post(
         '/collaboration/rooms/$roomId/messages',
         data: {
           'message_text': messageText,
           'attachment': attachment,
+          if (replyTo != null) 'reply_to': replyTo,
         },
       );
       if ((response.statusCode == 200 || response.statusCode == 201) && response.data['success'] == true) {

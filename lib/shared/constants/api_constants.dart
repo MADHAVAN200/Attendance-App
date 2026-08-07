@@ -101,6 +101,15 @@ class ApiConstants {
   static const String darSettingsList = '/dar/settings/list';
   static const String darRequestsCreate = '/dar/requests/create';
 
+  // Labour / Site Worker Management
+  static const String labourSites = '/labour/sites';
+  static const String labourLabours = '/labour/labours';
+  static const String labourAttendance = '/labour/attendance';
+  static const String labourSchedule = '/labour/schedule';
+  static const String labourFinancesSummary = '/labour/finances/summary';
+  static const String labourFinancesAdvance = '/labour/finances/advance';
+  static const String labourFinancesPayout = '/labour/finances/payout';
+
   // Chatbot
   static const String chatbotAskInternal = '/website-chatbot/ask-internal';
 

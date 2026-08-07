@@ -17,8 +17,12 @@ class PagePathHelper {
         return '/daily-activity';
       case PageType.leavesAndHolidays:
         return '/apply-leave';
+      case PageType.payroll:
+        return '/payroll';
       case PageType.reports:
         return '/reports';
+      case PageType.labourManagement:
+        return '/labour';
       case PageType.policyEngine:
         return '/shift-management';
       case PageType.geoFencing:
@@ -71,11 +75,23 @@ class PagePathHelper {
           'Where is the holiday calendar list?',
           'How do I check my remaining leave balances?',
         ];
+      case PageType.payroll:
+        return [
+          'How is basic salary and HRA calculated?',
+          'How do I process pay period runs?',
+          'How do I view or download PDF payslips?',
+        ];
       case PageType.reports:
         return [
           'What report formats are supported?',
           'How do I export lateness or overtime?',
           'Can I generate a payroll matrix report?',
+        ];
+      case PageType.labourManagement:
+        return [
+          'How do I register a site worker?',
+          'How do I mark daily site check-in?',
+          'How are daily wages and payouts calculated?',
         ];
       case PageType.policyEngine:
         return [

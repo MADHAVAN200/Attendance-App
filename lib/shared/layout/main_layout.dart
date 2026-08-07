@@ -11,6 +11,10 @@ import '../../features/feedback/tablet/views/feedback_view.dart'; // ADDED
 import '../../features/daily_activity/daily_activity_screen.dart'; // ADDED
 import '../../features/profile/tablet/views/profile_view.dart';
 import '../../features/collaboration/collaboration_screen.dart'; // ADDED
+import '../../features/payroll/payroll_screen.dart'; // ADDED
+import '../../features/labour/mobile/labour_mobile_view.dart';
+import '../../features/labour/tablet/labour_tablet_view.dart';
+import 'responsive_layout.dart';
 import '../navigation/navigation_controller.dart';
 import '../widgets/sidebars/sidebar_tablet_landscape.dart';
 import '../widgets/custom_app_bar.dart';
@@ -72,8 +76,16 @@ class MainLayout extends StatelessWidget {
         return const LiveAttendanceView();
       case PageType.leavesAndHolidays:
         return LeaveView(); // UPDATED
+      case PageType.payroll:
+        return const PayrollScreen(); // ADDED
       case PageType.reports:
         return const ReportsView();
+      case PageType.labourManagement:
+        return const ResponsiveLayout(
+          mobile: LabourMobileContent(),
+          tabletPortrait: LabourTabletContent(),
+          tabletLandscape: LabourTabletContent(),
+        );
       case PageType.policyEngine:
         return const PolicyEngineView();
       case PageType.geoFencing:

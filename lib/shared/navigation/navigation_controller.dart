@@ -7,8 +7,9 @@ enum PageType {
   liveAttendance,
   dailyActivity, // ADDED
   leavesAndHolidays,    // RENAMED from leaves, MERGED with holidays
+  payroll, // ADDED
   reports,
-
+  labourManagement, // ADDED
   policyEngine,
   geoFencing,
   collaboration, // ADDED
@@ -26,7 +27,9 @@ extension PageTypeExtension on PageType {
       case PageType.liveAttendance: return 'Live Attendance';
         case PageType.dailyActivity: return 'Daily Activity';
       case PageType.leavesAndHolidays: return 'Holidays & Leave'; // UPDATED
+      case PageType.payroll: return 'Payroll & Salary Slips'; // ADDED
       case PageType.reports: return 'Reports & Exports';
+      case PageType.labourManagement: return 'Labour & Site Workers';
 
       case PageType.policyEngine: return 'Shift Management';
       case PageType.geoFencing: return 'Geo-Fencing';
@@ -44,7 +47,9 @@ extension PageTypeExtension on PageType {
       case PageType.liveAttendance: return Icons.access_time;
         case PageType.dailyActivity: return Icons.today;
       case PageType.leavesAndHolidays: return Icons.date_range_outlined; // UPDATED
+      case PageType.payroll: return Icons.payments_outlined; // ADDED
       case PageType.reports: return Icons.show_chart;
+      case PageType.labourManagement: return Icons.construction_outlined;
 
       case PageType.policyEngine: return Icons.settings_suggest_outlined;
       case PageType.geoFencing: return Icons.location_on_outlined;

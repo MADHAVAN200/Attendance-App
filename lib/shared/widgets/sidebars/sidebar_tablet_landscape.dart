@@ -95,6 +95,7 @@ class _SidebarContent extends StatelessWidget {
                                 PageType.myAttendance,
                                 PageType.dailyActivity,
                                 PageType.leavesAndHolidays,
+                                PageType.payroll,
                                 PageType.feedback,
                                 PageType.collaboration,
                                 PageType.profile,

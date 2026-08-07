@@ -23,10 +23,12 @@ import '../../../attendance/mobile/views/my_attendance_view.dart';
 import '../../../live_attendance/mobile/views/live_attendance_view.dart';
 import '../../../reports/mobile/views/reports_view.dart';
 import '../../../geo_fencing/mobile/views/geo_fencing_view.dart';
+import '../../../labour/mobile/labour_mobile_view.dart';
 import '../../../leave/tablet/views/leave_view.dart'; // Reusing tablet view
 import '../../../daily_activity/daily_activity_screen.dart'; // ADDED
 import '../../../feedback/mobile/views/feedback_mobile_view.dart'; // Reusing tablet view
 import '../../../collaboration/collaboration_screen.dart'; // ADDED
+import '../../../payroll/mobile/views/payroll_screen_mobile.dart'; // ADDED
 import 'package:flutter_application/shared/widgets/chatbot_fab.dart';
 
 class MobileLandscape extends StatelessWidget {
@@ -83,6 +85,9 @@ class MobileLandscape extends StatelessWidget {
       case PageType.leavesAndHolidays: // UPDATED
           return LeaveView();
 
+      case PageType.payroll:
+          return const PayrollScreenMobile(); // ADDED
+
       case PageType.geoFencing:
         return const MobileGeoFencingContent();
 
@@ -98,6 +103,8 @@ class MobileLandscape extends StatelessWidget {
          return Center(child: Text('${page.title} (Landscape)'));
       case PageType.collaboration:
          return const CollaborationScreen(); // ADDED
+      case PageType.labourManagement:
+         return const LabourMobileContent();
     }
   }
 }

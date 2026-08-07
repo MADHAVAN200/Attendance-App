@@ -15,6 +15,8 @@ import '../../../feedback/tablet/views/landscape.dart';
 import '../../../daily_activity/daily_activity_screen.dart';
 import '../../../geo_fencing/tablet/views/geo_fencing_view.dart';
 import '../../../../features/collaboration/collaboration_screen.dart'; // ADDED
+import '../../../labour/tablet/labour_tablet_view.dart';
+import '../../../payroll/tablet/views/payroll_screen_tablet.dart'; // ADDED
 
 class TabletLandscape extends StatelessWidget {
   const TabletLandscape({super.key});
@@ -64,6 +66,8 @@ class TabletLandscape extends StatelessWidget {
                         return const ReportsView();
                       case PageType.leavesAndHolidays:
                         return LeaveView();
+                      case PageType.payroll:
+                        return const PayrollScreenTablet(); // ADDED
                       case PageType.policyEngine:
                         return const PolicyEngineView();
                       case PageType.feedback:
@@ -76,6 +80,8 @@ class TabletLandscape extends StatelessWidget {
                         return const DailyActivityScreen();
                       case PageType.geoFencing:
                         return const GeoFencingView();
+                      case PageType.labourManagement:
+                        return const LabourTabletContent();
                     }
                   }
                 ),

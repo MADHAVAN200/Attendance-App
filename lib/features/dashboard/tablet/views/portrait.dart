@@ -14,6 +14,8 @@ import '../../../feedback/tablet/views/portrait.dart';
 import '../../../daily_activity/daily_activity_screen.dart'; // ADDED
 import '../../../geo_fencing/tablet/views/geo_fencing_view.dart';
 import '../../../../features/collaboration/collaboration_screen.dart'; // ADDED
+import '../../../labour/tablet/labour_tablet_view.dart';
+import '../../../payroll/tablet/views/payroll_screen_tablet.dart'; // ADDED
 import 'package:flutter_application/shared/widgets/chatbot_fab.dart';
 
 class TabletPortrait extends StatelessWidget {
@@ -71,6 +73,8 @@ class TabletPortrait extends StatelessWidget {
                            return const ReportsView();
                         case PageType.leavesAndHolidays:
                            return LeaveView(); // UPDATED (removed const)
+                        case PageType.payroll:
+                           return const PayrollScreenTablet(); // ADDED
                         case PageType.policyEngine:
                            return const PolicyEngineView();
                         case PageType.dailyActivity:
@@ -83,6 +87,8 @@ class TabletPortrait extends StatelessWidget {
                            return const CollaborationScreen(); // ADDED
                         case PageType.profile:
                            return const ProfileView();
+                        case PageType.labourManagement:
+                           return const LabourTabletContent();
                       }
                     }
                   ),
